@@ -1,0 +1,271 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Material Icons – default icon set (font loaded via index.html) */
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* TheSans C4 (LucasFonts): uncomment and set paths if self-hosting
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4-Regular.woff2") format("woff2"),
+       url("/fonts/TheSansC4-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
+/* vSNET Design System – definitive color tokens (hex) */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-success: var(--success);
+  --color-link: var(--link);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input-highlight: var(--input-highlight);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-sidebar-background: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --radius: var(--radius);
+  /* Typography – shadcn-style tokens */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --text-xs: var(--font-size-xs);
+  --text-sm: var(--font-size-sm);
+  --text-base: var(--font-size-base);
+  --text-lg: var(--font-size-lg);
+  --text-xl: var(--font-size-xl);
+  --text-2xl: var(--font-size-2xl);
+  --text-3xl: var(--font-size-3xl);
+  --text-4xl: var(--font-size-4xl);
+  --text-5xl: var(--font-size-5xl);
+  --leading-none: var(--leading-none);
+  --leading-tight: var(--leading-tight);
+  --leading-snug: var(--leading-snug);
+  --leading-normal: var(--leading-normal);
+  --leading-7: var(--leading-7);
+  --leading-relaxed: var(--leading-relaxed);
+  --leading-loose: var(--leading-loose);
+  --font-normal: var(--font-weight-normal);
+  --font-medium: var(--font-weight-medium);
+  --font-semibold: var(--font-weight-semibold);
+  --font-bold: var(--font-weight-bold);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar: var(--sidebar);
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@layer base {
+  /* Login page full-screen background uses theme primary */
+  .login-page-backdrop {
+    background-color: var(--primary) !important;
+  }
+
+  :root {
+    /* Base */
+    --background: #F8FAFC;
+    --foreground: #1E293B;
+    --primary: #004F69;
+    --primary-foreground: #FFFFFF;
+    --secondary: #CBD5E1;
+    --secondary-foreground: #1E293B;
+    /* General UI */
+    --muted: #F1F5F9;
+    --muted-foreground: #64748B;
+    --subtle-foreground: #475569;
+    /* Card */
+    --card: #FFFFFF;
+    --card-foreground: #0F172A;
+    --card-border: #E2E8F0;
+    --card-subtle: #F1F5F9;
+    --card-subtle-foreground: #475569;
+    --card-filled: #CBD5E1;
+    --card-filled-foreground: #334155;
+    --card-outlined-foreground: #1E293B;
+    --card-filled-border: #E2E8F0;
+    /* Accent */
+    --accent: #D6D3D1;
+    --accent-foreground: #0F172A;
+    /* Input */
+    --input: #D1D5DB;
+    --input-highlight: #18181B;
+    /* Other */
+    --ring: #6366F1;
+    --border: #E2E8F0;
+    --link: #0369A1;
+    --link-hover: #3730A3;
+    /* Sidebar (light – aligned with background/muted) */
+    --sidebar: 214 32% 95%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 196 100% 21%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 214 32% 91%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 196 100% 21%;
+    /* Popover */
+    --popover: #FFFFFF;
+    --popover-foreground: #0F172A;
+    /* Status */
+    --success: #009B3A;
+    --destructive: #D13C59;
+    --destructive-foreground: #FAFAFA;
+    /* Radius */
+    --radius: 0.5rem;
+    /* Typography – TheSans C4 (LucasFonts). Add @font-face in index.html or here if self-hosting. */
+    --font-sans: "TheSans C4", "TheSans", ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
+    --font-size-5xl: 3rem;
+    --leading-none: 1;
+    --leading-tight: 1.25;
+    --leading-snug: 1.375;
+    --leading-normal: 1.5;
+    --leading-7: 1.75rem;
+    --leading-relaxed: 1.625;
+    --leading-loose: 2;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+  }
+
+  .dark {
+    /* Base */
+    --background: #0F172A;
+    --foreground: #F8FAFC;
+    --primary: #004F69;
+    --primary-foreground: #FFFFFF;
+    --secondary: #639BB2;
+    --secondary-foreground: #F8FAFC;
+    /* General UI */
+    --muted: #334155;
+    --muted-foreground: #94A3B8;
+    --subtle-foreground: #717F94;
+    /* Card */
+    --card: #1E293B;
+    --card-foreground: #F8FAFC;
+    --card-border: #334155;
+    --card-subtle: #334155;
+    --card-subtle-foreground: #CBD5E1;
+    --card-filled: #1E2433;
+    --card-filled-foreground: #E2E8F0;
+    --card-outlined-foreground: #F8FAFC;
+    --card-filled-border: #2F2F33;
+    /* Accent */
+    --accent: #57534E;
+    --accent-foreground: #F8FAFC;
+    /* Input */
+    --input: #334155;
+    --input-highlight: #FFFFFF;
+    /* Other */
+    --ring: #818CF8;
+    --border: #27303F;
+    --link: #0369A1;
+    --link-hover: #A5B4FC;
+    /* Sidebar (dark – close to navbar #004F69 = hsl(196 100% 21%) but slightly darker at 16%) */
+    --sidebar: 196 100% 16%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 196 100% 21%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 196 100% 21%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 196 100% 24%;
+    --sidebar-ring: 196 100% 21%;
+    /* Popover */
+    --popover: #1E2433;
+    --popover-foreground: #F8FAFC;
+    /* Status */
+    --success: #006C28;
+    --destructive: #8A0821;
+    --destructive-foreground: #FAFAFA;
+  }
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans); /* TheSans C4 */
+  }
+}
+
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+}
+
+/* ---break---
+*/
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

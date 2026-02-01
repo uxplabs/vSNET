@@ -1,0 +1,205 @@
+'use client';
+
+import * as React from 'react';
+import type { ColumnDef, ColumnFiltersState, Row } from '@tanstack/react-table';
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type PaginationState,
+  type SortingState,
+} from '@tanstack/react-table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Icon } from '@/components/Icon';
+import { SortableHeader } from '@/components/ui/sortable-header';
+import { TrendBadge } from '@/components/TrendBadge';
+import { TablePagination } from '@/components/ui/table-pagination';
+import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
+import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
+
+export interface DisconnectedRadioNodeRow {
+  id: string;
+  radioNode: string;
+  region: string;
+  timeOccurred: string;
+}
+
+const REGIONS = ['All regions', ...NORTH_AMERICAN_REGIONS] as const;
+
+const DISCONNECTED_RADIO_NODES_DATA: DisconnectedRadioNodeRow[] = [
+  { id: '1', radioNode: 'RN-SEA-001', region: 'Pacific Northwest', timeOccurred: '5 min ago' },
+  { id: '2', radioNode: 'RN-PDX-003', region: 'Pacific Northwest', timeOccurred: '22 min ago' },
+  { id: '3', radioNode: 'RN-PHX-002', region: 'Desert Southwest', timeOccurred: '1 hour ago' },
+  { id: '4', radioNode: 'RN-LAS-001', region: 'Desert Southwest', timeOccurred: '2 hours ago' },
+  { id: '5', radioNode: 'RN-BOS-002', region: 'New England', timeOccurred: '18 min ago' },
+  { id: '6', radioNode: 'RN-NYC-002', region: 'Northeast', timeOccurred: '8 min ago' },
+  { id: '7', radioNode: 'RN-MIA-001', region: 'Southeast', timeOccurred: '55 min ago' },
+];
+
+const columns: ColumnDef<DisconnectedRadioNodeRow>[] = [
+  {
+    accessorKey: 'radioNode',
+    header: ({ column }) => <SortableHeader column={column}>Radio node</SortableHeader>,
+    cell: ({ row }) => <span className="font-medium">{row.getValue('radioNode')}</span>,
+  },
+  {
+    accessorKey: 'region',
+    header: ({ column }) => <SortableHeader column={column}>Region</SortableHeader>,
+    cell: ({ row }) => row.getValue('region') as string,
+  },
+  {
+    accessorKey: 'timeOccurred',
+    header: ({ column }) => <SortableHeader column={column}>Time occurred</SortableHeader>,
+    cell: ({ row }) => row.getValue('timeOccurred') as string,
+  },
+];
+
+function filterBySearch(
+  row: Row<DisconnectedRadioNodeRow>,
+  _columnId: string,
+  filterValue: string
+) {
+  if (!filterValue) return true;
+  const search = filterValue.toLowerCase();
+  const data = row.original;
+  return (
+    data.radioNode.toLowerCase().includes(search) ||
+    data.region.toLowerCase().includes(search) ||
+    data.timeOccurred.toLowerCase().includes(search)
+  );
+}
+
+export function DisconnectedRadioNodesCard() {
+  const pageSize = useResponsivePageSize();
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = React.useState('');
+  const [regionFilter, setRegionFilter] = React.useState<string>('All regions');
+  const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize });
+
+  React.useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageSize }));
+  }, [pageSize]);
+
+  const columnFilters = React.useMemo<ColumnFiltersState>(() => {
+    if (regionFilter === 'All regions') return [];
+    return [{ id: 'region', value: regionFilter }];
+  }, [regionFilter]);
+
+  const table = useReactTable({
+    data: DISCONNECTED_RADIO_NODES_DATA,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    onGlobalFilterChange: setGlobalFilter,
+    onColumnFiltersChange: () => {},
+    getFilteredRowModel: getFilteredRowModel(),
+    globalFilterFn: filterBySearch,
+    onPaginationChange: (updater) => setPagination(updater),
+    state: { sorting, globalFilter, columnFilters, pagination },
+  });
+
+  return (
+    <Card>
+      <CardHeader className="space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle>Disconnected radio nodes</CardTitle>
+          <TrendBadge direction="down">↓ 1</TrendBadge>
+        </div>
+        <p className="text-2xl font-bold tabular-nums">
+          {table.getFilteredRowModel().rows.length}
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Icon
+              name="search"
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+            />
+            <Input
+              placeholder="Search radio nodes..."
+              value={globalFilter ?? ''}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+          <Select value={regionFilter} onValueChange={setRegionFilter}>
+            <SelectTrigger className="w-[140px] h-9">
+              <SelectValue placeholder="Region" />
+            </SelectTrigger>
+            <SelectContent>
+              {REGIONS.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 ml-auto" aria-label="Download">
+            <Icon name="download" size={18} />
+          </Button>
+        </div>
+        <div className="overflow-hidden rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} className="px-4 py-3 h-12">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="px-4 py-3">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center px-4 py-3">
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <TablePagination table={table} className="justify-end" />
+      </CardContent>
+    </Card>
+  );
+}
