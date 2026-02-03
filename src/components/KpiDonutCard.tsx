@@ -61,7 +61,7 @@ function KpiDonutCard({
   }, [donutData, configProp]);
 
   return (
-    <Card className={cn('overflow-hidden transition-colors duration-200 hover:bg-muted/40', className)}>
+    <Card className={cn('overflow-hidden transition-colors duration-200', className)}>
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="mb-0 font-bold">{title}</CardTitle>

@@ -6,7 +6,7 @@ import { RegionsDataTable, getRegionRow, getAggregatedRegionData } from './regio
 
 const RegionsMap = lazy(() => import('./regions-map').then((m) => ({ default: m.RegionsMap })));
 const DashboardAlarmsTab = lazy(() => import('./DashboardAlarmsTab').then((m) => ({ default: m.DashboardAlarmsTab })));
-import { KpiDonutCard } from './KpiDonutCard';
+const DashboardCapacityTab = lazy(() => import('./DashboardCapacityTab').then((m) => ({ default: m.DashboardCapacityTab })));
 import { TrendBadge } from './TrendBadge';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
@@ -202,34 +202,40 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, onReg
                       Radio nodes
                     </h2>
                     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                      <KpiDonutCard
+                      <ChartCard
                         title="Total"
                         kpiValue={overviewData.radio.total}
-                        trendBadge={<TrendBadge direction="up">↑ 5%</TrendBadge>}
-                        donutData={[
-                          { name: 'Free', value: Math.round(overviewData.radio.total * (180 / 248)), legendLabel: `${Math.round(overviewData.radio.total * (180 / 248))} GB Free` },
-                          { name: 'Used', value: Math.round(overviewData.radio.total * (68 / 248)), legendLabel: `${Math.round(overviewData.radio.total * (68 / 248))} GB Used` },
-                          { name: 'Total', value: overviewData.radio.total, legendLabel: `${overviewData.radio.total} GB Total`, legendOnly: true },
+                        kpiIcon={<Icon name="device_hub" size={36} className="text-muted-foreground" />}
+                        sparkLineData={[
+                          { name: '1', value: Math.round(overviewData.radio.total * 0.92) },
+                          { name: '2', value: Math.round(overviewData.radio.total * 0.94) },
+                          { name: '3', value: Math.round(overviewData.radio.total * 0.9) },
+                          { name: '4', value: Math.round(overviewData.radio.total * 0.96) },
+                          { name: '5', value: overviewData.radio.total },
                         ]}
                       />
-                      <KpiDonutCard
+                      <ChartCard
                         title="Connected"
                         kpiValue={overviewData.radio.connected}
-                        trendBadge={<TrendBadge direction="up">↑ 2%</TrendBadge>}
-                        donutData={[
-                          { name: 'Free', value: overviewData.radio.connectedFree, legendLabel: `${overviewData.radio.connectedFree} GB Free` },
-                          { name: 'Used', value: overviewData.radio.connectedUsed, legendLabel: `${overviewData.radio.connectedUsed} GB Used` },
-                          { name: 'Total', value: overviewData.radio.connected, legendLabel: `${overviewData.radio.connected} GB Total`, legendOnly: true },
+                        kpiIcon={<Icon name="link" size={36} className="text-emerald-600 dark:text-emerald-500" />}
+                        sparkLineData={[
+                          { name: '1', value: Math.round(overviewData.radio.connected * 0.96) },
+                          { name: '2', value: Math.round(overviewData.radio.connected * 0.98) },
+                          { name: '3', value: Math.round(overviewData.radio.connected * 0.94) },
+                          { name: '4', value: Math.round(overviewData.radio.connected * 0.99) },
+                          { name: '5', value: overviewData.radio.connected },
                         ]}
                       />
-                      <KpiDonutCard
+                      <ChartCard
                         title="Disconnected"
                         kpiValue={overviewData.radio.disconnected}
-                        trendBadge={<TrendBadge direction="down">↓ 1%</TrendBadge>}
-                        donutData={[
-                          { name: 'Free', value: overviewData.radio.disconnectedFree, legendLabel: `${overviewData.radio.disconnectedFree} GB Free` },
-                          { name: 'Used', value: overviewData.radio.disconnectedUsed, legendLabel: `${overviewData.radio.disconnectedUsed} GB Used` },
-                          { name: 'Total', value: overviewData.radio.disconnected, legendLabel: `${overviewData.radio.disconnected} GB Total`, legendOnly: true },
+                        kpiIcon={<Icon name="link_off" size={36} className="text-destructive" />}
+                        sparkLineData={[
+                          { name: '1', value: overviewData.radio.disconnected + 3 },
+                          { name: '2', value: overviewData.radio.disconnected + 1 },
+                          { name: '3', value: overviewData.radio.disconnected + 4 },
+                          { name: '4', value: overviewData.radio.disconnected + 2 },
+                          { name: '5', value: overviewData.radio.disconnected },
                         ]}
                       />
                     </div>
@@ -302,7 +308,12 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, onReg
                   />
                 </Suspense>
             )}
-            {activeTab !== 'network-overview' && activeTab !== 'alarms' && (
+            {activeTab === 'capacity' && (
+                <Suspense fallback={<div className="rounded-lg border bg-card p-8 flex items-center justify-center"><span className="text-muted-foreground">Loading capacity…</span></div>}>
+                  <DashboardCapacityTab overviewData={overviewData} />
+                </Suspense>
+            )}
+            {activeTab !== 'network-overview' && activeTab !== 'alarms' && activeTab !== 'capacity' && (
               <div className="rounded-lg border bg-card p-6 text-card-foreground">
                 <p className="text-muted-foreground">{DASHBOARD_TABS.find((t) => t.value === activeTab)?.label ?? activeTab} content.</p>
               </div>

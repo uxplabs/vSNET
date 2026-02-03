@@ -130,6 +130,17 @@ function LoginPage({ onLogin, onLoginWithSSO, appName = 'vSNET' }: LoginPageProp
             >
               {loading ? 'Signing in…' : 'Log in'}
             </Button>
+            <div className="text-center text-xs uppercase tracking-widest text-muted-foreground">
+              or
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled
+            >
+              Sign in with SSO
+            </Button>
             {error && (
               <p className="text-center text-sm text-destructive">{error}</p>
             )}

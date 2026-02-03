@@ -42,10 +42,11 @@ export function DashboardAlarmsTab({
             tabIndex={0}
             onClick={() => scrollToAlarmsAndFilter('Critical')}
             onKeyDown={(e) => e.key === 'Enter' && scrollToAlarmsAndFilter('Critical')}
-            className="cursor-pointer rounded-lg transition-colors hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="cursor-pointer rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <ChartCard
               title="Critical"
+              className="hover:bg-muted/40"
               kpiValue={overviewData.alarms.critical}
               kpiIcon={<Icon name="error" size={48} className="text-destructive" />}
               trendBadge={<TrendBadge direction="up">↑ 1</TrendBadge>}
@@ -63,10 +64,11 @@ export function DashboardAlarmsTab({
             tabIndex={0}
             onClick={() => scrollToAlarmsAndFilter('Major')}
             onKeyDown={(e) => e.key === 'Enter' && scrollToAlarmsAndFilter('Major')}
-            className="cursor-pointer rounded-lg transition-colors hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="cursor-pointer rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <ChartCard
               title="Major"
+              className="hover:bg-muted/40"
               kpiValue={overviewData.alarms.major}
               kpiIcon={<Icon name="error_outline" size={48} className="text-amber-600 dark:text-amber-500" />}
               trendBadge={<TrendBadge direction="down">↓ 2</TrendBadge>}
@@ -84,10 +86,11 @@ export function DashboardAlarmsTab({
             tabIndex={0}
             onClick={() => scrollToAlarmsAndFilter('Minor')}
             onKeyDown={(e) => e.key === 'Enter' && scrollToAlarmsAndFilter('Minor')}
-            className="cursor-pointer rounded-lg transition-colors hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="cursor-pointer rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <ChartCard
               title="Minor"
+              className="hover:bg-muted/40"
               kpiValue={overviewData.alarms.minor}
               kpiIcon={<Icon name="warning" size={48} className="text-amber-600 dark:text-amber-500" />}
               trendBadge={<TrendBadge direction="up">↑ 5</TrendBadge>}

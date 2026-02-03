@@ -30,13 +30,20 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
-const NAV_ITEMS = [
-  { label: 'Dashboard', href: '#dashboard' },
-  { label: 'Devices', href: '#devices' },
-  { label: 'Tasks', href: '#tasks' },
-  { label: 'Administration', href: '#administration' },
-  { label: 'Performance', href: '#performance' },
-] as const;
+type NavItem = {
+  label: string;
+  href: string;
+  section: string;
+  tab?: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Dashboard', href: '#dashboard', section: 'dashboard' },
+  { label: 'Nodes', href: '#devices', section: 'devices', tab: 'device' },
+  { label: 'Tasks', href: '#tasks', section: 'tasks' },
+  { label: 'Administration', href: '#administration', section: 'administration' },
+  { label: 'Performance', href: '#performance', section: 'performance' },
+];
 
 const REGION_OPTIONS = ['All', ...NORTH_AMERICAN_REGIONS] as const;
 
@@ -98,21 +105,10 @@ const Navbar01 = ({
     }
   };
 
-  const handleNavClick = (item: (typeof NAV_ITEMS)[number]) => {
+  const handleNavClick = (item: NavItem) => {
     setMobileMenuOpen(false);
-    const section = item.label.toLowerCase();
-    setActiveSection(section);
-    if (item.label === 'Dashboard') {
-      onNavigate?.(section);
-    } else if (item.label === 'Devices') {
-      onNavigate?.(section, 'device');
-    } else if (item.label === 'Tasks') {
-      onNavigate?.(section);
-    } else if (item.label === 'Administration') {
-      onNavigate?.(section);
-    } else if (item.label === 'Performance') {
-      onNavigate?.(section);
-    }
+    setActiveSection(item.section);
+    onNavigate?.(item.section, item.tab);
   };
 
   return (
@@ -144,7 +140,7 @@ const Navbar01 = ({
         <NavigationMenu className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:flex">
           <NavigationMenuList className="gap-0.5">
             {NAV_ITEMS.map((item) => {
-              const isSelected = activeSection === item.label.toLowerCase();
+              const isSelected = activeSection === item.section;
               return (
                 <NavigationMenuItem key={item.href}>
                   <NavigationMenuLink
@@ -291,7 +287,7 @@ const Navbar01 = ({
             </SheetHeader>
             <nav className="flex flex-col gap-1 mt-8">
               {NAV_ITEMS.map((item) => {
-                const isSelected = activeSection === item.label.toLowerCase();
+                const isSelected = activeSection === item.section;
                 return (
                   <Button
                     key={item.href}

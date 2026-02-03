@@ -38,6 +38,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from './ui/sheet';
 import type { DeviceRow } from './devices-data-table';
 import { AlarmsDataTable } from './alarms-data-table';
 import { EventsDataTable } from './events-data-table';
@@ -234,6 +235,32 @@ function DeviceDetailPage({
   const [noteInput, setNoteInput] = useState('');
   const notesScrollRef = React.useRef<HTMLDivElement>(null);
   const notesCardRef = React.useRef<HTMLDivElement>(null);
+
+  const [snmpValues, setSnmpValues] = useState({
+    ipAddress: device.ipAddress || '10.12.1.42',
+    snmpPort: '161',
+    timeout: '5',
+    snmpVersion: 'v2c',
+    readCommunity: 'public',
+    writeCommunity: 'private',
+  });
+  const [snmpEditDrawerOpen, setSnmpEditDrawerOpen] = useState(false);
+  const [snmpEditDraft, setSnmpEditDraft] = useState(snmpValues);
+
+  const handleOpenSnmpEdit = React.useCallback(() => {
+    setSnmpEditDraft(snmpValues);
+    setSnmpEditDrawerOpen(true);
+  }, [snmpValues]);
+
+  const handleSaveSnmpEdit = React.useCallback(() => {
+    setSnmpValues(snmpEditDraft);
+    setSnmpEditDrawerOpen(false);
+  }, [snmpEditDraft]);
+
+  const handleCancelSnmpEdit = React.useCallback(() => {
+    setSnmpEditDraft(snmpValues);
+    setSnmpEditDrawerOpen(false);
+  }, [snmpValues]);
 
   React.useEffect(() => {
     if (!scrollToNotes) return;
@@ -1424,14 +1451,144 @@ function DeviceDetailPage({
           )}
 
           {activeSection === 'snmp-details' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>SNMP Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">SNMP configuration and trap details will be displayed here.</p>
-              </CardContent>
-            </Card>
+            <>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-end space-y-0 pb-2">
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={handleOpenSnmpEdit}>
+                    <Icon name="edit" size={16} />
+                    Edit
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-muted-foreground">IP address</span>
+                      <span className="font-medium">{snmpValues.ipAddress || '—'}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-muted-foreground">SNMP port</span>
+                      <span className="font-medium">{snmpValues.snmpPort || '—'}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-muted-foreground">Timeout</span>
+                      <span className="font-medium">{snmpValues.timeout || '—'}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-muted-foreground">SNMP version</span>
+                      <span className="font-medium">{snmpValues.snmpVersion || '—'}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-muted-foreground">Read community</span>
+                      <span className="font-medium font-mono text-sm">{snmpValues.readCommunity || '—'}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-muted-foreground">Write community</span>
+                      <span className="font-medium font-mono text-sm">{snmpValues.writeCommunity || '—'}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Sheet
+                open={snmpEditDrawerOpen}
+                onOpenChange={(open) => {
+                  if (!open) setSnmpEditDraft(snmpValues);
+                  setSnmpEditDrawerOpen(open);
+                }}
+              >
+                <SheetContent side="right" className="sm:max-w-md flex flex-col h-full">
+                  <SheetHeader className="shrink-0">
+                    <SheetTitle>Edit SNMP configuration</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex-1 overflow-auto min-h-0 space-y-6 py-6">
+                    <div className="space-y-2">
+                      <label htmlFor="snmp-ip" className="text-sm font-medium text-foreground">
+                        IP address
+                      </label>
+                      <Input
+                        id="snmp-ip"
+                        value={snmpEditDraft.ipAddress}
+                        onChange={(e) => setSnmpEditDraft((s) => ({ ...s, ipAddress: e.target.value }))}
+                        placeholder="10.0.0.1"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="snmp-port" className="text-sm font-medium text-foreground">
+                        SNMP port
+                      </label>
+                      <Input
+                        id="snmp-port"
+                        value={snmpEditDraft.snmpPort}
+                        onChange={(e) => setSnmpEditDraft((s) => ({ ...s, snmpPort: e.target.value }))}
+                        placeholder="161"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="snmp-timeout" className="text-sm font-medium text-foreground">
+                        Timeout
+                      </label>
+                      <Input
+                        id="snmp-timeout"
+                        value={snmpEditDraft.timeout}
+                        onChange={(e) => setSnmpEditDraft((s) => ({ ...s, timeout: e.target.value }))}
+                        placeholder="5"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="snmp-version" className="text-sm font-medium text-foreground">
+                        SNMP version
+                      </label>
+                      <Select
+                        value={snmpEditDraft.snmpVersion}
+                        onValueChange={(v) => setSnmpEditDraft((s) => ({ ...s, snmpVersion: v }))}
+                      >
+                        <SelectTrigger id="snmp-version">
+                          <SelectValue placeholder="Select version" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="v1">v1</SelectItem>
+                          <SelectItem value="v2c">v2c</SelectItem>
+                          <SelectItem value="v3">v3</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="snmp-read" className="text-sm font-medium text-foreground">
+                        Read community
+                      </label>
+                      <Input
+                        id="snmp-read"
+                        value={snmpEditDraft.readCommunity}
+                        onChange={(e) => setSnmpEditDraft((s) => ({ ...s, readCommunity: e.target.value }))}
+                        placeholder="public"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="snmp-write" className="text-sm font-medium text-foreground">
+                        Write community
+                      </label>
+                      <Input
+                        id="snmp-write"
+                        value={snmpEditDraft.writeCommunity}
+                        onChange={(e) => setSnmpEditDraft((s) => ({ ...s, writeCommunity: e.target.value }))}
+                        placeholder="private"
+                        className="font-mono"
+                      />
+                    </div>
+                  </div>
+                  <SheetFooter className="shrink-0 flex flex-row gap-2 sm:justify-end border-t pt-6 mt-auto">
+                    <Button variant="outline" onClick={handleCancelSnmpEdit}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSaveSnmpEdit}>Save</Button>
+                  </SheetFooter>
+                </SheetContent>
+              </Sheet>
+            </>
           )}
           </div>
         </div>
