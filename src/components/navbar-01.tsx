@@ -19,6 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
@@ -30,7 +38,7 @@ const NAV_ITEMS = [
   { label: 'Performance', href: '#performance' },
 ] as const;
 
-const REGIONS = NORTH_AMERICAN_REGIONS;
+const REGION_OPTIONS = ['All', ...NORTH_AMERICAN_REGIONS] as const;
 
 const navLinkClass = cn(
   navigationMenuTriggerStyle(),
@@ -62,29 +70,55 @@ const Navbar01 = ({
   region: regionProp,
   onRegionChange,
 }: Navbar01Props) => {
-  const [internalRegion, setInternalRegion] = useState<string>(REGIONS[0]);
+  const [internalRegion, setInternalRegion] = useState<string>('All');
   const region = regionProp ?? internalRegion;
   const setRegion = onRegionChange ?? setInternalRegion;
   const [activeSection, setActiveSection] = useState<string>(currentSection ?? '');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (currentSection) setActiveSection(currentSection);
   }, [currentSection]);
 
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (newTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      // System preference
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  };
+
   const handleNavClick = (item: (typeof NAV_ITEMS)[number]) => {
+    setMobileMenuOpen(false);
     const section = item.label.toLowerCase();
     setActiveSection(section);
     if (item.label === 'Dashboard') {
       onNavigate?.(section);
     } else if (item.label === 'Devices') {
       onNavigate?.(section, 'device');
+    } else if (item.label === 'Tasks') {
+      onNavigate?.(section);
+    } else if (item.label === 'Administration') {
+      onNavigate?.(section);
+    } else if (item.label === 'Performance') {
+      onNavigate?.(section);
     }
   };
 
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 w-full border-b border-primary-foreground/20 bg-primary text-primary-foreground',
+        'sticky top-0 z-[1100] w-full border-b border-primary-foreground/20 bg-primary text-primary-foreground',
         className
       )}
     >
@@ -115,7 +149,7 @@ const Navbar01 = ({
                 <NavigationMenuItem key={item.href}>
                   <NavigationMenuLink
                     href={item.href}
-                    className={cn(navLinkClass, isSelected && 'bg-primary-foreground/5 focus:bg-primary-foreground/5 active:bg-primary-foreground/5')}
+                    className={cn(navLinkClass, isSelected && 'bg-primary-foreground/20 font-semibold focus:bg-primary-foreground/20 active:bg-primary-foreground/20')}
                     aria-current={isSelected ? 'page' : undefined}
                     onClick={(e) => {
                       e.preventDefault();
@@ -141,7 +175,7 @@ const Navbar01 = ({
               <SelectValue>{region}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {REGIONS.map((r) => (
+              {REGION_OPTIONS.map((r) => (
                 <SelectItem key={r} value={r}>
                   {r}
                 </SelectItem>
@@ -172,16 +206,71 @@ const Navbar01 = ({
           >
             <Icon name="help" size={16} />
           </Button>
-          <Avatar className="h-8 w-8 border border-primary-foreground/30">
-            <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground text-xs">
-              U
-            </AvatarFallback>
-          </Avatar>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                aria-label="Theme"
+              >
+                <Icon name={theme === 'dark' ? 'dark_mode' : theme === 'light' ? 'light_mode' : 'contrast'} size={16} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Theme</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleThemeChange('light')}>
+                <Icon name="light_mode" size={16} className="mr-2" />
+                Light
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleThemeChange('dark')}>
+                <Icon name="dark_mode" size={16} className="mr-2" />
+                Dark
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleThemeChange('system')}>
+                <Icon name="contrast" size={16} className="mr-2" />
+                System
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <Avatar className="h-8 w-8 border border-primary-foreground/30">
+                  <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground text-xs">
+                    U
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Icon name="person" size={16} className="mr-2" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Icon name="settings" size={16} className="mr-2" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Icon name="help" size={16} className="mr-2" />
+                Help & Support
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onSignOut}>
+                <Icon name="logout" size={16} className="mr-2" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Mobile menu - hamburger on the right */}
         <div className="flex shrink-0 items-center md:hidden md:ml-auto">
-          <Sheet>
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
@@ -211,7 +300,7 @@ const Navbar01 = ({
                   <Button
                     key={item.href}
                     variant="ghost"
-                    className={cn('justify-start active:bg-transparent', isSelected && 'bg-muted/60 active:bg-muted/60')}
+                    className={cn('justify-start active:bg-transparent', isSelected && 'bg-muted font-semibold active:bg-muted')}
                     aria-current={isSelected ? 'page' : undefined}
                     onClick={() => handleNavClick(item)}
                   >
@@ -223,7 +312,7 @@ const Navbar01 = ({
                 <Select value={region} onValueChange={setRegion}>
                   <SelectTrigger className="w-full mb-2">Region</SelectTrigger>
                   <SelectContent>
-                    {REGIONS.map((r) => (
+                    {REGION_OPTIONS.map((r) => (
                       <SelectItem key={r} value={r}>
                         {r}
                       </SelectItem>
@@ -240,9 +329,59 @@ const Navbar01 = ({
                   <Button variant="ghost" size="icon" aria-label="Help">
                     <Icon name="help" size={16} />
                   </Button>
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">U</AvatarFallback>
-                  </Avatar>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" aria-label="Theme">
+                        <Icon name={theme === 'dark' ? 'dark_mode' : theme === 'light' ? 'light_mode' : 'contrast'} size={16} />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Theme</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleThemeChange('light')}>
+                        <Icon name="light_mode" size={16} className="mr-2" />
+                        Light
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleThemeChange('dark')}>
+                        <Icon name="dark_mode" size={16} className="mr-2" />
+                        Dark
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleThemeChange('system')}>
+                        <Icon name="contrast" size={16} className="mr-2" />
+                        System
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-xs">U</AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>
+                        <Icon name="person" size={16} className="mr-2" />
+                        Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Icon name="settings" size={16} className="mr-2" />
+                        Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Icon name="help" size={16} className="mr-2" />
+                        Help & Support
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={onSignOut}>
+                        <Icon name="logout" size={16} className="mr-2" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </nav>

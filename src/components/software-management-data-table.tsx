@@ -88,7 +88,7 @@ const columns: ColumnDef<SoftwareRow>[] = [
       />
     ),
     enableSorting: false,
-    meta: { className: 'w-12' },
+    meta: { className: 'w-10' },
   },
   {
     accessorKey: 'host',
@@ -179,7 +179,42 @@ const columns: ColumnDef<SoftwareRow>[] = [
   },
 ];
 
-export function SoftwareManagementDataTable() {
+export interface SoftwareTableFilters {
+  search?: string;
+  typeFilter?: string;
+  statusFilter?: string;
+  versionFilter?: string;
+}
+
+function filterSoftware(rows: SoftwareRow[], filters: SoftwareTableFilters): SoftwareRow[] {
+  let result = rows;
+  if (filters.search?.trim()) {
+    const q = filters.search.trim().toLowerCase();
+    result = result.filter((r) => r.host.toLowerCase().includes(q));
+  }
+  if (filters.typeFilter && filters.typeFilter !== 'Type') result = result.filter((r) => r.type === filters.typeFilter);
+  if (filters.statusFilter && filters.statusFilter !== 'Status') result = result.filter((r) => r.status === filters.statusFilter);
+  if (filters.versionFilter && filters.versionFilter !== 'Version') result = result.filter((r) => r.currentVersion === filters.versionFilter || r.newVersion === filters.versionFilter);
+  return result;
+}
+
+export function getFilteredSoftwareCount(filters: SoftwareTableFilters): number {
+  return filterSoftware(SOFTWARE_DATA, filters).length;
+}
+
+export interface SoftwareManagementDataTableProps {
+  search?: string;
+  typeFilter?: string;
+  statusFilter?: string;
+  versionFilter?: string;
+}
+
+export function SoftwareManagementDataTable({
+  search = '',
+  typeFilter = 'Type',
+  statusFilter = 'Status',
+  versionFilter = 'Version',
+}: SoftwareManagementDataTableProps = {}) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'status', desc: false },
   ]);
@@ -191,12 +226,17 @@ export function SoftwareManagementDataTable() {
     pageSize,
   });
 
+  const data = React.useMemo(
+    () => filterSoftware(SOFTWARE_DATA, { search, typeFilter, statusFilter, versionFilter }),
+    [search, typeFilter, statusFilter, versionFilter]
+  );
+
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
 
   const table = useReactTable({
-    data: SOFTWARE_DATA,
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

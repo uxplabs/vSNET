@@ -98,7 +98,41 @@ const columns: ColumnDef<ReportRow>[] = [
   },
 ];
 
-export function ReportsDataTable() {
+export interface ReportTableFilters {
+  search?: string;
+  typeFilter?: string;
+  taskFilter?: string;
+  createdFilter?: string;
+}
+
+function filterReports(rows: ReportRow[], filters: ReportTableFilters): ReportRow[] {
+  let result = rows;
+  if (filters.search?.trim()) {
+    const q = filters.search.trim().toLowerCase();
+    result = result.filter((r) => r.report.toLowerCase().includes(q) || r.task.toLowerCase().includes(q));
+  }
+  if (filters.typeFilter && filters.typeFilter !== 'Type') result = result.filter((r) => r.type === filters.typeFilter);
+  if (filters.taskFilter && filters.taskFilter !== 'Task') result = result.filter((r) => r.task === filters.taskFilter);
+  return result;
+}
+
+export function getFilteredReportCount(filters: ReportTableFilters): number {
+  return filterReports(REPORTS_DATA, filters).length;
+}
+
+export interface ReportsDataTableProps {
+  search?: string;
+  typeFilter?: string;
+  taskFilter?: string;
+  createdFilter?: string;
+}
+
+export function ReportsDataTable({
+  search = '',
+  typeFilter = 'Type',
+  taskFilter = 'Task',
+  createdFilter = 'Created',
+}: ReportsDataTableProps = {}) {
   const pageSize = useResponsivePageSize();
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'created', desc: true },
@@ -108,12 +142,17 @@ export function ReportsDataTable() {
     pageSize,
   });
 
+  const data = React.useMemo(
+    () => filterReports(REPORTS_DATA, { search, typeFilter, taskFilter, createdFilter }),
+    [search, typeFilter, taskFilter, createdFilter]
+  );
+
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
 
   const table = useReactTable({
-    data: REPORTS_DATA,
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

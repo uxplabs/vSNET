@@ -5,6 +5,9 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
   XAxis,
   YAxis,
 } from 'recharts';
@@ -41,6 +44,10 @@ export interface ChartCardProps {
   kpiPercentage?: React.ReactNode;
   /** Badge or label shown on the top line, aligned right (e.g. trend). */
   trendBadge?: React.ReactNode;
+  /** Spark line data; when set with kpiValue, shows a small chart right-aligned with the KPI. */
+  sparkLineData?: ChartCardDataPoint[];
+  /** Data key for spark line (default: "value"). */
+  sparkLineDataKey?: string;
   /** Chart data; required when not using kpiValue. */
   data?: ChartCardDataPoint[];
   /** Data key for the area value (e.g. "value", "total"). Must match a key in config. */
@@ -71,6 +78,8 @@ function ChartCard({
   kpiIcon,
   kpiPercentage,
   trendBadge,
+  sparkLineData,
+  sparkLineDataKey = 'value',
   data = [],
   dataKey = 'value',
   config = defaultConfig,
@@ -91,7 +100,7 @@ function ChartCard({
   const isKpiOnly = kpiValue !== undefined;
 
   return (
-    <Card className={cn('overflow-hidden', className)}>
+    <Card className={cn('overflow-hidden transition-colors duration-200 hover:bg-muted/40', className)}>
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="mb-0 font-bold">{title}</CardTitle>
@@ -106,20 +115,45 @@ function ChartCard({
       </CardHeader>
       <CardContent>
         {isKpiOnly ? (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 min-w-0">
             {kpiIcon != null && (
-              <div className="flex shrink-0 items-center justify-center [&_svg]:h-12 [&_svg]:w-12 [&_svg]:shrink-0" aria-hidden>
+              <div className="flex shrink-0 items-center justify-center" aria-hidden>
                 {kpiIcon}
               </div>
             )}
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-semibold tabular-nums text-foreground">
-                {kpiValue}
-              </span>
-              {kpiPercentage != null && (
-                <span className="text-lg font-medium tabular-nums text-muted-foreground">
-                  {kpiPercentage}
+            <div className="flex items-center gap-3 min-w-0 flex-1 justify-between">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-semibold tabular-nums text-foreground leading-none">
+                  {kpiValue}
                 </span>
+                {kpiPercentage != null && (
+                  <span className="text-lg font-medium tabular-nums text-muted-foreground">
+                    {kpiPercentage}
+                  </span>
+                )}
+              </div>
+              {sparkLineData != null && sparkLineData.length > 0 && (
+                <div className="w-24 h-10 shrink-0" aria-hidden>
+                  <ResponsiveContainer width="100%" height={40}>
+                    <LineChart data={sparkLineData} margin={{ top: 4, right: 2, bottom: 0, left: 2 }}>
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={false} />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={false}
+                        width={0}
+                        domain={['dataMin', 'dataMax']}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey={sparkLineDataKey}
+                        stroke="hsl(var(--chart-1, 214 95% 50%))"
+                        strokeWidth={1.5}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </div>
           </div>

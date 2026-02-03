@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { ColumnDef, ColumnFiltersState, Row } from '@tanstack/react-table';
+import type { ColumnDef, Row } from '@tanstack/react-table';
 import {
   flexRender,
   getCoreRowModel,
@@ -23,13 +23,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Icon } from '@/components/Icon';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { TrendBadge } from '@/components/TrendBadge';
@@ -37,8 +30,6 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { DeviceLink } from '@/components/ui/device-link';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
-
 export interface DisconnectedDeviceRow {
   id: string;
   device: string;
@@ -46,7 +37,6 @@ export interface DisconnectedDeviceRow {
   timeOccurred: string;
 }
 
-const REGIONS = ['All regions', ...NORTH_AMERICAN_REGIONS] as const;
 
 const DISCONNECTED_DEVICES_DATA: DisconnectedDeviceRow[] = [
   { id: '1', device: 'eNB-SEA-001', region: 'Pacific Northwest', timeOccurred: '2 min ago' },
@@ -92,17 +82,11 @@ export function DisconnectedDevicesCard() {
   const pageSize = useResponsivePageSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState('');
-  const [regionFilter, setRegionFilter] = React.useState<string>('All regions');
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize });
 
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
-
-  const columnFilters = React.useMemo<ColumnFiltersState>(() => {
-    if (regionFilter === 'All regions') return [];
-    return [{ id: 'region', value: regionFilter }];
-  }, [regionFilter]);
 
   const table = useReactTable({
     data: DISCONNECTED_DEVICES_DATA,
@@ -116,7 +100,7 @@ export function DisconnectedDevicesCard() {
     getFilteredRowModel: getFilteredRowModel(),
     globalFilterFn: filterBySearch,
     onPaginationChange: (updater) => setPagination(updater),
-    state: { sorting, globalFilter, columnFilters, pagination },
+    state: { sorting, globalFilter, pagination },
   });
 
   return (
@@ -146,18 +130,12 @@ export function DisconnectedDevicesCard() {
               className="pl-9 h-9"
             />
           </div>
-          <Select value={regionFilter} onValueChange={setRegionFilter}>
-            <SelectTrigger className="w-[140px] h-9">
-              <SelectValue placeholder="Region" />
-            </SelectTrigger>
-            <SelectContent>
-              {REGIONS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {globalFilter !== '' && (
+            <Button variant="ghost" size="sm" className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground h-9" onClick={() => setGlobalFilter('')}>
+              <Icon name="close" size={16} />
+              Clear
+            </Button>
+          )}
           <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 ml-auto" aria-label="Download">
             <Icon name="download" size={18} />
           </Button>

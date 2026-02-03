@@ -55,7 +55,7 @@ function LoginPage({ onLogin, onLoginWithSSO, appName = 'vSNET' }: LoginPageProp
                 alt="Airspan"
                 width={LOGO_WIDTH}
                 height={LOGO_HEIGHT}
-                className="max-w-full h-auto object-contain"
+                className="max-w-full h-auto object-contain dark:brightness-0 dark:invert"
               />
             </div>
             <div className="space-y-1">

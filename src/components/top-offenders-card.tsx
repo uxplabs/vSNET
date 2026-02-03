@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { ColumnDef, ColumnFiltersState, Row } from '@tanstack/react-table';
+import type { ColumnDef, Row } from '@tanstack/react-table';
 import {
   flexRender,
   getCoreRowModel,
@@ -9,6 +9,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  type ColumnFiltersState,
   type PaginationState,
   type SortingState,
 } from '@tanstack/react-table';
@@ -30,16 +31,32 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Icon } from '@/components/Icon';
-import { TrendBadge } from '@/components/TrendBadge';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { DeviceLink } from '@/components/ui/device-link';
+import { DeviceDrawer } from '@/components/device-drawer';
+import type { DeviceRow } from '@/components/devices-data-table';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
+function topOffenderToDeviceRow(row: TopOffenderRow): DeviceRow {
+  return {
+    id: row.id,
+    device: row.device,
+    type: row.type,
+    notes: '',
+    status: row.status,
+    alarms: row.alarms,
+    alarmType: row.alarmType,
+    configStatus: row.configStatus,
+    ipAddress: row.ipAddress,
+    version: 'v2.2',
+    deviceGroup: 'Radio access',
+    labels: [],
+  };
+}
 export type AlarmType = 'Critical' | 'Major' | 'Minor';
 
 export interface TopOffenderRow {
@@ -54,7 +71,6 @@ export interface TopOffenderRow {
   ipAddress: string;
 }
 
-const REGIONS = ['All regions', ...NORTH_AMERICAN_REGIONS] as const;
 
 const ALARM_TYPE_ICON: Record<AlarmType, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
@@ -75,11 +91,17 @@ const TOP_OFFENDERS_DATA: TopOffenderRow[] = [
   { id: '10', device: 'RN-ATL-005', region: 'Southeast', type: 'SN-LTE', status: 'Connected', alarms: 4, alarmType: 'Major', configStatus: 'Synchronized', ipAddress: '10.12.4.99' },
 ];
 
-const columns: ColumnDef<TopOffenderRow>[] = [
+function getColumns(onDeviceClick: (row: TopOffenderRow) => void): ColumnDef<TopOffenderRow>[] {
+  return [
   {
     accessorKey: 'device',
     header: ({ column }) => <SortableHeader column={column}>Device</SortableHeader>,
-    cell: ({ row }) => <DeviceLink value={row.getValue('device') as string} />,
+    cell: ({ row }) => (
+      <DeviceLink
+        value={row.getValue('device') as string}
+        onClick={() => onDeviceClick(row.original)}
+      />
+    ),
   },
   {
     accessorKey: 'region',
@@ -151,6 +173,7 @@ const columns: ColumnDef<TopOffenderRow>[] = [
     ),
   },
 ];
+}
 
 function filterBySearch(row: Row<TopOffenderRow>, _columnId: string, filterValue: string) {
   if (!filterValue) return true;
@@ -168,21 +191,55 @@ function filterBySearch(row: Row<TopOffenderRow>, _columnId: string, filterValue
   );
 }
 
+const REGION_OPTIONS = ['Region', 'Southeast', 'Northeast', 'Pacific Northwest', 'Desert Southwest', 'Midwest', 'Mountain West'] as const;
+const TYPE_OPTIONS = ['Type', 'SN-LTE'] as const;
+const STATUS_OPTIONS = ['Status', 'Connected', 'Disconnected'] as const;
+const ALARM_TYPE_FILTER_OPTIONS = ['Alarm type', 'Critical', 'Major', 'Minor'] as const;
+const CONFIG_STATUS_OPTIONS = ['Config status', 'Synchronized', 'Out of sync'] as const;
+
 export function TopOffendersCard() {
   const pageSize = useResponsivePageSize();
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const [selectedDevice, setSelectedDevice] = React.useState<TopOffenderRow | null>(null);
+  const [sorting, setSorting] = React.useState<SortingState>([{ id: 'alarms', desc: true }]);
   const [globalFilter, setGlobalFilter] = React.useState('');
-  const [regionFilter, setRegionFilter] = React.useState<string>('All regions');
+  const [regionFilter, setRegionFilter] = React.useState<string>('Region');
+  const [typeFilter, setTypeFilter] = React.useState<string>('Type');
+  const [statusFilter, setStatusFilter] = React.useState<string>('Status');
+  const [alarmTypeFilter, setAlarmTypeFilter] = React.useState<string>('Alarm type');
+  const [configStatusFilter, setConfigStatusFilter] = React.useState<string>('Config status');
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize });
+
+  const handleDeviceClick = React.useCallback((row: TopOffenderRow) => {
+    setSelectedDevice(row);
+    setDrawerOpen(true);
+  }, []);
+
+  const columns = React.useMemo(() => getColumns(handleDeviceClick), [handleDeviceClick]);
 
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
 
   const columnFilters = React.useMemo<ColumnFiltersState>(() => {
-    if (regionFilter === 'All regions') return [];
-    return [{ id: 'region', value: regionFilter }];
-  }, [regionFilter]);
+    const filters: ColumnFiltersState = [];
+    if (regionFilter !== 'Region') filters.push({ id: 'region', value: regionFilter });
+    if (typeFilter !== 'Type') filters.push({ id: 'type', value: typeFilter });
+    if (statusFilter !== 'Status') filters.push({ id: 'status', value: statusFilter });
+    if (alarmTypeFilter !== 'Alarm type') filters.push({ id: 'alarmType', value: alarmTypeFilter });
+    if (configStatusFilter !== 'Config status') filters.push({ id: 'configStatus', value: configStatusFilter });
+    return filters;
+  }, [regionFilter, typeFilter, statusFilter, alarmTypeFilter, configStatusFilter]);
+
+  const filtersActive = globalFilter !== '' || regionFilter !== 'Region' || typeFilter !== 'Type' || statusFilter !== 'Status' || alarmTypeFilter !== 'Alarm type' || configStatusFilter !== 'Config status';
+  const clearFilters = () => {
+    setGlobalFilter('');
+    setRegionFilter('Region');
+    setTypeFilter('Type');
+    setStatusFilter('Status');
+    setAlarmTypeFilter('Alarm type');
+    setConfigStatusFilter('Config status');
+  };
 
   const table = useReactTable({
     data: TOP_OFFENDERS_DATA,
@@ -202,14 +259,8 @@ export function TopOffendersCard() {
   return (
     <TooltipProvider delayDuration={300}>
     <Card>
-      <CardHeader className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle>Top offenders</CardTitle>
-          <TrendBadge direction="up">↑ 3</TrendBadge>
-        </div>
-        <p className="text-2xl font-bold tabular-nums">
-          {table.getFilteredRowModel().rows.length}
-        </p>
+      <CardHeader>
+        <CardTitle>Top offenders</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -226,18 +277,64 @@ export function TopOffendersCard() {
               className="pl-9 h-9"
             />
           </div>
-          <Select value={regionFilter} onValueChange={setRegionFilter}>
-            <SelectTrigger className="w-[140px] h-9">
-              <SelectValue placeholder="Region" />
-            </SelectTrigger>
-            <SelectContent>
-              {REGIONS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
+            <Select value={regionFilter} onValueChange={setRegionFilter}>
+              <SelectTrigger className="w-[140px] shrink-0 h-9">
+                <SelectValue placeholder="Region" />
+              </SelectTrigger>
+              <SelectContent>
+                {REGION_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[110px] shrink-0 h-9">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[120px] shrink-0 h-9">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={alarmTypeFilter} onValueChange={setAlarmTypeFilter}>
+              <SelectTrigger className="w-[120px] shrink-0 h-9">
+                <SelectValue placeholder="Alarm type" />
+              </SelectTrigger>
+              <SelectContent>
+                {ALARM_TYPE_FILTER_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={configStatusFilter} onValueChange={setConfigStatusFilter}>
+              <SelectTrigger className="w-[130px] shrink-0 h-9">
+                <SelectValue placeholder="Config status" />
+              </SelectTrigger>
+              <SelectContent>
+                {CONFIG_STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {filtersActive && (
+            <Button variant="ghost" size="sm" className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground h-9" onClick={clearFilters}>
+              <Icon name="close" size={16} />
+              Clear
+            </Button>
+          )}
           <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 ml-auto" aria-label="Download">
             <Icon name="download" size={18} />
           </Button>
@@ -281,6 +378,11 @@ export function TopOffendersCard() {
         <TablePagination table={table} className="justify-end" />
       </CardContent>
     </Card>
+    <DeviceDrawer
+      device={selectedDevice ? topOffenderToDeviceRow(selectedDevice) : null}
+      open={drawerOpen}
+      onOpenChange={setDrawerOpen}
+    />
     </TooltipProvider>
   );
 }

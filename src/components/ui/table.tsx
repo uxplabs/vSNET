@@ -14,7 +14,7 @@ const Table = React.forwardRef<
   >
     <table
       ref={ref}
-      className={cn("w-full caption-bottom text-sm border-collapse table-fixed", className)}
+      className={cn("w-full caption-bottom text-sm border-collapse table-auto", className)}
       {...props}
     />
   </div>

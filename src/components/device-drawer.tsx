@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { NameValueField, EditableLabelsField } from '@/components/ui/editable-value';
 import type { DeviceRow } from './devices-data-table';
 
 const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string }> = {
@@ -109,19 +110,40 @@ interface DeviceDrawerProps {
   device: DeviceRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onNavigateToDetails?: (device: DeviceRow) => void;
 }
 
-const LABELS_VISIBLE_COUNT = 4;
-
-export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) {
+export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }: DeviceDrawerProps) {
   const notesSectionRef = React.useRef<HTMLDivElement>(null);
   const [labelsExpanded, setLabelsExpanded] = React.useState(false);
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
+  const [summaryValues, setSummaryValues] = React.useState(() => ({
+    hostname: device?.device ?? '',
+    location: device?.deviceGroup ?? '',
+    description: device?.notes ?? '',
+    deploymentType: 'Standalone',
+    contact: 'ops@example.com',
+    groupName: device?.deviceGroup ?? '',
+    labels: device?.labels ?? [],
+  }));
 
   React.useEffect(() => {
-    setLabelsExpanded(false);
     setDetailsExpanded(false);
   }, [device?.id]);
+
+  React.useEffect(() => {
+    if (device) {
+      setSummaryValues({
+        hostname: device.device,
+        location: device.deviceGroup,
+        description: device.notes || '',
+        deploymentType: 'Standalone',
+        contact: 'ops@example.com',
+        groupName: device.deviceGroup,
+        labels: device.labels ?? [],
+      });
+    }
+  }, [device?.id, device?.device, device?.deviceGroup, device?.notes, device?.labels]);
 
   if (!device) return null;
 
@@ -143,8 +165,8 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
     <Drawer open={open} onOpenChange={onOpenChange} direction="right">
       <DrawerContent className="left-auto right-0 top-0 bottom-0 h-full w-[560px] max-w-[90vw] rounded-l-[10px] rounded-t-none mt-0 [&>div:first-child]:hidden">
         <TooltipProvider delayDuration={300}>
-        <div className="flex flex-col h-full overflow-auto">
-          <DrawerHeader className="relative pr-12">
+        <div className="flex flex-col h-full min-h-0">
+          <DrawerHeader className="relative pr-12 shrink-0">
             <DrawerClose asChild>
               <Button
                 variant="ghost"
@@ -180,7 +202,15 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
               </Tooltip>
             </div>
             <div className="flex items-center gap-2 pt-3">
-              <Button variant="outline" size="sm" className="h-8">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => {
+                  onNavigateToDetails?.(device);
+                  onOpenChange(false);
+                }}
+              >
                 Details
               </Button>
               <Button variant="outline" size="sm" className="h-8">
@@ -202,7 +232,7 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
               </DropdownMenu>
             </div>
           </DrawerHeader>
-          <div className="flex-1 px-4 pb-4 space-y-4">
+          <div className="flex-1 min-h-0 overflow-auto px-4 pb-4 space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <KpiCard
                 title="Alarms"
@@ -232,7 +262,7 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
             </div>
             <Card>
               <CardContent className="pt-6 space-y-8">
-                <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                   <div className="flex flex-col gap-1.5">
                     <span className="text-muted-foreground">Radio nodes</span>
                     <div className="flex items-center gap-3">
@@ -261,76 +291,68 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
                     </span>
                   </div>
                 </div>
+                <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-foreground">Summary</h4>
-                  <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Hostname</span>
-                      <span className="font-medium">{device.device}</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Location</span>
-                      <span className="font-medium">{device.deviceGroup}</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Description</span>
-                      <span className="font-medium">{device.notes || '—'}</span>
-                    </div>
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
+                    <NameValueField
+                      label="Hostname"
+                      value={summaryValues.hostname}
+                      onSave={(v) => setSummaryValues((s) => ({ ...s, hostname: v }))}
+                      placeholder="—"
+                    />
+                    <NameValueField
+                      label="Location"
+                      value={summaryValues.location}
+                      onSave={(v) => setSummaryValues((s) => ({ ...s, location: v }))}
+                      placeholder="—"
+                    />
+                    <NameValueField
+                      label="Description"
+                      value={summaryValues.description}
+                      onSave={(v) => setSummaryValues((s) => ({ ...s, description: v }))}
+                      placeholder="—"
+                      multiline
+                    />
                   </div>
-                  <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Deployment type</span>
-                      <span className="font-medium">Standalone</span>
-                    </div>
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
+                    <NameValueField
+                      label="Deployment type"
+                      value={summaryValues.deploymentType}
+                      onSave={(v) => setSummaryValues((s) => ({ ...s, deploymentType: v }))}
+                      placeholder="—"
+                    />
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Cluster ID</span>
                       <span className="font-medium">{device.id.padStart(3, '0')}</span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Contact</span>
-                      <span className="font-medium">ops@example.com</span>
-                    </div>
+                    <NameValueField
+                      label="Contact"
+                      value={summaryValues.contact}
+                      onSave={(v) => setSummaryValues((s) => ({ ...s, contact: v }))}
+                      placeholder="—"
+                    />
                   </div>
-                  <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Group name</span>
-                      <span className="font-medium">{device.deviceGroup}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 col-span-2">
-                      <span className="text-muted-foreground">Labels</span>
-                      {device.labels?.length ? (
-                        <div className={`flex gap-1.5 ${labelsExpanded ? 'flex-wrap' : 'flex-nowrap overflow-hidden'}`}>
-                          {(labelsExpanded ? device.labels : device.labels.slice(0, LABELS_VISIBLE_COUNT)).map((label) => (
-                            <Badge key={label} variant="outline" className="font-normal shrink-0">{label}</Badge>
-                          ))}
-                          {!labelsExpanded && device.labels.length > LABELS_VISIBLE_COUNT && (
-                            <button
-                              type="button"
-                              className="text-xs text-link hover:underline shrink-0 font-normal"
-                              onClick={() => setLabelsExpanded(true)}
-                            >
-                              {device.labels.length - LABELS_VISIBLE_COUNT} more
-                            </button>
-                          )}
-                          {labelsExpanded && device.labels.length > LABELS_VISIBLE_COUNT && (
-                            <button
-                              type="button"
-                              className="text-xs text-link hover:underline shrink-0 font-normal"
-                              onClick={() => setLabelsExpanded(false)}
-                            >
-                              Show less
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
-                    </div>
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
+                    <NameValueField
+                      label="Group name"
+                      value={summaryValues.groupName}
+                      onSave={(v) => setSummaryValues((s) => ({ ...s, groupName: v }))}
+                      placeholder="—"
+                    />
+                    <EditableLabelsField
+                      label="Labels"
+                      value={summaryValues.labels}
+                      onSave={(v) => setSummaryValues((s) => ({ ...s, labels: v }))}
+                      placeholder="—"
+                      visibleCount={3}
+                    />
                   </div>
                 </div>
+                <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-foreground">Status</h4>
-                  <div className="grid grid-cols-3 gap-3 text-sm">
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Node status</span>
                       <span className="font-medium">{device.status}</span>
@@ -344,7 +366,7 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
                       <span className="font-medium">{device.status}</span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 text-sm">
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Last inform</span>
                       <span className="font-medium">Jan 27, 2025 2:34 PM</span>
@@ -363,9 +385,10 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
                 </div>
                 {detailsExpanded && (
                   <>
+                    <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
                       <h4 className="text-sm font-semibold text-foreground">Location</h4>
-                      <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Latitude</span>
                           <span className="font-medium">47.6062° N</span>
@@ -376,9 +399,10 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
                         </div>
                       </div>
                     </div>
+                    <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
                       <h4 className="text-sm font-semibold text-foreground">Hardware</h4>
-                      <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Management server</span>
                           <span className="font-medium">10.12.0.1</span>
@@ -392,7 +416,7 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
                           <span className="font-medium">SN-LTE-2000</span>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Serial #</span>
                           <span className="font-medium font-mono text-xs">SN-{device.id.padStart(6, '0')}</span>
@@ -403,9 +427,10 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
                         </div>
                       </div>
                     </div>
+                    <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
                       <h4 className="text-sm font-semibold text-foreground">Settings</h4>
-                      <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Notifications</span>
                           <span className="font-medium">Enabled</span>
@@ -419,7 +444,7 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
                           <span className="font-medium">Auto</span>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">PCI lock enabled</span>
                           <span className="font-medium">Yes</span>
@@ -433,7 +458,7 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
                           <span className="font-medium">Active</span>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">DU mode</span>
                           <span className="font-medium">FDD</span>
@@ -504,18 +529,29 @@ export function DeviceDrawer({ device, open, onOpenChange }: DeviceDrawerProps) 
               <CardContent className="pt-4">
                 {hasNotes ? (
                   <div className="space-y-4 max-h-[240px] overflow-y-auto">
-                    {MOCK_NOTES.map((note) => (
-                      <div key={note.id} className="flex flex-col gap-1">
-                        <div className="rounded-2xl rounded-tl-sm bg-muted/60 px-3 py-2 text-xs text-foreground">
-                          {note.content}
+                    {MOCK_NOTES.map((note) => {
+                      const isMine = note.author === 'You';
+                      return (
+                        <div key={note.id} className={`flex flex-col gap-1 w-full ${isMine ? 'items-end' : 'items-start'}`}>
+                          <div className={`flex items-center w-2/3 min-w-0 ${isMine ? 'ml-auto justify-end' : ''}`}>
+                            <div
+                              className={
+                                isMine
+                                  ? 'rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-3 py-2 text-base w-max max-w-full break-words shrink-0 min-w-0'
+                                  : 'rounded-2xl rounded-tl-sm bg-muted/60 px-3 py-2 text-base text-foreground w-max max-w-full break-words shrink-0 min-w-0'
+                              }
+                            >
+                              {note.content}
+                            </div>
+                          </div>
+                          <div className={`w-2/3 min-w-0 ${isMine ? 'ml-auto text-right pr-3' : 'text-left pl-3'}`}>
+                            <span className="text-[10px] text-muted-foreground tabular-nums">
+                              {note.author} · {note.datetime}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-[10px] text-muted-foreground tabular-nums">
-                            {note.author} · {note.datetime}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-6">

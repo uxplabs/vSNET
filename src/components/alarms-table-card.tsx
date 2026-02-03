@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import type { ColumnDef, ColumnFiltersState, Row } from '@tanstack/react-table';
+import { AlarmDrawer } from '@/components/alarm-drawer';
 import {
   flexRender,
   getCoreRowModel,
@@ -36,16 +37,18 @@ import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { Button } from '@/components/ui/button';
 import { DeviceLink } from '@/components/ui/device-link';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { DeviceDrawer } from '@/components/device-drawer';
+import type { DeviceRow } from '@/components/devices-data-table';
 
 export type AlarmSeverity = 'Critical' | 'Major' | 'Minor';
 
 export interface AlarmTableRow {
   id: string;
   severity: AlarmSeverity;
+  region: string;
   timestamp: string;
   updated: string;
   source: string;
-  configStatus: string;
   managedObject: string;
   type: string;
   ticket: string;
@@ -61,18 +64,50 @@ const SEVERITY_ICON: Record<AlarmSeverity, { name: string; className: string }> 
   Minor: { name: 'warning', className: 'text-amber-600 dark:text-amber-500' },
 };
 
-const ALARMS_TABLE_DATA: AlarmTableRow[] = [
-  { id: '1', severity: 'Critical', timestamp: '2025-01-27 09:12', updated: '2025-01-27 09:15', source: 'eNB-ATL-002', configStatus: 'Synchronized', managedObject: 'Cell-1', type: 'Device disconnected', ticket: 'TKT-1001', owner: 'J. Smith' },
-  { id: '2', severity: 'Major', timestamp: '2025-01-27 08:45', updated: '2025-01-27 09:00', source: 'RN-LON-001', configStatus: 'Synchronized', managedObject: 'Radio-2', type: 'Link down', ticket: 'TKT-1002', owner: 'A. Jones' },
-  { id: '3', severity: 'Minor', timestamp: '2025-01-27 08:30', updated: '2025-01-27 08:35', source: 'eNB-SIN-003', configStatus: 'Synchronized', managedObject: 'Cell-3', type: 'Device disconnected', ticket: '—', owner: '—' },
-  { id: '4', severity: 'Critical', timestamp: '2025-01-27 08:15', updated: '2025-01-27 08:20', source: 'eNB-NYC-001', configStatus: 'Synchronized', managedObject: 'Cell-4', type: 'Radio link failure', ticket: 'TKT-1003', owner: 'M. Lee' },
-  { id: '5', severity: 'Major', timestamp: '2025-01-27 07:58', updated: '2025-01-27 08:10', source: 'RN-FRA-003', configStatus: 'Synchronized', managedObject: 'Radio-5', type: 'Device disconnected', ticket: 'TKT-1004', owner: 'K. Brown' },
-  { id: '6', severity: 'Minor', timestamp: '2025-01-27 07:42', updated: '2025-01-27 07:45', source: 'RN-TOK-001', configStatus: 'Synchronized', managedObject: 'Radio-6', type: 'Config mismatch', ticket: '—', owner: '—' },
-  { id: '7', severity: 'Major', timestamp: '2025-01-27 07:20', updated: '2025-01-27 07:30', source: 'eNB-CHI-002', configStatus: 'Synchronized', managedObject: 'Cell-7', type: 'Link down', ticket: 'TKT-1005', owner: 'J. Smith' },
-  { id: '8', severity: 'Critical', timestamp: '2025-01-27 06:55', updated: '2025-01-27 07:05', source: 'eNB-MUC-002', configStatus: 'Synchronized', managedObject: 'Cell-8', type: 'Device disconnected', ticket: 'TKT-1006', owner: 'A. Jones' },
-  { id: '9', severity: 'Minor', timestamp: '2025-01-27 06:30', updated: '2025-01-27 06:32', source: 'RN-HKG-002', configStatus: 'Synchronized', managedObject: 'Radio-9', type: 'Device disconnected', ticket: '—', owner: '—' },
-  { id: '10', severity: 'Major', timestamp: '2025-01-27 06:10', updated: '2025-01-27 06:25', source: 'RN-ATL-005', configStatus: 'Synchronized', managedObject: 'Radio-10', type: 'Radio link failure', ticket: 'TKT-1007', owner: 'M. Lee' },
+export const ALARMS_TABLE_DATA: AlarmTableRow[] = [
+  { id: '1', severity: 'Critical', region: 'Southeast', timestamp: '2025-01-27 09:12', updated: '2025-01-27 09:15', source: 'eNB-ATL-002', managedObject: 'Cell-1', type: 'Device disconnected', ticket: 'TKT-1001', owner: 'J. Smith' },
+  { id: '2', severity: 'Major', region: 'Northeast', timestamp: '2025-01-27 08:45', updated: '2025-01-27 09:00', source: 'RN-NYC-001', managedObject: 'Radio-2', type: 'Link down', ticket: 'TKT-1002', owner: 'A. Jones' },
+  { id: '3', severity: 'Minor', region: 'Pacific Northwest', timestamp: '2025-01-27 08:30', updated: '2025-01-27 08:35', source: 'eNB-SEA-001', managedObject: 'Cell-3', type: 'Device disconnected', ticket: '—', owner: '—' },
+  { id: '4', severity: 'Critical', region: 'Northeast', timestamp: '2025-01-27 08:15', updated: '2025-01-27 08:20', source: 'eNB-NYC-001', managedObject: 'Cell-4', type: 'Radio link failure', ticket: 'TKT-1003', owner: 'M. Lee' },
+  { id: '5', severity: 'Major', region: 'Desert Southwest', timestamp: '2025-01-27 07:58', updated: '2025-01-27 08:10', source: 'RN-PHX-001', managedObject: 'Radio-5', type: 'Device disconnected', ticket: 'TKT-1004', owner: 'K. Brown' },
+  { id: '6', severity: 'Minor', region: 'Southeast', timestamp: '2025-01-27 07:42', updated: '2025-01-27 07:45', source: 'RN-ATL-001', managedObject: 'Radio-6', type: 'Config mismatch', ticket: '—', owner: '—' },
+  { id: '7', severity: 'Major', region: 'Midwest', timestamp: '2025-01-27 07:20', updated: '2025-01-27 07:30', source: 'eNB-CHI-002', managedObject: 'Cell-7', type: 'Link down', ticket: 'TKT-1005', owner: 'J. Smith' },
+  { id: '8', severity: 'Critical', region: 'Mountain West', timestamp: '2025-01-27 06:55', updated: '2025-01-27 07:05', source: 'eNB-DEN-001', managedObject: 'Cell-8', type: 'Device disconnected', ticket: 'TKT-1006', owner: 'A. Jones' },
+  { id: '9', severity: 'Minor', region: 'Southern California', timestamp: '2025-01-27 06:30', updated: '2025-01-27 06:32', source: 'RN-LAX-001', managedObject: 'Radio-9', type: 'Device disconnected', ticket: '—', owner: '—' },
+  { id: '10', severity: 'Major', region: 'Southeast', timestamp: '2025-01-27 06:10', updated: '2025-01-27 06:25', source: 'RN-ATL-005', managedObject: 'Radio-10', type: 'Radio link failure', ticket: 'TKT-1007', owner: 'M. Lee' },
+  { id: '11', severity: 'Critical', region: 'Florida', timestamp: '2025-01-27 05:45', updated: '2025-01-27 05:55', source: 'eNB-MIA-001', managedObject: 'Cell-11', type: 'Power failure', ticket: 'TKT-1008', owner: 'S. Davis' },
+  { id: '12', severity: 'Major', region: 'Great Plains', timestamp: '2025-01-27 05:22', updated: '2025-01-27 05:35', source: 'eNB-KC-001', managedObject: 'Radio-11', type: 'Link down', ticket: 'TKT-1009', owner: 'J. Smith' },
+  { id: '13', severity: 'Minor', region: 'Texas', timestamp: '2025-01-27 05:10', updated: '2025-01-27 05:12', source: 'eNB-AUS-001', managedObject: 'Cell-12', type: 'Config mismatch', ticket: '—', owner: '—' },
+  { id: '14', severity: 'Critical', region: 'Gulf Coast', timestamp: '2025-01-27 04:58', updated: '2025-01-27 05:05', source: 'eNB-HOU-001', managedObject: 'Cell-13', type: 'Cell outage', ticket: 'TKT-1010', owner: 'A. Jones' },
+  { id: '15', severity: 'Major', region: 'Northern California', timestamp: '2025-01-27 04:40', updated: '2025-01-27 04:52', source: 'eNB-SFO-001', managedObject: 'Radio-12', type: 'Device disconnected', ticket: 'TKT-1011', owner: 'M. Lee' },
+  { id: '16', severity: 'Minor', region: 'Great Lakes', timestamp: '2025-01-27 04:25', updated: '2025-01-27 04:28', source: 'RN-DET-001', managedObject: 'Cell-14', type: 'Antenna fault', ticket: '—', owner: '—' },
+  { id: '17', severity: 'Major', region: 'New England', timestamp: '2025-01-27 04:10', updated: '2025-01-27 04:22', source: 'eNB-BOS-001', managedObject: 'Radio-13', type: 'Radio link failure', ticket: 'TKT-1012', owner: 'K. Brown' },
+  { id: '18', severity: 'Critical', region: 'Mid-Atlantic', timestamp: '2025-01-27 03:55', updated: '2025-01-27 04:02', source: 'eNB-DC-001', managedObject: 'Cell-15', type: 'Device disconnected', ticket: 'TKT-1013', owner: 'S. Davis' },
+  { id: '19', severity: 'Minor', region: 'Eastern Canada', timestamp: '2025-01-27 03:42', updated: '2025-01-27 03:45', source: 'eNB-TOR-001', managedObject: 'Radio-14', type: 'Config mismatch', ticket: '—', owner: '—' },
+  { id: '20', severity: 'Major', region: 'Pacific Northwest', timestamp: '2025-01-27 03:30', updated: '2025-01-27 03:40', source: 'eNB-PDX-002', managedObject: 'Cell-16', type: 'Link down', ticket: 'TKT-1014', owner: 'J. Smith' },
+  { id: '21', severity: 'Critical', region: 'Southern California', timestamp: '2025-01-27 03:15', updated: '2025-01-27 03:25', source: 'eNB-SAN-002', managedObject: 'Cell-17', type: 'Radio link failure', ticket: 'TKT-1015', owner: 'A. Jones' },
+  { id: '22', severity: 'Minor', region: 'Desert Southwest', timestamp: '2025-01-27 03:02', updated: '2025-01-27 03:05', source: 'eNB-LAS-002', managedObject: 'Radio-15', type: 'Device disconnected', ticket: '—', owner: '—' },
+  { id: '23', severity: 'Major', region: 'Northeast', timestamp: '2025-01-27 02:48', updated: '2025-01-27 02:58', source: 'eNB-NYC-002', managedObject: 'Cell-18', type: 'Power failure', ticket: 'TKT-1016', owner: 'M. Lee' },
+  { id: '24', severity: 'Critical', region: 'Texas', timestamp: '2025-01-27 02:35', updated: '2025-01-27 02:45', source: 'eNB-DAL-002', managedObject: 'Cell-19', type: 'Device disconnected', ticket: 'TKT-1017', owner: 'K. Brown' },
+  { id: '25', severity: 'Minor', region: 'Florida', timestamp: '2025-01-27 02:22', updated: '2025-01-27 02:25', source: 'eNB-TPA-002', managedObject: 'Radio-16', type: 'Link down', ticket: '—', owner: '—' },
+  { id: '26', severity: 'Major', region: 'Midwest', timestamp: '2025-01-27 02:10', updated: '2025-01-27 02:20', source: 'RN-CHI-001', managedObject: 'Cell-20', type: 'Config mismatch', ticket: 'TKT-1018', owner: 'S. Davis' },
+  { id: '27', severity: 'Critical', region: 'Southeast', timestamp: '2025-01-27 01:58', updated: '2025-01-27 02:05', source: 'eNB-ATL-001', managedObject: 'Cell-21', type: 'Cell outage', ticket: 'TKT-1019', owner: 'J. Smith' },
+  { id: '28', severity: 'Minor', region: 'Mountain West', timestamp: '2025-01-27 01:45', updated: '2025-01-27 01:48', source: 'RN-DEN-001', managedObject: 'Radio-17', type: 'Antenna fault', ticket: '—', owner: '—' },
+  { id: '29', severity: 'Major', region: 'Great Plains', timestamp: '2025-01-27 01:32', updated: '2025-01-27 01:42', source: 'RN-KC-001', managedObject: 'Cell-22', type: 'Device disconnected', ticket: 'TKT-1020', owner: 'A. Jones' },
+  { id: '30', severity: 'Critical', region: 'New England', timestamp: '2025-01-27 01:20', updated: '2025-01-27 01:28', source: 'RN-BOS-001', managedObject: 'Cell-23', type: 'Radio link failure', ticket: 'TKT-1021', owner: 'M. Lee' },
+  { id: '31', severity: 'Minor', region: 'Gulf Coast', timestamp: '2025-01-27 01:08', updated: '2025-01-27 01:12', source: 'RN-NOL-001', managedObject: 'Radio-18', type: 'Device disconnected', ticket: '—', owner: '—' },
+  { id: '32', severity: 'Major', region: 'Northern California', timestamp: '2025-01-27 00:55', updated: '2025-01-27 01:05', source: 'RN-OAK-001', managedObject: 'Cell-24', type: 'Link down', ticket: 'TKT-1022', owner: 'K. Brown' },
+  { id: '33', severity: 'Critical', region: 'Great Lakes', timestamp: '2025-01-27 00:42', updated: '2025-01-27 00:52', source: 'eNB-DET-001', managedObject: 'Cell-25', type: 'Power failure', ticket: 'TKT-1023', owner: 'S. Davis' },
+  { id: '34', severity: 'Minor', region: 'Mid-Atlantic', timestamp: '2025-01-27 00:30', updated: '2025-01-27 00:33', source: 'RN-BAL-001', managedObject: 'Radio-19', type: 'Config mismatch', ticket: '—', owner: '—' },
+  { id: '35', severity: 'Major', region: 'Eastern Canada', timestamp: '2025-01-27 00:18', updated: '2025-01-27 00:28', source: 'RN-TOR-001', managedObject: 'Cell-26', type: 'Device disconnected', ticket: 'TKT-1024', owner: 'J. Smith' },
 ];
+
+export function getAlarmCounts(alarms: AlarmTableRow[]): { critical: number; major: number; minor: number; total: number } {
+  const critical = alarms.filter((a) => a.severity === 'Critical').length;
+  const major = alarms.filter((a) => a.severity === 'Major').length;
+  const minor = alarms.filter((a) => a.severity === 'Minor').length;
+  return { critical, major, minor, total: alarms.length };
+}
 
 const columns: ColumnDef<AlarmTableRow>[] = [
   {
@@ -96,29 +131,24 @@ const columns: ColumnDef<AlarmTableRow>[] = [
     },
   },
   {
+    accessorKey: 'region',
+    header: ({ column }) => <SortableHeader column={column}>Region</SortableHeader>,
+    cell: ({ row }) => row.getValue('region') as string,
+  },
+  {
     accessorKey: 'timestamp',
-    header: ({ column }) => <SortableHeader column={column}>Timestamp</SortableHeader>,
+    header: ({ column }) => <SortableHeader column={column}>Time occurred</SortableHeader>,
     cell: ({ row }) => <span className="tabular-nums text-sm">{row.getValue('timestamp')}</span>,
   },
   {
     accessorKey: 'updated',
-    header: ({ column }) => <SortableHeader column={column}>Updated</SortableHeader>,
+    header: ({ column }) => <SortableHeader column={column}>Time updated</SortableHeader>,
     cell: ({ row }) => <span className="tabular-nums text-sm">{row.getValue('updated')}</span>,
   },
   {
     accessorKey: 'source',
     header: ({ column }) => <SortableHeader column={column}>Source</SortableHeader>,
     cell: ({ row }) => <DeviceLink value={row.getValue('source') as string} />,
-  },
-  {
-    accessorKey: 'configStatus',
-    header: ({ column }) => <SortableHeader column={column}>Config status</SortableHeader>,
-    cell: ({ row }) => (
-      <span className="inline-flex items-center gap-2">
-        <Icon name="sync" size={16} className="text-muted-foreground shrink-0" aria-hidden />
-        <span>Synchronized</span>
-      </span>
-    ),
   },
   {
     accessorKey: 'managedObject',
@@ -132,7 +162,7 @@ const columns: ColumnDef<AlarmTableRow>[] = [
   },
   {
     accessorKey: 'ticket',
-    header: ({ column }) => <SortableHeader column={column}>Ticket</SortableHeader>,
+    header: ({ column }) => <SortableHeader column={column}>Ticket ID</SortableHeader>,
     cell: ({ row }) => row.getValue('ticket') as string,
   },
   {
@@ -151,7 +181,7 @@ function filterBySearch(row: Row<AlarmTableRow>, _columnId: string, filterValue:
     data.timestamp.toLowerCase().includes(search) ||
     data.updated.toLowerCase().includes(search) ||
     data.source.toLowerCase().includes(search) ||
-    data.configStatus.toLowerCase().includes(search) ||
+    data.region.toLowerCase().includes(search) ||
     data.managedObject.toLowerCase().includes(search) ||
     data.type.toLowerCase().includes(search) ||
     data.ticket.toLowerCase().includes(search) ||
@@ -159,27 +189,70 @@ function filterBySearch(row: Row<AlarmTableRow>, _columnId: string, filterValue:
   );
 }
 
-export function AlarmsTableCard() {
+export interface AlarmsTableCardProps {
+  severityFilter?: string;
+  onSeverityFilterChange?: (value: string) => void;
+  regionFilter?: string;
+  /** Fixed page size (overrides responsive calculation). Use for dashboard/embedded tables. */
+  pageSize?: number;
+}
+
+function alarmSourceToDeviceRow(source: string): DeviceRow {
+  return {
+    id: source,
+    device: source,
+    type: 'SN-LTE',
+    notes: '',
+    status: 'Unknown',
+    alarms: 0,
+    alarmType: 'None',
+    configStatus: '—',
+    ipAddress: '—',
+    version: '—',
+    deviceGroup: 'Radio access',
+    labels: [],
+  };
+}
+
+export function AlarmsTableCard({ severityFilter: severityFilterProp, onSeverityFilterChange, regionFilter, pageSize: pageSizeProp }: AlarmsTableCardProps = {}) {
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const [selectedAlarm, setSelectedAlarm] = React.useState<AlarmTableRow | null>(null);
+  const [deviceDrawerOpen, setDeviceDrawerOpen] = React.useState(false);
+  const [selectedDevice, setSelectedDevice] = React.useState<DeviceRow | null>(null);
+
+  const handleNavigateToDevice = React.useCallback((source: string) => {
+    const device = alarmSourceToDeviceRow(source);
+    setSelectedDevice(device);
+    setDeviceDrawerOpen(true);
+  }, []);
+
+  const openAlarmDrawer = React.useCallback((alarm: AlarmTableRow) => {
+    setSelectedAlarm(alarm);
+    setDrawerOpen(true);
+  }, []);
+
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'severity', desc: false },
   ]);
   const [globalFilter, setGlobalFilter] = React.useState('');
-  const [severityFilter, setSeverityFilter] = React.useState<string>('All');
+  const [internalSeverityFilter, setInternalSeverityFilter] = React.useState<string>('All');
+  const severityFilter = severityFilterProp ?? internalSeverityFilter;
+  const setSeverityFilter = onSeverityFilterChange ?? setInternalSeverityFilter;
   const [timestampFilter, setTimestampFilter] = React.useState<string>('All');
-  const pageSize = useResponsivePageSize();
+  const responsivePageSize = useResponsivePageSize();
+  const pageSize = pageSizeProp ?? responsivePageSize;
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize });
 
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
 
-  const severityCounts = React.useMemo(() => {
-    const counts = { Critical: 0, Major: 0, Minor: 0 };
-    ALARMS_TABLE_DATA.forEach((row) => {
-      counts[row.severity]++;
-    });
-    return counts;
-  }, []);
+  const filteredData = React.useMemo(() => {
+    if (regionFilter && regionFilter !== 'All') {
+      return ALARMS_TABLE_DATA.filter((a) => a.region === regionFilter);
+    }
+    return ALARMS_TABLE_DATA;
+  }, [regionFilter]);
 
   const columnFilters = React.useMemo<ColumnFiltersState>(() => {
     const filters: ColumnFiltersState = [];
@@ -187,8 +260,14 @@ export function AlarmsTableCard() {
     return filters;
   }, [severityFilter]);
 
+  const severityCounts = React.useMemo(() => {
+    const counts = { Critical: 0, Major: 0, Minor: 0 };
+    filteredData.forEach((row) => { counts[row.severity]++; });
+    return counts;
+  }, [filteredData]);
+
   const table = useReactTable({
-    data: ALARMS_TABLE_DATA,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -233,7 +312,7 @@ export function AlarmsTableCard() {
               {SEVERITY_OPTIONS.map((s) => (
                 <SelectItem key={s} value={s}>
                   {s === 'All' 
-                    ? `All (${ALARMS_TABLE_DATA.length})` 
+                    ? `All (${filteredData.length})` 
                     : `${s} (${severityCounts[s as AlarmSeverity]})`}
                 </SelectItem>
               ))}
@@ -246,7 +325,7 @@ export function AlarmsTableCard() {
               <SelectTrigger className="w-[130px] h-9">
                 <SelectValue />
               </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[1100]">
               {TIMESTAMP_OPTIONS.map((t) => (
                 <SelectItem key={t} value={t}>
                   {t}
@@ -255,6 +334,21 @@ export function AlarmsTableCard() {
             </SelectContent>
             </Select>
           </div>
+          {(globalFilter !== '' || severityFilter !== 'All' || timestampFilter !== 'All') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground h-9"
+              onClick={() => {
+                setGlobalFilter('');
+                setSeverityFilter('All');
+                setTimestampFilter('All');
+              }}
+            >
+              <Icon name="close" size={16} />
+              Clear
+            </Button>
+          )}
           <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 ml-auto" aria-label="Download">
             <Icon name="download" size={18} />
           </Button>
@@ -277,7 +371,12 @@ export function AlarmsTableCard() {
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => openAlarmDrawer(row.original)}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="px-4 py-3 whitespace-nowrap">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -298,6 +397,20 @@ export function AlarmsTableCard() {
         <TablePagination table={table} className="justify-end" />
       </CardContent>
     </Card>
+    <AlarmDrawer
+      alarm={selectedAlarm}
+      open={drawerOpen}
+      onOpenChange={setDrawerOpen}
+      allAlarms={ALARMS_TABLE_DATA}
+      tableAlarms={table.getPrePaginationRowModel().rows.map((r) => r.original)}
+      onSelectAlarm={(alarm) => setSelectedAlarm(alarm as AlarmTableRow)}
+      onNavigateToDevice={handleNavigateToDevice}
+    />
+    <DeviceDrawer
+      device={selectedDevice}
+      open={deviceDrawerOpen}
+      onOpenChange={setDeviceDrawerOpen}
+    />
     </TooltipProvider>
   );
 }

@@ -43,23 +43,25 @@ export interface ThresholdCrossingAlertRow {
   lteMonitoredCells: number;
 }
 
-const THRESHOLD_ALERTS_DATA: ThresholdCrossingAlertRow[] = [
-  { id: '1', device: 'eNB-SEA-001', triggered: 'Yes', lastTriggered: '2025-01-27 09:12', lastReset: '2025-01-27 08:45', umtsMonitoredCells: 12, lteMonitoredCells: 24 },
-  { id: '2', device: 'RN-PDX-002', triggered: 'No', lastTriggered: '—', lastReset: '2025-01-27 09:00', umtsMonitoredCells: 6, lteMonitoredCells: 12 },
-  { id: '3', device: 'eNB-PHX-001', triggered: 'Yes', lastTriggered: '2025-01-27 08:30', lastReset: '2025-01-27 08:10', umtsMonitoredCells: 8, lteMonitoredCells: 18 },
-  { id: '4', device: 'eNB-NYC-001', triggered: 'Yes', lastTriggered: '2025-01-27 08:15', lastReset: '2025-01-27 07:55', umtsMonitoredCells: 15, lteMonitoredCells: 30 },
-  { id: '5', device: 'RN-SFO-003', triggered: 'No', lastTriggered: '—', lastReset: '2025-01-27 07:30', umtsMonitoredCells: 4, lteMonitoredCells: 8 },
-  { id: '6', device: 'eNB-CHI-002', triggered: 'Yes', lastTriggered: '2025-01-27 07:20', lastReset: '2025-01-27 06:45', umtsMonitoredCells: 10, lteMonitoredCells: 20 },
-];
+const DEVICE_IDS = ['eNB-SEA-001', 'eNB-PDX-002', 'RN-PHX-003', 'eNB-SFO-001', 'RN-LAS-001', 'eNB-NYC-001', 'RN-DEN-002', 'eNB-CHI-002', 'RN-ATL-005', 'eNB-MIA-002', 'RN-SEA-001', 'eNB-PHX-001', 'RN-SFO-003'];
 
-const columns: ColumnDef<ThresholdCrossingAlertRow>[] = [
-  {
-    accessorKey: 'device',
-    header: ({ column }) => (
-      <SortableHeader column={column}>Device</SortableHeader>
-    ),
-    cell: ({ row }) => <DeviceLink value={row.getValue('device') as string} />,
-  },
+const THRESHOLD_ALERTS_DATA: ThresholdCrossingAlertRow[] = DEVICE_IDS.flatMap((device, i) => [
+  { id: `${device}-1`, device, triggered: i % 2 === 0 ? 'Yes' : 'No', lastTriggered: i % 2 === 0 ? '2025-01-27 09:12' : '—', lastReset: '2025-01-27 08:45', umtsMonitoredCells: 6 + (i % 6), lteMonitoredCells: 12 + (i % 12) },
+  { id: `${device}-2`, device, triggered: i % 3 === 0 ? 'Yes' : 'No', lastTriggered: i % 3 === 0 ? '2025-01-27 08:30' : '—', lastReset: '2025-01-27 08:10', umtsMonitoredCells: 4 + (i % 4), lteMonitoredCells: 8 + (i % 8) },
+]);
+
+const getColumns = (hideDeviceColumn?: boolean): ColumnDef<ThresholdCrossingAlertRow>[] => {
+  const cols: ColumnDef<ThresholdCrossingAlertRow>[] = [];
+  if (!hideDeviceColumn) {
+    cols.push({
+      accessorKey: 'device',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Device</SortableHeader>
+      ),
+      cell: ({ row }) => <DeviceLink value={row.getValue('device') as string} />,
+    });
+  }
+  cols.push(
   {
     accessorKey: 'triggered',
     header: ({ column }) => (
@@ -122,12 +124,35 @@ const columns: ColumnDef<ThresholdCrossingAlertRow>[] = [
     ),
     enableSorting: false,
     meta: {
-      className: 'sticky right-0 bg-card',
+      className: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
     },
-  },
-];
+  });
+  return cols;
+};
 
-export function ThresholdCrossingAlertsDataTable() {
+export function getFilteredThresholdCount(filters: { actSessFilter?: string }): number {
+  if (!filters.actSessFilter || filters.actSessFilter === 'ACT_SESS' || filters.actSessFilter === 'All') {
+    return THRESHOLD_ALERTS_DATA.length;
+  }
+  return THRESHOLD_ALERTS_DATA.filter((row) => {
+    const idx = DEVICE_IDS.indexOf(row.device);
+    if (filters.actSessFilter === 'ACT_SESS_1') return idx % 3 === 0;
+    if (filters.actSessFilter === 'ACT_SESS_2') return idx % 3 === 1;
+    if (filters.actSessFilter === 'ACT_SESS_3') return idx % 3 === 2;
+    return true;
+  }).length;
+}
+
+export interface ThresholdCrossingAlertsDataTableProps {
+  /** Filter to only show conditions for this device */
+  deviceId?: string;
+  /** Hide the device column (for device detail page) */
+  hideDeviceColumn?: boolean;
+  /** ACT_SESS filter from Devices page (ACT_SESS, All, ACT_SESS_1, ACT_SESS_2, ACT_SESS_3) */
+  actSessFilter?: string;
+}
+
+export function ThresholdCrossingAlertsDataTable({ deviceId, hideDeviceColumn, actSessFilter }: ThresholdCrossingAlertsDataTableProps = {}) {
   const pageSize = useResponsivePageSize();
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'lastTriggered', desc: true },
@@ -137,12 +162,29 @@ export function ThresholdCrossingAlertsDataTable() {
     pageSize,
   });
 
+  const filteredData = React.useMemo(() => {
+    let data = THRESHOLD_ALERTS_DATA;
+    if (deviceId) data = data.filter((row) => row.device === deviceId);
+    if (actSessFilter && actSessFilter !== 'ACT_SESS' && actSessFilter !== 'All') {
+      data = data.filter((row) => {
+        const idx = DEVICE_IDS.indexOf(row.device);
+        if (actSessFilter === 'ACT_SESS_1') return idx % 3 === 0;
+        if (actSessFilter === 'ACT_SESS_2') return idx % 3 === 1;
+        if (actSessFilter === 'ACT_SESS_3') return idx % 3 === 2;
+        return true;
+      });
+    }
+    return data;
+  }, [deviceId, actSessFilter]);
+
+  const columns = React.useMemo(() => getColumns(hideDeviceColumn), [hideDeviceColumn]);
+
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
 
   const table = useReactTable({
-    data: THRESHOLD_ALERTS_DATA,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -189,7 +231,7 @@ export function ThresholdCrossingAlertsDataTable() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center px-4 py-3">
+                <TableCell colSpan={table.getAllColumns().length} className="h-24 text-center px-4 py-3">
                   No results.
                 </TableCell>
               </TableRow>

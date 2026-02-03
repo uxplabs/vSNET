@@ -14,6 +14,10 @@ import { cn } from '@/lib/utils';
 export interface KpiDonutCardSegment {
   name: string;
   value: number;
+  /** Optional legend label (e.g. "180 GB Free"). If omitted, uses config label or name. */
+  legendLabel?: string;
+  /** If true, shown in legend only (not in pie). Use for "Total" when Free + Used = Total. */
+  legendOnly?: boolean;
 }
 
 export interface KpiDonutCardProps {
@@ -44,6 +48,7 @@ function KpiDonutCard({
   config: configProp,
   className,
 }: KpiDonutCardProps) {
+  const pieData = React.useMemo(() => donutData.filter((d) => !d.legendOnly), [donutData]);
   const config = React.useMemo(() => {
     const base: ChartConfig = {};
     donutData.forEach((seg, i) => {
@@ -56,7 +61,7 @@ function KpiDonutCard({
   }, [donutData, configProp]);
 
   return (
-    <Card className={cn('overflow-hidden', className)}>
+    <Card className={cn('overflow-hidden transition-colors duration-200 hover:bg-muted/40', className)}>
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="mb-0 font-bold">{title}</CardTitle>
@@ -72,7 +77,7 @@ function KpiDonutCard({
         <div className="flex items-center gap-4">
           <ChartContainer
             config={config}
-            className="h-[160px] w-[160px] shrink-0 [&_.recharts-pie]:outline-none"
+            className="h-[200px] w-[200px] shrink-0 [&_.recharts-pie]:outline-none"
           >
             <PieChart>
               <ChartTooltip
@@ -80,15 +85,15 @@ function KpiDonutCard({
                 content={<ChartTooltipContent hideLabel indicator="line" />}
               />
               <Pie
-                data={donutData}
+                data={pieData}
                 dataKey="value"
                 nameKey="name"
-                innerRadius={50}
-                outerRadius={64}
+                innerRadius={62}
+                outerRadius={80}
                 strokeWidth={0}
                 paddingAngle={1}
               >
-                {donutData.map((entry, index) => (
+                {pieData.map((entry, index) => (
                   <Cell
                     key={entry.name}
                     fill={
@@ -115,7 +120,7 @@ function KpiDonutCard({
                     style={{ backgroundColor: color }}
                   />
                   <span className="text-muted-foreground">
-                    {config[entry.name]?.label ?? entry.name}
+                    {entry.legendLabel ?? config[entry.name]?.label ?? entry.name}
                   </span>
                 </div>
               );

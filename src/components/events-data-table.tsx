@@ -53,7 +53,7 @@ const SEVERITY_ICON: Record<EventSeverity, { name: string; className: string }> 
   Info: { name: 'info', className: 'text-muted-foreground' },
 };
 
-const EVENTS_DATA: EventRow[] = [
+export const EVENTS_DATA: EventRow[] = [
   { id: 'EVT-1001', timestamp: '2025-01-27 09:12', updated: '2025-01-27 09:15', type: 'Configuration change', severity: 'Info', source: 'eNB-SEA-001', managedObject: 'Cell-1' },
   { id: 'EVT-1002', timestamp: '2025-01-27 08:45', updated: '2025-01-27 09:00', type: 'Connection', severity: 'Major', source: 'RN-PDX-002', managedObject: 'Radio-2' },
   { id: 'EVT-1003', timestamp: '2025-01-27 08:30', updated: '2025-01-27 08:35', type: 'Performance', severity: 'Minor', source: 'eNB-PHX-001', managedObject: 'Cell-3' },
@@ -89,7 +89,7 @@ const columns: ColumnDef<EventRow>[] = [
       />
     ),
     enableSorting: false,
-    meta: { className: 'w-12' },
+    meta: { className: 'w-10' },
   },
   {
     accessorKey: 'severity',
@@ -173,13 +173,64 @@ const columns: ColumnDef<EventRow>[] = [
     ),
     enableSorting: false,
     meta: {
-      className: 'sticky right-0 bg-card',
+      className: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
     },
   },
 ];
 
-export function EventsDataTable() {
-  const pageSize = useResponsivePageSize();
+export interface EventTableFilters {
+  search?: string;
+  typeFilter?: string;
+  severityFilter?: string;
+  sourceFilter?: string;
+}
+
+export function getFilteredEventCount(filters: EventTableFilters): number {
+  return filterEvents(EVENTS_DATA, filters).length;
+}
+
+function filterEvents(events: EventRow[], filters: EventTableFilters): EventRow[] {
+  let result = events;
+  if (filters.search?.trim()) {
+    const q = filters.search.trim().toLowerCase();
+    result = result.filter(
+      (e) =>
+        e.id.toLowerCase().includes(q) ||
+        e.type.toLowerCase().includes(q) ||
+        e.source.toLowerCase().includes(q) ||
+        e.managedObject.toLowerCase().includes(q)
+    );
+  }
+  if (filters.typeFilter && filters.typeFilter !== 'Type') {
+    result = result.filter((e) => e.type === filters.typeFilter);
+  }
+  if (filters.severityFilter && filters.severityFilter !== 'Severity') {
+    result = result.filter((e) => e.severity === filters.severityFilter);
+  }
+  if (filters.sourceFilter && filters.sourceFilter !== 'Source') {
+    const want = filters.sourceFilter === 'All sources' ? '' : filters.sourceFilter;
+    if (want) result = result.filter((e) => e.source.startsWith(want) || e.source.includes(want));
+  }
+  return result;
+}
+
+export interface EventsDataTableProps {
+  pageSize?: number;
+  search?: string;
+  typeFilter?: string;
+  severityFilter?: string;
+  sourceFilter?: string;
+}
+
+export function EventsDataTable({
+  pageSize: pageSizeProp,
+  search = '',
+  typeFilter = 'Type',
+  severityFilter = 'Severity',
+  sourceFilter = 'Source',
+}: EventsDataTableProps = {}) {
+  const responsivePageSize = useResponsivePageSize();
+  const pageSize = pageSizeProp ?? responsivePageSize;
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'severity', desc: false },
   ]);
@@ -189,12 +240,17 @@ export function EventsDataTable() {
     pageSize,
   });
 
+  const data = React.useMemo(
+    () => filterEvents(EVENTS_DATA, { search, typeFilter, severityFilter, sourceFilter }),
+    [search, typeFilter, severityFilter, sourceFilter]
+  );
+
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
 
   const table = useReactTable({
-    data: EVENTS_DATA,
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -207,8 +263,8 @@ export function EventsDataTable() {
 
   return (
     <TooltipProvider delayDuration={300}>
-    <div className="flex flex-col flex-1 min-h-0 gap-4 h-full">
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden rounded-lg border bg-card">
+    <div className="flex flex-col gap-4">
+      <div className="overflow-x-auto rounded-lg border bg-card">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

@@ -38,6 +38,9 @@ import {
 import { DeviceLink } from '@/components/ui/device-link';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
+import { AlarmDrawer } from '@/components/alarm-drawer';
+import { DeviceDrawer } from '@/components/device-drawer';
+import type { DeviceRow } from '@/components/devices-data-table';
 
 export type AlarmSeverity = 'Critical' | 'Major' | 'Minor';
 
@@ -95,6 +98,49 @@ function generateAlarms(count: number): AlarmRow[] {
 
 export const ALARMS_DATA: AlarmRow[] = generateAlarms(124);
 
+export interface AlarmTableFilters {
+  search?: string;
+  severityFilter?: string;
+}
+
+function filterAlarms(alarms: AlarmRow[], filters: AlarmTableFilters): AlarmRow[] {
+  let result = alarms;
+  if (filters.search?.trim()) {
+    const q = filters.search.trim().toLowerCase();
+    result = result.filter(
+      (a) =>
+        a.source.toLowerCase().includes(q) ||
+        a.type.toLowerCase().includes(q) ||
+        a.managedObject.toLowerCase().includes(q)
+    );
+  }
+  if (filters.severityFilter && filters.severityFilter !== 'Alarms') {
+    result = result.filter((a) => a.severity === filters.severityFilter);
+  }
+  return result;
+}
+
+export function getFilteredAlarmsCount(filters: AlarmTableFilters): number {
+  return filterAlarms(ALARMS_DATA, filters).length;
+}
+
+function alarmSourceToDeviceRow(source: string): DeviceRow {
+  return {
+    id: source,
+    device: source,
+    type: 'SN-LTE',
+    notes: '',
+    status: 'Unknown',
+    alarms: 0,
+    alarmType: 'None',
+    configStatus: '—',
+    ipAddress: '—',
+    version: '—',
+    deviceGroup: 'Radio access',
+    labels: [],
+  };
+}
+
 export function getAlarmCounts(alarms: AlarmRow[]) {
   return {
     total: alarms.length,
@@ -125,7 +171,7 @@ const columns: ColumnDef<AlarmRow>[] = [
       />
     ),
     enableSorting: false,
-    meta: { className: 'w-12' },
+    meta: { className: 'w-10' },
   },
   {
     accessorKey: 'severity',
@@ -152,7 +198,7 @@ const columns: ColumnDef<AlarmRow>[] = [
   {
     accessorKey: 'timestamp',
     header: ({ column }) => (
-      <SortableHeader column={column}>Timestamp</SortableHeader>
+      <SortableHeader column={column}>Time occurred</SortableHeader>
     ),
     cell: ({ row }) => {
       const value = row.getValue('timestamp') as string;
@@ -171,7 +217,7 @@ const columns: ColumnDef<AlarmRow>[] = [
   {
     accessorKey: 'updated',
     header: ({ column }) => (
-      <SortableHeader column={column}>Updated</SortableHeader>
+      <SortableHeader column={column}>Time updated</SortableHeader>
     ),
     cell: ({ row }) => {
       const value = row.getValue('updated') as string;
@@ -243,13 +289,34 @@ const columns: ColumnDef<AlarmRow>[] = [
     ),
     enableSorting: false,
     meta: {
-      className: 'sticky right-0 bg-card',
+      className: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
     },
   },
 ];
 
-export function AlarmsDataTable() {
+export interface AlarmsDataTableProps {
+  search?: string;
+  severityFilter?: string;
+}
+
+export function AlarmsDataTable({ search = '', severityFilter = 'Alarms' }: AlarmsDataTableProps = {}) {
   const pageSize = useResponsivePageSize();
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const [selectedAlarm, setSelectedAlarm] = React.useState<AlarmRow | null>(null);
+  const [deviceDrawerOpen, setDeviceDrawerOpen] = React.useState(false);
+  const [selectedDevice, setSelectedDevice] = React.useState<DeviceRow | null>(null);
+
+  const handleNavigateToDevice = React.useCallback((source: string) => {
+    const device = alarmSourceToDeviceRow(source);
+    setSelectedDevice(device);
+    setDeviceDrawerOpen(true);
+  }, []);
+
+  const openAlarmDrawer = React.useCallback((alarm: AlarmRow) => {
+    setSelectedAlarm(alarm);
+    setDrawerOpen(true);
+  }, []);
+
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'severity', desc: false },
   ]);
@@ -259,12 +326,17 @@ export function AlarmsDataTable() {
     pageSize,
   });
 
+  const data = React.useMemo(
+    () => filterAlarms(ALARMS_DATA, { search, severityFilter }),
+    [search, severityFilter]
+  );
+
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
 
   const table = useReactTable({
-    data: ALARMS_DATA,
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -299,11 +371,17 @@ export function AlarmsDataTable() {
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => openAlarmDrawer(row.original)}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
                       className={`px-4 py-3 ${(cell.column.columnDef.meta as { className?: string })?.className ?? ''}`}
+                      onClick={cell.column.id === 'select' || cell.column.id === 'actions' ? (e) => e.stopPropagation() : undefined}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -322,6 +400,20 @@ export function AlarmsDataTable() {
       </div>
       <TablePagination table={table} className="justify-end shrink-0" />
     </div>
+    <AlarmDrawer
+      alarm={selectedAlarm}
+      open={drawerOpen}
+      onOpenChange={setDrawerOpen}
+      allAlarms={ALARMS_DATA}
+      tableAlarms={table.getPrePaginationRowModel().rows.map((r) => r.original)}
+      onSelectAlarm={(alarm) => setSelectedAlarm(alarm as AlarmRow)}
+      onNavigateToDevice={handleNavigateToDevice}
+    />
+    <DeviceDrawer
+      device={selectedDevice}
+      open={deviceDrawerOpen}
+      onOpenChange={setDeviceDrawerOpen}
+    />
     </TooltipProvider>
   );
 }

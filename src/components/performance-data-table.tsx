@@ -23,10 +23,12 @@ import { Icon } from '@/components/Icon';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
-import { DeviceLink } from '@/components/ui/device-link';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
 type AlarmSeverity = 'critical' | 'warning';
+
+const CARRIERS = ['Verizon', 'AT&T', 'T-Mobile'] as const;
 
 function MetricCell({ value, format, severity }: { value: number; format: 'pct' | 'num'; severity?: AlarmSeverity }) {
   const display = format === 'pct' ? `${value}%` : String(value);
@@ -45,7 +47,8 @@ function MetricCell({ value, format, severity }: { value: number; format: 'pct' 
 
 export interface PerformanceRow {
   id: string;
-  device: string;
+  region: string;
+  carrier: string;
   dataAccessibilityPct: number;
   dataAccessSuccess: number;
   dataAccessAttempts: number;
@@ -56,27 +59,45 @@ export interface PerformanceRow {
   erabDropCount: number;
 }
 
-const PERFORMANCE_DATA: PerformanceRow[] = [
-  { id: '1', device: 'eNB-SEA-001', dataAccessibilityPct: 99.2, dataAccessSuccess: 9920, dataAccessAttempts: 10000, volteAccessibilityPct: 98.5, volteAccessibilitySuccess: 9850, volteAccessibilityAttempts: 10000, dataRetainabilityPct: 99.8, erabDropCount: 2 },
-  { id: '2', device: 'RN-PDX-002', dataAccessibilityPct: 97.8, dataAccessSuccess: 9780, dataAccessAttempts: 10000, volteAccessibilityPct: 96.2, volteAccessibilitySuccess: 9620, volteAccessibilityAttempts: 10000, dataRetainabilityPct: 98.5, erabDropCount: 5 },
-  { id: '3', device: 'eNB-PHX-001', dataAccessibilityPct: 99.5, dataAccessSuccess: 9950, dataAccessAttempts: 10000, volteAccessibilityPct: 99.1, volteAccessibilitySuccess: 9910, volteAccessibilityAttempts: 10000, dataRetainabilityPct: 99.9, erabDropCount: 1 },
-  { id: '4', device: 'eNB-NYC-001', dataAccessibilityPct: 98.1, dataAccessSuccess: 9810, dataAccessAttempts: 10000, volteAccessibilityPct: 97.3, volteAccessibilitySuccess: 9730, volteAccessibilityAttempts: 10000, dataRetainabilityPct: 98.2, erabDropCount: 8 },
-  { id: '5', device: 'RN-SFO-003', dataAccessibilityPct: 99.0, dataAccessSuccess: 9900, dataAccessAttempts: 10000, volteAccessibilityPct: 98.8, volteAccessibilitySuccess: 9880, volteAccessibilityAttempts: 10000, dataRetainabilityPct: 99.5, erabDropCount: 3 },
-  { id: '6', device: 'eNB-CHI-002', dataAccessibilityPct: 96.5, dataAccessSuccess: 9650, dataAccessAttempts: 10000, volteAccessibilityPct: 95.2, volteAccessibilitySuccess: 9520, volteAccessibilityAttempts: 10000, dataRetainabilityPct: 97.1, erabDropCount: 12 },
-  { id: '7', device: 'eNB-MIA-002', dataAccessibilityPct: 99.8, dataAccessSuccess: 9980, dataAccessAttempts: 10000, volteAccessibilityPct: 99.5, volteAccessibilitySuccess: 9950, volteAccessibilityAttempts: 10000, dataRetainabilityPct: 99.9, erabDropCount: 0 },
-  { id: '8', device: 'RN-DEN-002', dataAccessibilityPct: 98.4, dataAccessSuccess: 9840, dataAccessAttempts: 10000, volteAccessibilityPct: 97.9, volteAccessibilitySuccess: 9790, volteAccessibilityAttempts: 10000, dataRetainabilityPct: 98.8, erabDropCount: 4 },
-  { id: '9', device: 'RN-ATL-005', dataAccessibilityPct: 99.1, dataAccessSuccess: 9910, dataAccessAttempts: 10000, volteAccessibilityPct: 98.2, volteAccessibilitySuccess: 9820, volteAccessibilityAttempts: 10000, dataRetainabilityPct: 99.2, erabDropCount: 2 },
-  { id: '10', device: 'eNB-BOS-001', dataAccessibilityPct: 97.2, dataAccessSuccess: 9720, dataAccessAttempts: 10000, volteAccessibilityPct: 96.8, volteAccessibilitySuccess: 9680, volteAccessibilityAttempts: 10000, dataRetainabilityPct: 97.5, erabDropCount: 9 },
-];
+const PERFORMANCE_DATA: PerformanceRow[] = NORTH_AMERICAN_REGIONS.map((region, regionIdx) => {
+  const carrier = CARRIERS[regionIdx % CARRIERS.length];
+  const dataAccessibilityPct = 96 + (regionIdx % 4) + (regionIdx * 0.2);
+  const dataAccessSuccess = Math.round(dataAccessibilityPct * 100);
+  const volteAccessibilityPct = dataAccessibilityPct - 0.5 + (regionIdx * 0.05);
+  const volteAccessibilitySuccess = Math.round(volteAccessibilityPct * 100);
+  const dataRetainabilityPct = Math.min(99.9, dataAccessibilityPct + 0.5);
+  const erabDropCount = regionIdx % 12;
+  return {
+    id: `${regionIdx + 1}`,
+    region,
+    carrier,
+    dataAccessibilityPct: Math.round(dataAccessibilityPct * 10) / 10,
+    dataAccessSuccess,
+    dataAccessAttempts: 10000,
+    volteAccessibilityPct: Math.round(volteAccessibilityPct * 10) / 10,
+    volteAccessibilitySuccess,
+    volteAccessibilityAttempts: 10000,
+    dataRetainabilityPct: Math.round(dataRetainabilityPct * 10) / 10,
+    erabDropCount,
+  };
+});
 
 const columns: ColumnDef<PerformanceRow>[] = [
   {
-    accessorKey: 'device',
+    accessorKey: 'region',
     meta: { align: 'left' },
     header: ({ column }) => (
-      <SortableHeader column={column}>Device</SortableHeader>
+      <SortableHeader column={column}>Region</SortableHeader>
     ),
-    cell: ({ row }) => <DeviceLink value={row.getValue('device') as string} className="text-xs" />,
+    cell: ({ row }) => <span className="text-xs">{row.getValue('region') as string}</span>,
+  },
+  {
+    accessorKey: 'carrier',
+    meta: { align: 'left' },
+    header: ({ column }) => (
+      <SortableHeader column={column}>Carrier</SortableHeader>
+    ),
+    cell: ({ row }) => <span className="text-xs">{row.getValue('carrier') as string}</span>,
   },
   {
     accessorKey: 'dataAccessibilityPct',
@@ -160,7 +181,42 @@ const columns: ColumnDef<PerformanceRow>[] = [
   },
 ];
 
-export function PerformanceDataTable() {
+export interface PerformanceTableFilters {
+  search?: string;
+  lteFilter?: string;
+  timeFilter?: string;
+  statusFilter?: 'all' | 'good' | 'bad';
+}
+
+export function getFilteredPerformanceCount(filters: PerformanceTableFilters): number {
+  let result = PERFORMANCE_DATA;
+  if (filters.search?.trim()) {
+    const q = filters.search.trim().toLowerCase();
+    result = result.filter((r) => r.region.toLowerCase().includes(q) || r.carrier.toLowerCase().includes(q));
+  }
+  if (filters.statusFilter && filters.statusFilter !== 'all') {
+    if (filters.statusFilter === 'good') result = result.filter((r) => r.dataAccessibilityPct >= 98);
+    if (filters.statusFilter === 'bad') result = result.filter((r) => r.dataAccessibilityPct < 95);
+  }
+  return result.length;
+}
+
+function filterPerformanceData(data: PerformanceRow[], filters: PerformanceTableFilters): PerformanceRow[] {
+  let result = data;
+  if (filters.search?.trim()) {
+    const q = filters.search.trim().toLowerCase();
+    result = result.filter((r) => r.region.toLowerCase().includes(q) || r.carrier.toLowerCase().includes(q));
+  }
+  if (filters.statusFilter && filters.statusFilter !== 'all') {
+    if (filters.statusFilter === 'good') result = result.filter((r) => r.dataAccessibilityPct >= 98);
+    if (filters.statusFilter === 'bad') result = result.filter((r) => r.dataAccessibilityPct < 95);
+  }
+  return result;
+}
+
+export interface PerformanceDataTableProps extends PerformanceTableFilters {}
+
+export function PerformanceDataTable({ search, lteFilter, timeFilter, statusFilter }: PerformanceDataTableProps = {}) {
   const pageSize = useResponsivePageSize();
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'dataAccessibilityPct', desc: true },
@@ -170,12 +226,17 @@ export function PerformanceDataTable() {
     pageSize,
   });
 
+  const filteredData = React.useMemo(
+    () => filterPerformanceData(PERFORMANCE_DATA, { search, lteFilter, timeFilter, statusFilter }),
+    [search, lteFilter, timeFilter, statusFilter]
+  );
+
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
 
   const table = useReactTable({
-    data: PERFORMANCE_DATA,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

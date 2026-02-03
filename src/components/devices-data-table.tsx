@@ -31,6 +31,7 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeviceLink } from '@/components/ui/device-link';
+import { DeviceStatus } from '@/components/ui/device-status';
 import { DeviceDrawer } from '@/components/device-drawer';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { Icon } from '@/components/Icon';
@@ -56,7 +57,7 @@ export interface DeviceRow {
 
 const LABEL_POOL = ['production', 'lte', '5g', 'core', 'radio', 'maintenance', 'critical', 'northwest', 'verified', 'active', 'standby', 'legacy', 'testing', 'hotfix'];
 
-const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string }> = {
+export const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
   Major: { name: 'error_outline', className: 'text-amber-600 dark:text-amber-500' },
   Minor: { name: 'warning', className: 'text-amber-600 dark:text-amber-500' },
@@ -85,7 +86,9 @@ function generateDevices(count: number): DeviceRow[] {
     const octet4 = ((i % 250) + 1).toString();
     const octet3 = (Math.floor(i / 250) % 256).toString();
     const alarm = alarmCombos[i % alarmCombos.length];
-    const notes = i % 4 === 0 ? (i % 3 === 0 ? 'Core site' : 'Radio node') : '';
+    const notes = `${prefix}-${num}` === 'RN-ATL-009'
+      ? 'Primary site – monitor connectivity and KPI sync status.'
+      : i % 4 === 0 ? (i % 3 === 0 ? 'Core site' : 'Radio node') : '';
     const deviceGroup: DeviceGroup = notes === 'Core site' ? 'Core network' : notes === 'Radio node' ? 'Radio access' : i % 3 === 0 ? 'Edge devices' : 'Test environment';
     const notesUpdatedAt = notes
       ? (() => {
@@ -153,15 +156,9 @@ function StatusCell({ status }: { status: string }) {
     return () => ro.disconnect();
   }, [status]);
 
-  const isConnected = status === 'Connected';
   const content = (
-    <span ref={containerRef} className="inline-flex items-center gap-2 min-w-0 truncate">
-      <Icon
-        name={isConnected ? 'link' : 'link_off'}
-        size={16}
-        className={isConnected ? 'text-muted-foreground shrink-0' : 'text-destructive shrink-0'}
-      />
-      <span className="truncate">{status}</span>
+    <span ref={containerRef} className="min-w-0 truncate">
+      <DeviceStatus status={status} className="truncate" />
     </span>
   );
 
@@ -175,7 +172,11 @@ function StatusCell({ status }: { status: string }) {
   );
 }
 
-function getColumns(onDeviceClick: (device: DeviceRow) => void): ColumnDef<DeviceRow>[] {
+function getColumns(
+  onDeviceClick: (device: DeviceRow) => void,
+  onNavigateToDeviceDetail?: (device: DeviceRow) => void,
+  onAddNoteClick?: (device: DeviceRow) => void
+): ColumnDef<DeviceRow>[] {
   return [
   {
     id: 'select',
@@ -197,7 +198,7 @@ function getColumns(onDeviceClick: (device: DeviceRow) => void): ColumnDef<Devic
       />
     ),
     enableSorting: false,
-    meta: { className: 'w-12' },
+    meta: { className: 'w-10' },
   },
   {
     accessorKey: 'device',
@@ -236,6 +237,7 @@ function getColumns(onDeviceClick: (device: DeviceRow) => void): ColumnDef<Devic
           type="button"
           className="p-1 rounded-md hover:bg-muted transition-colors"
           aria-label={tooltipText}
+          onClick={() => onAddNoteClick?.(row.original)}
         >
           <Icon
             name={hasNotes ? 'note' : 'note_add'}
@@ -311,7 +313,7 @@ function getColumns(onDeviceClick: (device: DeviceRow) => void): ColumnDef<Devic
   {
     id: 'actions',
     header: '',
-    cell: () => (
+    cell: ({ row }) => (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="More actions">
@@ -319,7 +321,11 @@ function getColumns(onDeviceClick: (device: DeviceRow) => void): ColumnDef<Devic
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem>View details</DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => onNavigateToDeviceDetail?.(row.original)}
+          >
+            Details
+          </DropdownMenuItem>
           <DropdownMenuItem>Edit</DropdownMenuItem>
           <DropdownMenuItem>Configure</DropdownMenuItem>
           <DropdownMenuItem className="text-destructive">Remove</DropdownMenuItem>
@@ -334,7 +340,97 @@ function getColumns(onDeviceClick: (device: DeviceRow) => void): ColumnDef<Devic
 ];
 }
 
-export function DevicesDataTable() {
+export type SidebarRegionFilter = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' | 'offline';
+
+export interface DeviceTableFilters {
+  sidebarRegion?: SidebarRegionFilter;
+  statusFilter?: string;
+  search?: string;
+  configStatusFilter?: string;
+  typeFilter?: string;
+  versionFilter?: string;
+  alarmsFilter?: string;
+  labelsFilter?: string;
+}
+
+interface DevicesDataTableProps {
+  onNavigateToDeviceDetail?: (device: DeviceRow) => void;
+  /** When provided, clicking the note icon in the table navigates to device detail with Notes tab active and scrolls to notes. */
+  onAddNoteClick?: (device: DeviceRow) => void;
+  sidebarRegion?: SidebarRegionFilter;
+  statusFilter?: string;
+  search?: string;
+  configStatusFilter?: string;
+  typeFilter?: string;
+  versionFilter?: string;
+  alarmsFilter?: string;
+  labelsFilter?: string;
+}
+
+function filterBySidebarRegion(devices: DeviceRow[], region: SidebarRegionFilter): DeviceRow[] {
+  if (!region || region === 'all') return devices;
+  switch (region) {
+    case 'disconnected':
+      return devices.filter((d) => d.status === 'Disconnected');
+    case 'kpiSyncErrors':
+      return devices.filter((d) => d.configStatus === 'Out of sync');
+    case 'inMaintenance':
+      return devices.filter((d) => d.status === 'In maintenance');
+    case 'offline':
+      return devices.filter((d) => d.status === 'Offline');
+    default:
+      return devices;
+  }
+}
+
+function applyDeviceFilters(devices: DeviceRow[], filters: DeviceTableFilters): DeviceRow[] {
+  let result = filterBySidebarRegion(devices, filters.sidebarRegion ?? 'all');
+  if (filters.statusFilter && filters.statusFilter !== 'Status') {
+    result = result.filter((d) => d.status === filters.statusFilter);
+  }
+  if (filters.search?.trim()) {
+    const q = filters.search.trim().toLowerCase();
+    result = result.filter(
+      (d) =>
+        d.device.toLowerCase().includes(q) ||
+        (d.notes && d.notes.toLowerCase().includes(q))
+    );
+  }
+  if (filters.configStatusFilter && filters.configStatusFilter !== 'Config status') {
+    result = result.filter((d) => d.configStatus === filters.configStatusFilter);
+  }
+  if (filters.typeFilter && filters.typeFilter !== 'Type') {
+    result = result.filter((d) => d.type === filters.typeFilter);
+  }
+  if (filters.versionFilter && filters.versionFilter !== 'Version') {
+    result = result.filter((d) => d.version === filters.versionFilter);
+  }
+  if (filters.alarmsFilter && filters.alarmsFilter !== 'Alarms') {
+    result = result.filter((d) => d.alarmType === filters.alarmsFilter);
+  }
+  if (filters.labelsFilter && filters.labelsFilter !== 'Labels') {
+    const label = filters.labelsFilter!.toLowerCase();
+    result = result.filter((d) => d.labels.some((l) => l.toLowerCase() === label));
+  }
+  return result;
+}
+
+export function getFilteredDeviceCount(filters: DeviceTableFilters): number {
+  return applyDeviceFilters(DEVICES_DATA, filters).length;
+}
+
+export function DevicesDataTable({
+  onNavigateToDeviceDetail,
+  onAddNoteClick,
+  sidebarRegion = 'all',
+  statusFilter = 'Status',
+  search = '',
+  configStatusFilter = 'Config status',
+  typeFilter = 'Type',
+  versionFilter = 'Version',
+  alarmsFilter = 'Alarms',
+  labelsFilter = 'Labels',
+}: DevicesDataTableProps = {}) {
   const pageSize = useResponsivePageSize();
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'alarms', desc: false },
@@ -352,14 +448,41 @@ export function DevicesDataTable() {
     setDrawerOpen(true);
   }, []);
 
-  const columns = React.useMemo(() => getColumns(handleDeviceClick), [handleDeviceClick]);
+  const columns = React.useMemo(
+    () => getColumns(handleDeviceClick, onNavigateToDeviceDetail, onAddNoteClick),
+    [handleDeviceClick, onNavigateToDeviceDetail, onAddNoteClick]
+  );
+
+  const data = React.useMemo(
+    () =>
+      applyDeviceFilters(DEVICES_DATA, {
+        sidebarRegion,
+        statusFilter,
+        search,
+        configStatusFilter,
+        typeFilter,
+        versionFilter,
+        alarmsFilter,
+        labelsFilter,
+      }),
+    [
+      sidebarRegion,
+      statusFilter,
+      search,
+      configStatusFilter,
+      typeFilter,
+      versionFilter,
+      alarmsFilter,
+      labelsFilter,
+    ]
+  );
 
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
 
   const table = useReactTable({
-    data: DEVICES_DATA,
+    data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -421,6 +544,7 @@ export function DevicesDataTable() {
       device={selectedDevice}
       open={drawerOpen}
       onOpenChange={setDrawerOpen}
+      onNavigateToDetails={onNavigateToDeviceDetail}
     />
     </TooltipProvider>
   );

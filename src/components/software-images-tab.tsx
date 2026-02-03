@@ -49,6 +49,7 @@ const IMAGE_CARDS = [
 
 export function SoftwareImagesTab() {
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="space-y-6">
       <div className="flex justify-end">
         <Button>
@@ -61,9 +62,14 @@ export function SoftwareImagesTab() {
         <Card key={card.title}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-base">{card.title}</CardTitle>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Add">
-              <Icon name="add" size={20} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Add">
+                  <Icon name="add" size={20} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Add</TooltipContent>
+            </Tooltip>
           </CardHeader>
           <CardContent>
             <div className="overflow-hidden rounded-lg border">
@@ -111,5 +117,6 @@ export function SoftwareImagesTab() {
       ))}
       </div>
     </div>
+    </TooltipProvider>
   );
 }

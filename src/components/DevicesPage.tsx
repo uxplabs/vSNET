@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar01 } from './navbar-01';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
@@ -11,16 +11,19 @@ import {
   SelectValue,
 } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { DevicesDataTable, DEVICES_DATA, getDeviceSidebarCounts } from './devices-data-table';
-import { AlarmsDataTable } from './alarms-data-table';
-import { EventsDataTable } from './events-data-table';
-import { ScheduledTasksDataTable } from './scheduled-tasks-data-table';
-import { SoftwareManagementDataTable } from './software-management-data-table';
+import { DevicesDataTable, DEVICES_DATA, getDeviceSidebarCounts, getFilteredDeviceCount } from './devices-data-table';
+import { AlarmsDataTable, getFilteredAlarmsCount } from './alarms-data-table';
+import { EventsDataTable, getFilteredEventCount } from './events-data-table';
+import { ScheduledTasksDataTable, getFilteredTaskCount } from './scheduled-tasks-data-table';
+import type { ScheduledTaskRow } from './scheduled-tasks-data-table';
+import { ScheduledTaskDrawer } from './scheduled-task-drawer';
+import { AddScheduledTaskDialog } from './add-scheduled-task-dialog';
+import { SoftwareManagementDataTable, getFilteredSoftwareCount } from './software-management-data-table';
 import { SoftwareImagesTab } from './software-images-tab';
 import { ActivityLogDataTable } from './activity-log-data-table';
-import { ReportsDataTable } from './reports-data-table';
-import { PerformanceDataTable } from './performance-data-table';
-import { ThresholdCrossingAlertsDataTable } from './threshold-crossing-alerts-data-table';
+import { ReportsDataTable, getFilteredReportCount } from './reports-data-table';
+import { PerformanceDataTable, getFilteredPerformanceCount } from './performance-data-table';
+import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount } from './threshold-crossing-alerts-data-table';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
 export interface DevicesPageProps {
@@ -31,6 +34,7 @@ export interface DevicesPageProps {
   onMainTabChange?: (tab: string) => void;
   region?: string;
   onRegionChange?: (region: string) => void;
+  onNavigateToDeviceDetail?: (device: any) => void;
 }
 
 const STATUS_OPTIONS = ['Status', 'Connected', 'Disconnected', 'In maintenance', 'Offline'] as const;
@@ -60,7 +64,7 @@ const deviceCounts = getDeviceSidebarCounts(DEVICES_DATA);
 type RegionOption = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' | 'offline';
 type DeviceGroupOption = 'Core network' | 'Radio access' | 'Edge devices' | 'Test environment';
 
-function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTabProp, onMainTabChange, region, onRegionChange }: DevicesPageProps) {
+function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTabProp, onMainTabChange, region, onRegionChange, onNavigateToDeviceDetail }: DevicesPageProps) {
   const [internalTab, setInternalTab] = useState('device');
   const mainTab = mainTabProp ?? internalTab;
   const handleMainTabChange = onMainTabChange ?? setInternalTab;
@@ -97,6 +101,52 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
   const [thresholdActSessFilter, setThresholdActSessFilter] = useState<string>('ACT_SESS');
   const [softwareManagementTab, setSoftwareManagementTab] = useState('tasks');
   const [performanceTab, setPerformanceTab] = useState('activity');
+  const [selectedTask, setSelectedTask] = useState<ScheduledTaskRow | null>(null);
+  const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
+  const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+
+  const deviceFiltersActive = search !== '' || statusFilter !== 'Status' || configStatusFilter !== 'Config status' || typeFilter !== 'Type' || versionFilter !== 'Version' || alarmsFilter !== 'Alarms' || labelsFilter !== 'Labels';
+  const clearDeviceFilters = () => {
+    setSearch(''); setStatusFilter('Status'); setSelectedRegion('all'); setConfigStatusFilter('Config status'); setTypeFilter('Type'); setVersionFilter('Version'); setAlarmsFilter('Alarms'); setLabelsFilter('Labels');
+  };
+  const eventsFiltersActive = eventsSearch !== '' || eventsTypeFilter !== 'Type' || eventsSeverityFilter !== 'Severity' || eventsSourceFilter !== 'Source';
+  const clearEventsFilters = () => {
+    setEventsSearch(''); setEventsTypeFilter('Type'); setEventsSeverityFilter('Severity'); setEventsSourceFilter('Source');
+  };
+  const tasksFiltersActive = tasksSearch !== '' || tasksTypeFilter !== 'Type' || tasksStatusFilter !== 'Status' || tasksDomainFilter !== 'Domain';
+  const clearTasksFilters = () => {
+    setTasksSearch(''); setTasksTypeFilter('Type'); setTasksStatusFilter('Status'); setTasksDomainFilter('Domain');
+  };
+  const softwareFiltersActive = softwareSearch !== '' || softwareTypeFilter !== 'Type' || softwareStatusFilter !== 'Status' || softwareVersionFilter !== 'Version';
+  const clearSoftwareFilters = () => {
+    setSoftwareSearch(''); setSoftwareTypeFilter('Type'); setSoftwareStatusFilter('Status'); setSoftwareVersionFilter('Version');
+  };
+  const reportsFiltersActive = reportsSearch !== '' || reportsTypeFilter !== 'Type' || reportsTaskFilter !== 'Task' || reportsCreatedFilter !== 'Created';
+  const clearReportsFilters = () => {
+    setReportsSearch(''); setReportsTypeFilter('Type'); setReportsTaskFilter('Task'); setReportsCreatedFilter('Created');
+  };
+  const performanceFiltersActive = performanceSearch !== '' || performanceLteFilter !== 'LTE' || performanceTimeFilter !== 'Last hour' || performanceStatusFilter !== 'all';
+  const clearPerformanceFilters = () => {
+    setPerformanceSearch(''); setPerformanceLteFilter('LTE'); setPerformanceTimeFilter('Last hour'); setPerformanceStatusFilter('all');
+  };
+  const thresholdFiltersActive = thresholdActSessFilter !== 'ACT_SESS';
+  const clearThresholdFilters = () => setThresholdActSessFilter('ACT_SESS');
+
+  // Keep Status dropdown in sync with sidebar selection
+  useEffect(() => {
+    if (selectedRegion === 'disconnected') setStatusFilter('Disconnected');
+    else if (selectedRegion === 'inMaintenance') setStatusFilter('In maintenance');
+    else if (selectedRegion === 'offline') setStatusFilter('Offline');
+    else if (selectedRegion === 'all' || selectedRegion === 'kpiSyncErrors') setStatusFilter('Status');
+  }, [selectedRegion]);
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    if (value === 'Disconnected') setSelectedRegion('disconnected');
+    else if (value === 'In maintenance') setSelectedRegion('inMaintenance');
+    else if (value === 'Offline') setSelectedRegion('offline');
+    else setSelectedRegion('all');
+  };
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -105,17 +155,6 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
         onSignOut={onSignOut}
         onNavigate={onNavigate}
         currentSection="devices"
-        leftAdornment={
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="h-7 w-7 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-            aria-label="Toggle sidebar"
-          >
-            <Icon name="menu" size={20} />
-          </Button>
-        }
         region={region}
         onRegionChange={onRegionChange}
       />
@@ -330,22 +369,22 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
 
               <TabsContent value="device" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 border-b mb-6 shrink-0">
-                  <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px] sm:flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                  <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
                       size={18}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
                     />
                     <Input
                       placeholder="Search devices..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 w-full"
+                      className="pl-9 w-full min-w-0"
                     />
                   </div>
-                  <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+                    <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                       <SelectTrigger className="w-[120px] shrink-0">
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
@@ -419,27 +458,87 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     </Select>
                   </div>
                 </div>
+                {/* Active filters + result count */}
+                {(() => {
+                  const count = getFilteredDeviceCount({
+                    sidebarRegion: selectedRegion,
+                    statusFilter,
+                    search,
+                    configStatusFilter,
+                    typeFilter,
+                    versionFilter,
+                    alarmsFilter,
+                    labelsFilter,
+                  });
+                  const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                  if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('Status'); setSelectedRegion('all'); } });
+                  if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => setConfigStatusFilter('Config status') });
+                  if (typeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('Type') });
+                  if (versionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('Version') });
+                  if (alarmsFilter !== 'Alarms') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('Alarms') });
+                  if (labelsFilter !== 'Labels') activeFilters.push({ key: 'labels', label: `Labels: ${labelsFilter}`, onClear: () => setLabelsFilter('Labels') });
+                  if (search.trim()) activeFilters.push({ key: 'search', label: `Search: "${search.trim()}"`, onClear: () => setSearch('') });
+                  const hasActive = activeFilters.length > 0;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                      <span className="text-sm text-muted-foreground">
+                        {count} {count === 1 ? 'result' : 'results'}
+                      </span>
+                      {activeFilters.map((f) => (
+                        <span
+                          key={f.key}
+                          className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground"
+                        >
+                          {f.label}
+                          <button
+                            type="button"
+                            onClick={f.onClear}
+                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={`Clear ${f.label}`}
+                          >
+                            <Icon name="close" size={14} aria-hidden />
+                          </button>
+                        </span>
+                      ))}
+                      {hasActive && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearDeviceFilters}>
+                          Clear all
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <DevicesDataTable />
+                  <DevicesDataTable
+                    sidebarRegion={selectedRegion}
+                    statusFilter={statusFilter}
+                    search={search}
+                    configStatusFilter={configStatusFilter}
+                    typeFilter={typeFilter}
+                    versionFilter={versionFilter}
+                    alarmsFilter={alarmsFilter}
+                    labelsFilter={labelsFilter}
+                    onNavigateToDeviceDetail={onNavigateToDeviceDetail}
+                  />
                 </div>
               </TabsContent>
               <TabsContent value="alarms" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 border-b mb-6 shrink-0">
-                  <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px] sm:flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                  <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
                       size={18}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
                     />
                     <Input
                       placeholder="Search devices..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 w-full"
+                      className="pl-9 w-full min-w-0"
                     />
                   </div>
-                  <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger className="w-[120px] shrink-0">
                         <SelectValue placeholder="Status" />
@@ -514,27 +613,60 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     </Select>
                   </div>
                 </div>
+                {(() => {
+                  const count = getFilteredAlarmsCount({ search, severityFilter: alarmsFilter });
+                  const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                  if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => setStatusFilter('Status') });
+                  if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => setConfigStatusFilter('Config status') });
+                  if (typeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('Type') });
+                  if (versionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('Version') });
+                  if (alarmsFilter !== 'Alarms') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('Alarms') });
+                  if (labelsFilter !== 'Labels') activeFilters.push({ key: 'labels', label: `Labels: ${labelsFilter}`, onClear: () => setLabelsFilter('Labels') });
+                  if (search.trim()) activeFilters.push({ key: 'search', label: `Search: "${search.trim()}"`, onClear: () => setSearch('') });
+                  const hasActive = activeFilters.length > 0;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                      <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
+                      {activeFilters.map((f) => (
+                        <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                          {f.label}
+                          <button
+                            type="button"
+                            onClick={f.onClear}
+                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={`Clear ${f.label}`}
+                          >
+                            <Icon name="close" size={14} aria-hidden />
+                          </button>
+                        </span>
+                      ))}
+                      {hasActive && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearDeviceFilters}>Clear all</Button>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <AlarmsDataTable />
+                  <AlarmsDataTable search={search} severityFilter={alarmsFilter} />
                 </div>
               </TabsContent>
               <TabsContent value="events" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 border-b mb-6 shrink-0">
-                  <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px] sm:flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                  <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
                       size={18}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
                     />
                     <Input
                       placeholder="Search events..."
                       value={eventsSearch}
                       onChange={(e) => setEventsSearch(e.target.value)}
-                      className="pl-9 w-full"
+                      className="pl-9 w-full min-w-0"
                     />
                   </div>
-                  <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                     <Select value={eventsTypeFilter} onValueChange={setEventsTypeFilter}>
                       <SelectTrigger className="w-[160px] shrink-0">
                         <SelectValue placeholder="Type" />
@@ -573,8 +705,49 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     </Select>
                   </div>
                 </div>
+                {/* Active filters + result count */}
+                {(() => {
+                  const count = getFilteredEventCount({
+                    search: eventsSearch,
+                    typeFilter: eventsTypeFilter,
+                    severityFilter: eventsSeverityFilter,
+                    sourceFilter: eventsSourceFilter,
+                  });
+                  const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                  if (eventsTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${eventsTypeFilter}`, onClear: () => setEventsTypeFilter('Type') });
+                  if (eventsSeverityFilter !== 'Severity') activeFilters.push({ key: 'severity', label: `Severity: ${eventsSeverityFilter}`, onClear: () => setEventsSeverityFilter('Severity') });
+                  if (eventsSourceFilter !== 'Source') activeFilters.push({ key: 'source', label: `Source: ${eventsSourceFilter}`, onClear: () => setEventsSourceFilter('Source') });
+                  if (eventsSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${eventsSearch.trim()}"`, onClear: () => setEventsSearch('') });
+                  const hasActive = activeFilters.length > 0;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                      <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
+                      {activeFilters.map((f) => (
+                        <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                          {f.label}
+                          <button
+                            type="button"
+                            onClick={f.onClear}
+                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={`Clear ${f.label}`}
+                          >
+                            <Icon name="close" size={14} aria-hidden />
+                          </button>
+                        </span>
+                      ))}
+                      {hasActive && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearEventsFilters}>Clear all</Button>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <EventsDataTable />
+                  <EventsDataTable
+                    search={eventsSearch}
+                    typeFilter={eventsTypeFilter}
+                    severityFilter={eventsSeverityFilter}
+                    sourceFilter={eventsSourceFilter}
+                  />
                 </div>
               </TabsContent>
               <TabsContent value="conditions" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
@@ -585,21 +758,21 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
               </TabsContent>
               <TabsContent value="scheduled-tasks" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 border-b mb-6 shrink-0">
-                  <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px] sm:flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                  <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
                       size={18}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
                     />
                     <Input
                       placeholder="Search tasks..."
                       value={tasksSearch}
                       onChange={(e) => setTasksSearch(e.target.value)}
-                      className="pl-9 w-full"
+                      className="pl-9 w-full min-w-0"
                     />
                   </div>
-                  <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                     <Select value={tasksTypeFilter} onValueChange={setTasksTypeFilter}>
                       <SelectTrigger className="w-[130px] shrink-0">
                         <SelectValue placeholder="Type" />
@@ -636,11 +809,70 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                         ))}
                       </SelectContent>
                     </Select>
+                    <Button variant="outline" size="sm" className="shrink-0 gap-1 ml-auto" onClick={() => setAddTaskDialogOpen(true)}>
+                      <Icon name="add" size={18} />
+                      Add scheduled task
+                    </Button>
                   </div>
                 </div>
+                <AddScheduledTaskDialog
+                  open={addTaskDialogOpen}
+                  onOpenChange={setAddTaskDialogOpen}
+                  region={region}
+                  onAdd={() => {}}
+                />
+                {(() => {
+                  const count = getFilteredTaskCount({
+                    search: tasksSearch,
+                    typeFilter: tasksTypeFilter,
+                    statusFilter: tasksStatusFilter,
+                    domainFilter: tasksDomainFilter,
+                  });
+                  const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                  if (tasksTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${tasksTypeFilter}`, onClear: () => setTasksTypeFilter('Type') });
+                  if (tasksStatusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${tasksStatusFilter}`, onClear: () => setTasksStatusFilter('Status') });
+                  if (tasksDomainFilter !== 'Domain') activeFilters.push({ key: 'domain', label: `Domain: ${tasksDomainFilter}`, onClear: () => setTasksDomainFilter('Domain') });
+                  if (tasksSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${tasksSearch.trim()}"`, onClear: () => setTasksSearch('') });
+                  const hasActive = activeFilters.length > 0;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                      <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
+                      {activeFilters.map((f) => (
+                        <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                          {f.label}
+                          <button
+                            type="button"
+                            onClick={f.onClear}
+                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={`Clear ${f.label}`}
+                          >
+                            <Icon name="close" size={14} aria-hidden />
+                          </button>
+                        </span>
+                      ))}
+                      {hasActive && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearTasksFilters}>Clear all</Button>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <ScheduledTasksDataTable />
+                  <ScheduledTasksDataTable
+                    search={tasksSearch}
+                    typeFilter={tasksTypeFilter}
+                    statusFilter={tasksStatusFilter}
+                    domainFilter={tasksDomainFilter}
+                    onTaskClick={(task) => {
+                      setSelectedTask(task);
+                      setTaskDrawerOpen(true);
+                    }}
+                  />
                 </div>
+                <ScheduledTaskDrawer
+                  task={selectedTask}
+                  open={taskDrawerOpen}
+                  onOpenChange={setTaskDrawerOpen}
+                />
               </TabsContent>
               <TabsContent value="software-management" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 <Tabs value={softwareManagementTab} onValueChange={setSoftwareManagementTab} className="flex-1 flex flex-col min-h-0 w-full">
@@ -657,21 +889,21 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   </TabsList>
                   <TabsContent value="tasks" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 border-b mb-6 shrink-0">
-                  <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px] sm:flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                  <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
                       size={18}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
                     />
                     <Input
                       placeholder="Search software..."
                       value={softwareSearch}
                       onChange={(e) => setSoftwareSearch(e.target.value)}
-                      className="pl-9 w-full"
+                      className="pl-9 w-full min-w-0"
                     />
                   </div>
-                  <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                     <Select value={softwareTypeFilter} onValueChange={setSoftwareTypeFilter}>
                       <SelectTrigger className="w-[130px] shrink-0">
                         <SelectValue placeholder="Type" />
@@ -710,8 +942,48 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     </Select>
                   </div>
                 </div>
+                {(() => {
+                  const count = getFilteredSoftwareCount({
+                    search: softwareSearch,
+                    typeFilter: softwareTypeFilter,
+                    statusFilter: softwareStatusFilter,
+                    versionFilter: softwareVersionFilter,
+                  });
+                  const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                  if (softwareTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${softwareTypeFilter}`, onClear: () => setSoftwareTypeFilter('Type') });
+                  if (softwareStatusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${softwareStatusFilter}`, onClear: () => setSoftwareStatusFilter('Status') });
+                  if (softwareVersionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${softwareVersionFilter}`, onClear: () => setSoftwareVersionFilter('Version') });
+                  if (softwareSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${softwareSearch.trim()}"`, onClear: () => setSoftwareSearch('') });
+                  const hasActive = activeFilters.length > 0;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                      <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
+                      {activeFilters.map((f) => (
+                        <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                          {f.label}
+                          <button
+                            type="button"
+                            onClick={f.onClear}
+                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={`Clear ${f.label}`}
+                          >
+                            <Icon name="close" size={14} aria-hidden />
+                          </button>
+                        </span>
+                      ))}
+                      {hasActive && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearSoftwareFilters}>Clear all</Button>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <SoftwareManagementDataTable />
+                  <SoftwareManagementDataTable
+                    search={softwareSearch}
+                    typeFilter={softwareTypeFilter}
+                    statusFilter={softwareStatusFilter}
+                    versionFilter={softwareVersionFilter}
+                  />
                 </div>
                   </TabsContent>
                   <TabsContent value="images" className="mt-0 flex-1 flex flex-col min-h-0 overflow-auto data-[state=inactive]:hidden">
@@ -719,21 +991,21 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   </TabsContent>
                   <TabsContent value="activity-log" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                     {/* Search and filters */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 border-b mb-6 shrink-0">
-                      <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px] sm:flex-shrink-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                      <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                         <Icon
                           name="search"
                           size={18}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
                         />
                         <Input
                           placeholder="Search software..."
                           value={softwareSearch}
                           onChange={(e) => setSoftwareSearch(e.target.value)}
-                          className="pl-9 w-full"
+                          className="pl-9 w-full min-w-0"
                         />
                       </div>
-                      <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                         <Select value={softwareTypeFilter} onValueChange={setSoftwareTypeFilter}>
                           <SelectTrigger className="w-[130px] shrink-0">
                             <SelectValue placeholder="Type" />
@@ -772,6 +1044,41 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                         </Select>
                       </div>
                     </div>
+                    {(() => {
+                      const count = getFilteredSoftwareCount({
+                        search: softwareSearch,
+                        typeFilter: softwareTypeFilter,
+                        statusFilter: softwareStatusFilter,
+                        versionFilter: softwareVersionFilter,
+                      });
+                      const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                      if (softwareTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${softwareTypeFilter}`, onClear: () => setSoftwareTypeFilter('Type') });
+                      if (softwareStatusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${softwareStatusFilter}`, onClear: () => setSoftwareStatusFilter('Status') });
+                      if (softwareVersionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${softwareVersionFilter}`, onClear: () => setSoftwareVersionFilter('Version') });
+                      if (softwareSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${softwareSearch.trim()}"`, onClear: () => setSoftwareSearch('') });
+                      const hasActive = activeFilters.length > 0;
+                      return (
+                        <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                          <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
+                          {activeFilters.map((f) => (
+                            <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                              {f.label}
+<button
+                                type="button"
+                                onClick={f.onClear}
+                                className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                aria-label={`Clear ${f.label}`}
+                              >
+                                <Icon name="close" size={14} aria-hidden />
+                              </button>
+                            </span>
+                          ))}
+                          {hasActive && (
+                            <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearSoftwareFilters}>Clear all</Button>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                       <ActivityLogDataTable />
                     </div>
@@ -780,21 +1087,21 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
               </TabsContent>
               <TabsContent value="reports" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 border-b mb-6 shrink-0">
-                  <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px] sm:flex-shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                  <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
                       size={18}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
                     />
                     <Input
                       placeholder="Search reports..."
                       value={reportsSearch}
                       onChange={(e) => setReportsSearch(e.target.value)}
-                      className="pl-9 w-full"
+                      className="pl-9 w-full min-w-0"
                     />
                   </div>
-                  <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                     <Select value={reportsTypeFilter} onValueChange={setReportsTypeFilter}>
                       <SelectTrigger className="w-[110px] shrink-0">
                         <SelectValue placeholder="Type" />
@@ -833,8 +1140,48 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     </Select>
                   </div>
                 </div>
+                {(() => {
+                  const count = getFilteredReportCount({
+                    search: reportsSearch,
+                    typeFilter: reportsTypeFilter,
+                    taskFilter: reportsTaskFilter,
+                    createdFilter: reportsCreatedFilter,
+                  });
+                  const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                  if (reportsTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${reportsTypeFilter}`, onClear: () => setReportsTypeFilter('Type') });
+                  if (reportsTaskFilter !== 'Task') activeFilters.push({ key: 'task', label: `Task: ${reportsTaskFilter}`, onClear: () => setReportsTaskFilter('Task') });
+                  if (reportsCreatedFilter !== 'Created') activeFilters.push({ key: 'created', label: `Created: ${reportsCreatedFilter}`, onClear: () => setReportsCreatedFilter('Created') });
+                  if (reportsSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${reportsSearch.trim()}"`, onClear: () => setReportsSearch('') });
+                  const hasActive = activeFilters.length > 0;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                      <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
+                      {activeFilters.map((f) => (
+                        <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                          {f.label}
+                          <button
+                            type="button"
+                            onClick={f.onClear}
+                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            aria-label={`Clear ${f.label}`}
+                          >
+                            <Icon name="close" size={14} aria-hidden />
+                          </button>
+                        </span>
+                      ))}
+                      {hasActive && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearReportsFilters}>Clear all</Button>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <ReportsDataTable />
+                  <ReportsDataTable
+                    search={reportsSearch}
+                    typeFilter={reportsTypeFilter}
+                    taskFilter={reportsTaskFilter}
+                    createdFilter={reportsCreatedFilter}
+                  />
                 </div>
               </TabsContent>
               <TabsContent value="performance" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
@@ -849,21 +1196,21 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   </TabsList>
                   <TabsContent value="activity" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                     {/* Search and filters */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 border-b mb-6 shrink-0">
-                      <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px] sm:flex-shrink-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                      <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                         <Icon
                           name="search"
                           size={18}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
                         />
                         <Input
                           placeholder="Search devices..."
                           value={performanceSearch}
                           onChange={(e) => setPerformanceSearch(e.target.value)}
-                          className="pl-9 w-full"
+                          className="pl-9 w-full min-w-0"
                         />
                       </div>
-                      <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                         <Select value={performanceLteFilter} onValueChange={setPerformanceLteFilter}>
                           <SelectTrigger className="w-[110px] shrink-0">
                             <SelectValue placeholder="LTE" />
@@ -916,13 +1263,53 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                         </div>
                       </div>
                     </div>
+                    {(() => {
+                      const count = getFilteredPerformanceCount({
+                        search: performanceSearch,
+                        lteFilter: performanceLteFilter,
+                        timeFilter: performanceTimeFilter,
+                        statusFilter: performanceStatusFilter,
+                      });
+                      const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                      if (performanceLteFilter !== 'LTE') activeFilters.push({ key: 'lte', label: `LTE: ${performanceLteFilter}`, onClear: () => setPerformanceLteFilter('LTE') });
+                      if (performanceTimeFilter !== 'Last hour') activeFilters.push({ key: 'time', label: `Time: ${performanceTimeFilter}`, onClear: () => setPerformanceTimeFilter('Last hour') });
+                      if (performanceStatusFilter !== 'all') activeFilters.push({ key: 'status', label: `Status: ${performanceStatusFilter}`, onClear: () => setPerformanceStatusFilter('all') });
+                      if (performanceSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${performanceSearch.trim()}"`, onClear: () => setPerformanceSearch('') });
+                      const hasActive = activeFilters.length > 0;
+                      return (
+                        <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                          <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
+                          {activeFilters.map((f) => (
+                            <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                              {f.label}
+<button
+                                type="button"
+                                onClick={f.onClear}
+                                className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                aria-label={`Clear ${f.label}`}
+                              >
+                                <Icon name="close" size={14} aria-hidden />
+                              </button>
+                            </span>
+                          ))}
+                          {hasActive && (
+                            <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearPerformanceFilters}>Clear all</Button>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                      <PerformanceDataTable />
+                      <PerformanceDataTable
+                        search={performanceSearch}
+                        lteFilter={performanceLteFilter}
+                        timeFilter={performanceTimeFilter}
+                        statusFilter={performanceStatusFilter}
+                      />
                     </div>
                   </TabsContent>
                   <TabsContent value="threshold-crossing-alerts" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 border-b mb-6 shrink-0">
-                      <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                         <Select value={thresholdActSessFilter} onValueChange={setThresholdActSessFilter}>
                           <SelectTrigger className="w-[140px] shrink-0">
                             <SelectValue placeholder="ACT_SESS" />
@@ -937,8 +1324,35 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                         </Select>
                       </div>
                     </div>
+                    {(() => {
+                      const count = getFilteredThresholdCount({ actSessFilter: thresholdActSessFilter });
+                      const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                      if (thresholdActSessFilter !== 'ACT_SESS') activeFilters.push({ key: 'actSess', label: `ACT_SESS: ${thresholdActSessFilter}`, onClear: () => setThresholdActSessFilter('ACT_SESS') });
+                      const hasActive = activeFilters.length > 0;
+                      return (
+                        <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                          <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
+                          {activeFilters.map((f) => (
+                            <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                              {f.label}
+<button
+                                type="button"
+                                onClick={f.onClear}
+                                className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                aria-label={`Clear ${f.label}`}
+                              >
+                                <Icon name="close" size={14} aria-hidden />
+                              </button>
+                            </span>
+                          ))}
+                          {hasActive && (
+                            <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearThresholdFilters}>Clear all</Button>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                      <ThresholdCrossingAlertsDataTable />
+                      <ThresholdCrossingAlertsDataTable actSessFilter={thresholdActSessFilter} />
                     </div>
                   </TabsContent>
                 </Tabs>

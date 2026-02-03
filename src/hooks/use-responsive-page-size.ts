@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 const DEFAULT_ROW_HEIGHT = 52;
-const MIN_PAGE_SIZE = 5;
+const MIN_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
 
 /** Estimated space used by navbar, tabs, filters, table header, pagination, padding (px) */

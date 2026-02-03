@@ -1,4 +1,11 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* Custom region markers - hide default Leaflet marker styling */
+.region-marker.leaflet-marker-icon {
+  background: transparent !important;
+  border: none !important;
+}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -17,16 +24,102 @@
   -webkit-font-smoothing: antialiased;
 }
 
-/* TheSans C4 (LucasFonts): uncomment and set paths if self-hosting
+/* TheSans C4 (LucasFonts) – public/fonts/ */
 @font-face {
   font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4-Regular.woff2") format("woff2"),
-       url("/fonts/TheSansC4-Regular.woff") format("woff");
+  src: url("/fonts/TheSansC4s-2_ExtraLight.otf") format("opentype");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-2iExtraLightIta.otf") format("opentype");
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-3_Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-3iLightItalic.otf") format("opentype");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-4_SemiLight.otf") format("opentype");
+  font-weight: 350;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-4iSemiLightIta.otf") format("opentype");
+  font-weight: 350;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-5_Plain.otf") format("opentype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
-*/
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-5iPlainItalic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-6_SemiBold.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-6iSemiBoldIta.otf") format("opentype");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-7_Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TheSans C4";
+  src: url("/fonts/TheSansC4s-7iBoldItalic.otf") format("opentype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
 
 /* vSNET Design System – definitive color tokens (hex) */
 @theme inline {
@@ -222,8 +315,8 @@
     /* Other */
     --ring: #818CF8;
     --border: #27303F;
-    --link: #0369A1;
-    --link-hover: #A5B4FC;
+    --link: #38BDF8;
+    --link-hover: #7DD3FC;
     /* Sidebar (dark – close to navbar #004F69 = hsl(196 100% 21%) but slightly darker at 16%) */
     --sidebar: 196 100% 16%;
     --sidebar-foreground: 210 40% 98%;
