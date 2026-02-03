@@ -10,6 +10,10 @@ const GAP = 16;
 const CORNER_RADIUS = 8;
 const LOGO_WIDTH = 206;
 const LOGO_HEIGHT = 120;
+const AUTH_CREDENTIALS = {
+  username: 'udoe@acme.com',
+  password: '2PVWyHwYA6fv-7dKZ',
+};
 
 export interface LoginPageProps {
   onLogin?: (username: string, password: string) => void | Promise<void>;
@@ -22,12 +26,22 @@ function LoginPage({ onLogin, onLoginWithSSO, appName = 'vSNET' }: LoginPageProp
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password) return;
     setLoading(true);
+    setError(null);
     try {
+      const normalizedUsername = username.trim().toLowerCase();
+      const isValid =
+        normalizedUsername === AUTH_CREDENTIALS.username &&
+        password === AUTH_CREDENTIALS.password;
+      if (!isValid) {
+        setError('Invalid username or password.');
+        return;
+      }
       await onLogin?.(username.trim(), password);
     } finally {
       setLoading(false);
@@ -116,15 +130,9 @@ function LoginPage({ onLogin, onLoginWithSSO, appName = 'vSNET' }: LoginPageProp
             >
               {loading ? 'Signing in…' : 'Log in'}
             </Button>
-            <p className="text-center text-sm text-muted-foreground">or</p>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full rounded-md border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
-              onClick={() => onLoginWithSSO?.()}
-            >
-              Login with SSO
-            </Button>
+            {error && (
+              <p className="text-center text-sm text-destructive">{error}</p>
+            )}
           </form>
         </DialogContent>
       </Dialog>
