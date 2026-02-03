@@ -255,10 +255,6 @@ const Navbar01 = ({
                 <Icon name="settings" size={16} className="mr-2" />
                 Settings
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Icon name="help" size={16} className="mr-2" />
-                Help & Support
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onSignOut}>
                 <Icon name="logout" size={16} className="mr-2" />
@@ -370,10 +366,6 @@ const Navbar01 = ({
                       <DropdownMenuItem>
                         <Icon name="settings" size={16} className="mr-2" />
                         Settings
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Icon name="help" size={16} className="mr-2" />
-                        Help & Support
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={onSignOut}>
