@@ -8,9 +8,10 @@ import DeviceDetailPage from './components/DeviceDetailPage'
 import TasksPage from './components/TasksPage'
 import AdministrationPage from './components/AdministrationPage'
 import PerformancePage from './components/PerformancePage'
+import DesignSystemPage from './components/DesignSystemPage'
 import type { DeviceRow } from './components/devices-data-table'
 
-type Page = 'dashboard' | 'devices' | 'device-detail' | 'tasks' | 'administration' | 'performance'
+type Page = 'dashboard' | 'devices' | 'device-detail' | 'tasks' | 'administration' | 'performance' | 'design-system'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -97,6 +98,14 @@ function App() {
             onRegionChange={setRegion}
           />
         </div>
+      ) : currentPage === 'design-system' ? (
+        <DesignSystemPage
+          appName="vSNET"
+          onSignOut={() => setIsAuthenticated(false)}
+          onNavigate={handleNavigate}
+          region={region}
+          onRegionChange={setRegion}
+        />
       ) : currentPage === 'administration' ? (
         <AdministrationPage
           appName="vSNET"

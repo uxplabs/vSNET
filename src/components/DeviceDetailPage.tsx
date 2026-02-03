@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from './ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import {
@@ -91,6 +92,90 @@ const ACCESSIBILITY_CHART_DATA = [
   { day: 'Jan 27', erabEstablishmentSr: 98.3, erabEstablishmentAttempts: 12600, volteEstablishmentSr: 99.1, volteEstablishmentAttempts: 3150, rrcSr: 99.4 },
 ];
 
+const RESOURCES_TIME_RANGES = ['Last 7 days'] as const;
+const RESOURCES_CHART_DATA = [
+  { day: 'Jan 21', cpu: 54, memory: 68 },
+  { day: 'Jan 22', cpu: 62, memory: 70 },
+  { day: 'Jan 23', cpu: 58, memory: 66 },
+  { day: 'Jan 24', cpu: 71, memory: 74 },
+  { day: 'Jan 25', cpu: 65, memory: 72 },
+  { day: 'Jan 26', cpu: 60, memory: 69 },
+  { day: 'Jan 27', cpu: 67, memory: 73 },
+] as const;
+
+const CELL_TIME_RANGES = ['Last 7 days'] as const;
+const CELL_STATUS_OPTIONS = ['all', 'good', 'bad'] as const;
+
+const CELL_PERFORMANCE_ROWS = [
+  {
+    name: 'Cell-1',
+    callSetupSuccessRate: 99.2,
+    erabs: 1245,
+    rrcSuccessRate: 98.7,
+    connEstabAttSum: 14520,
+    maxRrcUsers: 842,
+    erabDropRate: 0.42,
+    erabDrops: 12,
+    dlBytes: 987654321,
+    ulBytes: 321654987,
+    status: 'good',
+  },
+  {
+    name: 'Cell-2',
+    callSetupSuccessRate: 97.4,
+    erabs: 1132,
+    rrcSuccessRate: 96.8,
+    connEstabAttSum: 13210,
+    maxRrcUsers: 910,
+    erabDropRate: 1.12,
+    erabDrops: 34,
+    dlBytes: 756432198,
+    ulBytes: 289765432,
+    status: 'bad',
+  },
+  {
+    name: 'Cell-3',
+    callSetupSuccessRate: 98.6,
+    erabs: 1388,
+    rrcSuccessRate: 98.1,
+    connEstabAttSum: 15110,
+    maxRrcUsers: 765,
+    erabDropRate: 0.58,
+    erabDrops: 18,
+    dlBytes: 1123456789,
+    ulBytes: 412356789,
+    status: 'good',
+  },
+  {
+    name: 'Cell-4',
+    callSetupSuccessRate: 96.9,
+    erabs: 1045,
+    rrcSuccessRate: 95.7,
+    connEstabAttSum: 12004,
+    maxRrcUsers: 688,
+    erabDropRate: 1.38,
+    erabDrops: 41,
+    dlBytes: 623456789,
+    ulBytes: 245678901,
+    status: 'bad',
+  },
+  {
+    name: 'Cell-5',
+    callSetupSuccessRate: 98.9,
+    erabs: 1294,
+    rrcSuccessRate: 98.4,
+    connEstabAttSum: 14780,
+    maxRrcUsers: 812,
+    erabDropRate: 0.51,
+    erabDrops: 15,
+    dlBytes: 998877665,
+    ulBytes: 356778899,
+    status: 'good',
+  },
+] as const;
+
+const formatBytes = (value: number) => `${(value / 1_000_000).toFixed(1)} MB`;
+
 function DeviceDetailPage({
   device,
   appName = 'vSNET',
@@ -136,6 +221,10 @@ function DeviceDetailPage({
   const [radioNodesSearch, setRadioNodesSearch] = useState('');
   const [radioNodesStatusFilter, setRadioNodesStatusFilter] = useState('Status');
   const [radioNodesModelFilter, setRadioNodesModelFilter] = useState('Model');
+  const [resourcesTimeRange, setResourcesTimeRange] = useState<(typeof RESOURCES_TIME_RANGES)[number]>(RESOURCES_TIME_RANGES[0]);
+  const [cellSearch, setCellSearch] = useState('');
+  const [cellTimeRange, setCellTimeRange] = useState<(typeof CELL_TIME_RANGES)[number]>(CELL_TIME_RANGES[0]);
+  const [cellStatusFilter, setCellStatusFilter] = useState<(typeof CELL_STATUS_OPTIONS)[number]>('all');
   const SIDEBAR_BADGE_COUNTS = React.useMemo<Record<string, number>>(() => ({
     'ip-interfaces': IP_INTERFACES_DATA.length,
     'radio-nodes': filterRadioNodes(RADIO_NODES_DATA, radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter).length,
@@ -1024,12 +1113,156 @@ function DeviceDetailPage({
                       </section>
                     </TabsContent>
 
-                    <TabsContent value="cell" className="mt-6">
-                      <p className="text-muted-foreground">Cell performance metrics will be displayed here.</p>
+                    <TabsContent value="cell" className="mt-6 space-y-4">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-start">
+                        <div className="relative w-full md:max-w-[280px]">
+                          <Icon
+                            name="search"
+                            size={18}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                          />
+                          <Input
+                            placeholder="Search cells..."
+                            value={cellSearch}
+                            onChange={(e) => setCellSearch(e.target.value)}
+                            className="pl-9 w-full"
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Select value={cellTimeRange} onValueChange={(v) => setCellTimeRange(v as (typeof CELL_TIME_RANGES)[number])}>
+                            <SelectTrigger className="w-[160px]">
+                              <SelectValue placeholder="Time period" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CELL_TIME_RANGES.map((opt) => (
+                                <SelectItem key={opt} value={opt}>
+                                  {opt}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="inline-flex rounded-md border bg-background p-1">
+                            {CELL_STATUS_OPTIONS.map((opt) => (
+                              <Button
+                                key={opt}
+                                variant={cellStatusFilter === opt ? 'secondary' : 'ghost'}
+                                size="sm"
+                                className="h-8 px-3 capitalize"
+                                aria-pressed={cellStatusFilter === opt}
+                                onClick={() => setCellStatusFilter(opt)}
+                              >
+                                {opt}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border bg-card overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="px-4 py-3 h-11">Cell name</TableHead>
+                              <TableHead className="px-4 py-3 h-11">Call setup success rate added ERAB</TableHead>
+                              <TableHead className="px-4 py-3 h-11">ERABs</TableHead>
+                              <TableHead className="px-4 py-3 h-11">RRC establishment success rate</TableHead>
+                              <TableHead className="px-4 py-3 h-11">SCE_LTE_RRC_Cell.ConnEstabAtt.Sum</TableHead>
+                              <TableHead className="px-4 py-3 h-11">LTE_MAX_RRC_CONNECTED_USERS_Cell</TableHead>
+                              <TableHead className="px-4 py-3 h-11">ERABs drop rate</TableHead>
+                              <TableHead className="px-4 py-3 h-11">ERABs drops</TableHead>
+                              <TableHead className="px-4 py-3 h-11">SCE_LTECell_GTP.DL.NumBytes</TableHead>
+                              <TableHead className="px-4 py-3 h-11">SCE_LTECell_GTP.UL.NumBytes</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {CELL_PERFORMANCE_ROWS.filter((row) => {
+                              const matchesSearch = cellSearch.trim()
+                                ? row.name.toLowerCase().includes(cellSearch.trim().toLowerCase())
+                                : true;
+                              const matchesStatus = cellStatusFilter === 'all' ? true : row.status === cellStatusFilter;
+                              return matchesSearch && matchesStatus;
+                            }).map((row) => (
+                              <TableRow key={row.name}>
+                                <TableCell className="px-4 py-3 font-medium">{row.name}</TableCell>
+                                <TableCell className="px-4 py-3 tabular-nums">{row.callSetupSuccessRate.toFixed(2)}%</TableCell>
+                                <TableCell className="px-4 py-3 tabular-nums">{row.erabs}</TableCell>
+                                <TableCell className="px-4 py-3 tabular-nums">{row.rrcSuccessRate.toFixed(2)}%</TableCell>
+                                <TableCell className="px-4 py-3 tabular-nums">{row.connEstabAttSum}</TableCell>
+                                <TableCell className="px-4 py-3 tabular-nums">{row.maxRrcUsers}</TableCell>
+                                <TableCell className="px-4 py-3 tabular-nums">{row.erabDropRate.toFixed(2)}%</TableCell>
+                                <TableCell className="px-4 py-3 tabular-nums">{row.erabDrops}</TableCell>
+                                <TableCell className="px-4 py-3 tabular-nums">{formatBytes(row.dlBytes)}</TableCell>
+                                <TableCell className="px-4 py-3 tabular-nums">{formatBytes(row.ulBytes)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </TabsContent>
 
-                    <TabsContent value="resources" className="mt-6">
-                      <p className="text-muted-foreground">Resources performance metrics will be displayed here.</p>
+                    <TabsContent value="resources" className="mt-6 space-y-4">
+                      <div className="flex items-center justify-start">
+                        <Select value={resourcesTimeRange} onValueChange={(v) => setResourcesTimeRange(v as (typeof RESOURCES_TIME_RANGES)[number])}>
+                          <SelectTrigger className="w-[160px]">
+                            <SelectValue placeholder="Time period" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {RESOURCES_TIME_RANGES.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>CPU utilization</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <ChartContainer
+                              config={{
+                                day: { label: 'Day' },
+                                cpu: { label: 'CPU (%)', color: 'hsl(var(--chart-1, 214 95% 50%))' },
+                              } satisfies ChartConfig}
+                              className="min-h-[220px] w-full"
+                            >
+                              <LineChart accessibilityLayer data={RESOURCES_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                                <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${v}%`} />
+                                <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                                <ChartLegend content={<ChartLegendContent />} />
+                                <Line type="monotone" dataKey="cpu" stroke="var(--color-cpu)" strokeWidth={2} dot={false} />
+                              </LineChart>
+                            </ChartContainer>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>Memory usage</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <ChartContainer
+                              config={{
+                                day: { label: 'Day' },
+                                memory: { label: 'Memory (%)', color: 'hsl(var(--chart-2, 173 58% 39%))' },
+                              } satisfies ChartConfig}
+                              className="min-h-[220px] w-full"
+                            >
+                              <LineChart accessibilityLayer data={RESOURCES_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                                <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${v}%`} />
+                                <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                                <ChartLegend content={<ChartLegendContent />} />
+                                <Line type="monotone" dataKey="memory" stroke="var(--color-memory)" strokeWidth={2} dot={false} />
+                              </LineChart>
+                            </ChartContainer>
+                          </CardContent>
+                        </Card>
+                      </div>
                     </TabsContent>
 
                     <TabsContent value="threshold-profiles" className="mt-6">
@@ -1037,7 +1270,80 @@ function DeviceDetailPage({
                     </TabsContent>
 
                     <TabsContent value="threshold-history" className="mt-6">
-                      <p className="text-muted-foreground">Threshold crossing history will be displayed here.</p>
+                      <div className="space-y-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-start">
+                          <div className="relative w-full md:max-w-[280px]">
+                            <Icon
+                              name="search"
+                              size={18}
+                              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                            />
+                            <Input
+                              placeholder="Search history..."
+                              className="pl-9 w-full"
+                            />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Select value="Rule">
+                              <SelectTrigger className="w-[160px]">
+                                <SelectValue placeholder="Rule" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {['Rule', 'CPU spike', 'Memory saturation', 'ERAB drop rate', 'RRC failures'].map((opt) => (
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Select value="Status">
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {['Status', 'Open', 'Acknowledged', 'Cleared'].map((opt) => (
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="rounded-lg border bg-card overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="px-4 py-3 h-11 w-10">
+                                  <Checkbox aria-label="Select all" />
+                                </TableHead>
+                                <TableHead className="px-4 py-3 h-11">Rule</TableHead>
+                                <TableHead className="px-4 py-3 h-11">Timestamp</TableHead>
+                                <TableHead className="px-4 py-3 h-11">Actions</TableHead>
+                                <TableHead className="px-4 py-3 h-11">Cleared</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {[
+                                { rule: 'CPU spike', timestamp: '2025-01-27 09:12', actions: 'Investigate', cleared: '—' },
+                                { rule: 'Memory saturation', timestamp: '2025-01-27 08:45', actions: 'Acknowledge', cleared: '2025-01-27 09:10' },
+                                { rule: 'ERAB drop rate', timestamp: '2025-01-27 07:58', actions: 'Escalate', cleared: '—' },
+                                { rule: 'RRC failures', timestamp: '2025-01-27 06:30', actions: 'Investigate', cleared: '2025-01-27 06:55' },
+                              ].map((row) => (
+                                <TableRow key={`${row.rule}-${row.timestamp}`}>
+                                  <TableCell className="px-4 py-3">
+                                    <Checkbox aria-label="Select row" />
+                                  </TableCell>
+                                  <TableCell className="px-4 py-3 font-medium">{row.rule}</TableCell>
+                                  <TableCell className="px-4 py-3 tabular-nums">{row.timestamp}</TableCell>
+                                  <TableCell className="px-4 py-3">{row.actions}</TableCell>
+                                  <TableCell className="px-4 py-3 tabular-nums">{row.cleared}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
                     </TabsContent>
                   </Tabs>
                 </CardContent>

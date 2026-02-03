@@ -269,6 +269,14 @@ export default function AdministrationPage({
             </div>
           )}
         </main>
+        <button
+          type="button"
+          onClick={() => onNavigate?.('design-system')}
+          className="fixed bottom-4 right-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-background/95 px-4 py-2 text-sm font-medium text-primary shadow-lg backdrop-blur hover:bg-primary/10 hover:border-primary transition-colors"
+        >
+          <Icon name="link" size={18} />
+          vSNET DS
+        </button>
       </div>
     </div>
     </TooltipProvider>
