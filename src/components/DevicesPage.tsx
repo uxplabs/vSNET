@@ -308,7 +308,7 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
             sidebarOpen ? 'ml-64' : 'ml-0'
           }`}
         >
-          <div className="flex-1 flex flex-col min-h-0 max-w-7xl mx-auto w-full">
+          <div className="flex-1 flex flex-col min-h-0 w-full">
             <Tabs value={mainTab} onValueChange={handleMainTabChange} className="flex-1 flex flex-col min-h-0 w-full">
               <TabsList className="inline-flex w-full justify-start h-auto gap-0 bg-transparent border-b rounded-none p-0 shrink-0">
                 <TabsTrigger
