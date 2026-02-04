@@ -30,6 +30,8 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { DeviceLink } from '@/components/ui/device-link';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { DeviceDrawer } from '@/components/device-drawer';
+import type { DeviceRow } from '@/components/devices-data-table';
 export interface DisconnectedDeviceRow {
   id: string;
   device: string;
@@ -78,11 +80,35 @@ function filterBySearch(row: Row<DisconnectedDeviceRow>, _columnId: string, filt
   );
 }
 
+function toDeviceRow(d: DisconnectedDeviceRow): DeviceRow {
+  return {
+    id: d.id,
+    device: d.device,
+    type: 'SN-LTE',
+    notes: '',
+    status: 'Disconnected',
+    alarms: 0,
+    alarmType: 'None',
+    configStatus: '—',
+    version: '—',
+    ipAddress: '—',
+    deviceGroup: 'Radio access',
+    labels: [],
+  };
+}
+
 export function DisconnectedDevicesCard() {
   const pageSize = useResponsivePageSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState('');
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize });
+  const [deviceDrawerOpen, setDeviceDrawerOpen] = React.useState(false);
+  const [selectedDevice, setSelectedDevice] = React.useState<DeviceRow | null>(null);
+
+  const openDeviceDrawer = React.useCallback((row: DisconnectedDeviceRow) => {
+    setSelectedDevice(toDeviceRow(row));
+    setDeviceDrawerOpen(true);
+  }, []);
 
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
@@ -158,7 +184,12 @@ export function DisconnectedDevicesCard() {
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => openDeviceDrawer(row.original)}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="px-4 py-3">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -179,6 +210,11 @@ export function DisconnectedDevicesCard() {
         <TablePagination table={table} className="justify-end" />
       </CardContent>
     </Card>
+    <DeviceDrawer
+      device={selectedDevice}
+      open={deviceDrawerOpen}
+      onOpenChange={setDeviceDrawerOpen}
+    />
     </TooltipProvider>
   );
 }

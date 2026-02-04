@@ -45,6 +45,8 @@ import { EventsDataTable } from './events-data-table';
 import { ThresholdCrossingAlertsDataTable } from './threshold-crossing-alerts-data-table';
 import { IpInterfacesDataTable } from './ip-interfaces-data-table';
 import { RadioNodesDataTable, RADIO_NODES_STATUS_OPTIONS, RADIO_NODES_MODEL_OPTIONS, RADIO_NODES_DATA, filterRadioNodes } from './radio-nodes-data-table';
+import { AddRadioNodeSheet, type AddRadioNodeFormData } from './add-radio-node-sheet';
+import { toast } from 'sonner';
 import { NrCellsDataTable, NR_CELLS_DATA } from './nr-cells-data-table';
 import { ZonesDataTable, ZONES_DATA } from './zones-data-table';
 import { X2ConnectionsDataTable } from './x2-connections-data-table';
@@ -231,6 +233,7 @@ function DeviceDetailPage({
   const [radioNodesSearch, setRadioNodesSearch] = useState('');
   const [radioNodesStatusFilter, setRadioNodesStatusFilter] = useState('Status');
   const [radioNodesModelFilter, setRadioNodesModelFilter] = useState('Model');
+  const [addRadioNodeSheetOpen, setAddRadioNodeSheetOpen] = useState(false);
   const [resourcesTimeRange, setResourcesTimeRange] = useState<(typeof RESOURCES_TIME_RANGES)[number]>(RESOURCES_TIME_RANGES[0]);
   const [cellSearch, setCellSearch] = useState('');
   const [cellTimeRange, setCellTimeRange] = useState<(typeof CELL_TIME_RANGES)[number]>(CELL_TIME_RANGES[0]);
@@ -801,7 +804,7 @@ function DeviceDetailPage({
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                      className="h-8 w-8"
                                       aria-label="Delete note"
                                       onClick={() => setNotes((prev) => prev.filter((n) => n.id !== note.id))}
                                     >
@@ -962,7 +965,7 @@ function DeviceDetailPage({
                 </div>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" className="shrink-0 gap-1">
+                    <Button variant="outline" size="sm" className="shrink-0 gap-1" onClick={() => setAddRadioNodeSheetOpen(true)}>
                       <Icon name="add" size={18} />
                       Add radio node
                     </Button>
@@ -1607,6 +1610,13 @@ function DeviceDetailPage({
           </div>
         </div>
       </main>
+      <AddRadioNodeSheet
+        open={addRadioNodeSheetOpen}
+        onOpenChange={setAddRadioNodeSheetOpen}
+        onSubmit={(data: AddRadioNodeFormData) => {
+          toast.success(data.mode === 'upload' ? 'Radio node(s) added from configuration file' : 'Radio node added');
+        }}
+      />
     </div>
     </TooltipProvider>
   );

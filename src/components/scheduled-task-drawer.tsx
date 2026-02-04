@@ -95,17 +95,14 @@ export function ScheduledTaskDrawer({ task, open, onOpenChange }: ScheduledTaskD
               </span>
             </div>
             <div className="flex items-center gap-2 pt-3 w-full">
-              <Button variant="outline" size="sm" className="h-8">
+              <Button variant="outline">
                 Edit
               </Button>
-              <Button variant="outline" size="sm" className="h-8">
+              <Button variant="outline">
                 Disable
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 ml-auto text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-              >
+              <Button variant="outline" className="gap-1.5 ml-auto shrink-0">
+                <Icon name="delete" size={18} />
                 Delete
               </Button>
             </div>

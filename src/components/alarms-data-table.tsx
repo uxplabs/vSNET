@@ -250,7 +250,7 @@ const columns: ColumnDef<AlarmRow>[] = [
   {
     accessorKey: 'type',
     header: ({ column }) => (
-      <SortableHeader column={column}>Type</SortableHeader>
+      <SortableHeader column={column}>Alarm type</SortableHeader>
     ),
     cell: ({ row }) => row.getValue('type') as string,
     meta: { className: 'min-w-[21ch]' },

@@ -72,7 +72,7 @@ export function DataTable<TData, TValue>({ columns, data, header }: DataTablePro
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'} className="group">
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta as { cellClassName?: string; className?: string } | undefined;
                     const cellClass = meta?.cellClassName ?? meta?.className;

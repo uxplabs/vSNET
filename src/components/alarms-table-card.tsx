@@ -157,7 +157,7 @@ const columns: ColumnDef<AlarmTableRow>[] = [
   },
   {
     accessorKey: 'type',
-    header: ({ column }) => <SortableHeader column={column}>Type</SortableHeader>,
+    header: ({ column }) => <SortableHeader column={column}>Alarm type</SortableHeader>,
     cell: ({ row }) => <span>{row.getValue('type') as string}</span>,
   },
   {

@@ -321,14 +321,17 @@ function getColumns(
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={() => onNavigateToDeviceDetail?.(row.original)}
-          >
-            Details
+          <DropdownMenuItem onClick={() => onNavigateToDeviceDetail?.(row.original)}>
+            View details
           </DropdownMenuItem>
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem>Configure</DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive">Remove</DropdownMenuItem>
+          <DropdownMenuItem>Refresh</DropdownMenuItem>
+          <DropdownMenuItem>Reboot</DropdownMenuItem>
+          <DropdownMenuItem>Network settings</DropdownMenuItem>
+          <DropdownMenuItem>Edit event notification settings</DropdownMenuItem>
+          <DropdownMenuItem>Update firmware</DropdownMenuItem>
+          <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+          <DropdownMenuItem>Connect RF feed</DropdownMenuItem>
+          <DropdownMenuItem>Create backup</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     ),
@@ -357,6 +360,10 @@ interface DevicesDataTableProps {
   onNavigateToDeviceDetail?: (device: DeviceRow) => void;
   /** When provided, clicking the note icon in the table navigates to device detail with Notes tab active and scrolls to notes. */
   onAddNoteClick?: (device: DeviceRow) => void;
+  /** Called when row selection changes; receives the number of selected rows. */
+  onSelectionChange?: (selectedCount: number) => void;
+  /** When this value changes, row selection is cleared (e.g. parent increments when user clicks Clear). */
+  clearSelectionTrigger?: number;
   sidebarRegion?: SidebarRegionFilter;
   statusFilter?: string;
   search?: string;
@@ -422,6 +429,8 @@ export function getFilteredDeviceCount(filters: DeviceTableFilters): number {
 export function DevicesDataTable({
   onNavigateToDeviceDetail,
   onAddNoteClick,
+  onSelectionChange,
+  clearSelectionTrigger,
   sidebarRegion = 'all',
   statusFilter = 'Status',
   search = '',
@@ -442,6 +451,21 @@ export function DevicesDataTable({
   });
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [selectedDevice, setSelectedDevice] = React.useState<DeviceRow | null>(null);
+
+  const selectedCount = React.useMemo(
+    () => Object.keys(rowSelection).filter((key) => rowSelection[key]).length,
+    [rowSelection]
+  );
+
+  React.useEffect(() => {
+    onSelectionChange?.(selectedCount);
+  }, [selectedCount, onSelectionChange]);
+
+  React.useEffect(() => {
+    if (clearSelectionTrigger != null && clearSelectionTrigger > 0) {
+      setRowSelection({});
+    }
+  }, [clearSelectionTrigger]);
 
   const handleDeviceClick = React.useCallback((device: DeviceRow) => {
     setSelectedDevice(device);

@@ -20,6 +20,8 @@ import {
   TooltipTrigger,
 } from './ui/tooltip';
 import { AccessControlUsersDataTable, ACCESS_CONTROL_USERS_DATA } from './access-control-users-data-table';
+import { AccessControlDomainsDataTable, ACCESS_CONTROL_DOMAINS_DATA } from './access-control-domains-data-table';
+import { AddDomainSheet } from './add-domain-sheet';
 import { Badge } from './ui/badge';
 import FaultManagementPage from './FaultManagementPage';
 import LabelManagementPage from './LabelManagementPage';
@@ -60,6 +62,9 @@ export default function AdministrationPage({
   const toKey = (label: string) => label.toLowerCase().replace(/\s+/g, '-');
   const [activeSection, setActiveSection] = useState(toKey(SIDEBAR_ITEMS[0]));
   const [accessControlTab, setAccessControlTab] = useState('users');
+  const [addDomainSheetOpen, setAddDomainSheetOpen] = useState(false);
+  const [editDomainSheetOpen, setEditDomainSheetOpen] = useState(false);
+  const [selectedDomainForEdit, setSelectedDomainForEdit] = useState<AccessControlDomainRow | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [search, setSearch] = useState('');
   const [profileFilter, setProfileFilter] = useState<string>('All profiles');
@@ -156,7 +161,7 @@ export default function AdministrationPage({
                   <TabsTrigger value="domains" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 gap-2">
                     Domains
                     <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs tabular-nums">
-                      5
+                      {ACCESS_CONTROL_DOMAINS_DATA.length}
                     </Badge>
                   </TabsTrigger>
                   <TabsTrigger value="password" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
@@ -225,8 +230,33 @@ export default function AdministrationPage({
                   <p className="text-muted-foreground">Profile management will be displayed here.</p>
                 </TabsContent>
 
-                <TabsContent value="domains" className="mt-6">
-                  <p className="text-muted-foreground">Domain settings will be displayed here.</p>
+                <TabsContent value="domains" className="mt-6 space-y-4">
+                  <div className="flex justify-end">
+                    <Button variant="outline" size="sm" className="gap-1" onClick={() => setAddDomainSheetOpen(true)}>
+                      <Icon name="add" size={18} />
+                      Add domain
+                    </Button>
+                  </div>
+                  <AccessControlDomainsDataTable
+                    onEditClick={(domain) => {
+                      setSelectedDomainForEdit(domain);
+                      setEditDomainSheetOpen(true);
+                    }}
+                  />
+                  <AddDomainSheet
+                    open={addDomainSheetOpen}
+                    onOpenChange={setAddDomainSheetOpen}
+                    onSubmit={() => {}}
+                  />
+                  <AddDomainSheet
+                    open={editDomainSheetOpen}
+                    onOpenChange={(open) => {
+                      setEditDomainSheetOpen(open);
+                      if (!open) setSelectedDomainForEdit(null);
+                    }}
+                    domain={selectedDomainForEdit}
+                    onSubmit={() => {}}
+                  />
                 </TabsContent>
 
                 <TabsContent value="password" className="mt-6">

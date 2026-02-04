@@ -29,6 +29,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NameValueField, EditableLabelsField } from '@/components/ui/editable-value';
 import type { DeviceRow } from './devices-data-table';
+import { AlarmDrawer } from './alarm-drawer';
+import type { AlarmDrawerAlarm } from './alarm-drawer';
 
 const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
@@ -44,6 +46,8 @@ interface DrawerAlarmRow {
   updated: string;
   source: string;
   severity: AlarmSeverity;
+  type: string;
+  managedObject: string;
 }
 
 interface NoteMessage {
@@ -65,6 +69,8 @@ const SEVERITY_ICON: Record<AlarmSeverity, { name: string; className: string }> 
   Minor: { name: 'warning', className: 'text-amber-600 dark:text-amber-500' },
 };
 
+const DRAWER_ALARM_TYPES = ['Device disconnected', 'Link down', 'Radio link failure', 'Config mismatch'];
+
 function getDeviceAlarms(deviceName: string, count: number): DrawerAlarmRow[] {
   const severities: AlarmSeverity[] = ['Critical', 'Major', 'Minor'];
   const alarms: DrawerAlarmRow[] = [];
@@ -78,9 +84,24 @@ function getDeviceAlarms(deviceName: string, count: number): DrawerAlarmRow[] {
       updated: up,
       source: deviceName,
       severity: severities[i % 3],
+      type: DRAWER_ALARM_TYPES[i % DRAWER_ALARM_TYPES.length],
+      managedObject: (i % 2 === 0 ? 'Cell-' : 'Radio-') + ((i % 12) + 1),
     });
   }
   return alarms;
+}
+
+function drawerAlarmToDrawerAlarm(a: DrawerAlarmRow, index: number): AlarmDrawerAlarm {
+  return {
+    id: `device-drawer-alarm-${index}`,
+    severity: a.severity,
+    timestamp: a.timestamp,
+    updated: a.updated,
+    source: a.source,
+    managedObject: a.managedObject,
+    type: a.type,
+    owner: '—',
+  };
 }
 
 function KpiCard({
@@ -117,6 +138,8 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
   const notesSectionRef = React.useRef<HTMLDivElement>(null);
   const [labelsExpanded, setLabelsExpanded] = React.useState(false);
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
+  const [alarmDrawerOpen, setAlarmDrawerOpen] = React.useState(false);
+  const [selectedAlarm, setSelectedAlarm] = React.useState<AlarmDrawerAlarm | null>(null);
   const [summaryValues, setSummaryValues] = React.useState(() => ({
     hostname: device?.device ?? '',
     location: device?.deviceGroup ?? '',
@@ -500,26 +523,34 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="h-8 px-2">Severity</TableHead>
                         <TableHead className="h-8 px-2">Timestamp</TableHead>
                         <TableHead className="h-8 px-2">Updated</TableHead>
                         <TableHead className="h-8 px-2">Source</TableHead>
-                        <TableHead className="h-8 px-2">Severity</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {getDeviceAlarms(device.device, Math.min(device.alarms, 5) || 3).map((alarm, i) => {
                         const cfg = SEVERITY_ICON[alarm.severity];
+                        const alarmForDrawer = drawerAlarmToDrawerAlarm(alarm, i);
                         return (
-                          <TableRow key={i}>
-                            <TableCell className="py-1.5 px-2 text-xs tabular-nums">{alarm.timestamp}</TableCell>
-                            <TableCell className="py-1.5 px-2 text-xs tabular-nums">{alarm.updated}</TableCell>
-                            <TableCell className="py-1.5 px-2 text-xs truncate max-w-[24ch]">{alarm.source}</TableCell>
+                          <TableRow
+                            key={i}
+                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => {
+                              setSelectedAlarm(alarmForDrawer);
+                              setAlarmDrawerOpen(true);
+                            }}
+                          >
                             <TableCell className="py-1.5 px-2">
                               <span className="inline-flex items-center gap-1.5 text-xs">
                                 <Icon name={cfg.name} size={14} className={`shrink-0 ${cfg.className}`} />
                                 {alarm.severity}
                               </span>
                             </TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs tabular-nums">{alarm.timestamp}</TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs tabular-nums">{alarm.updated}</TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs truncate max-w-[24ch]">{alarm.source}</TableCell>
                           </TableRow>
                         );
                       })}
@@ -576,6 +607,11 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
         </div>
         </TooltipProvider>
       </DrawerContent>
+      <AlarmDrawer
+        alarm={selectedAlarm}
+        open={alarmDrawerOpen}
+        onOpenChange={setAlarmDrawerOpen}
+      />
     </Drawer>
   );
 }

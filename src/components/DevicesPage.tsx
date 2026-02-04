@@ -10,6 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { DevicesDataTable, DEVICES_DATA, getDeviceSidebarCounts, getFilteredDeviceCount } from './devices-data-table';
 import { AlarmsDataTable, getFilteredAlarmsCount } from './alarms-data-table';
@@ -24,7 +30,9 @@ import { ActivityLogDataTable } from './activity-log-data-table';
 import { ReportsDataTable, getFilteredReportCount } from './reports-data-table';
 import { PerformanceDataTable, getFilteredPerformanceCount } from './performance-data-table';
 import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount } from './threshold-crossing-alerts-data-table';
+import { ChevronDown } from 'lucide-react';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
+import { ErrorBoundary } from './error-boundary';
 
 export interface DevicesPageProps {
   appName?: string;
@@ -104,6 +112,8 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
   const [selectedTask, setSelectedTask] = useState<ScheduledTaskRow | null>(null);
   const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+  const [deviceSelectedCount, setDeviceSelectedCount] = useState(0);
+  const [clearSelectionTrigger, setClearSelectionTrigger] = useState(0);
 
   const deviceFiltersActive = search !== '' || statusFilter !== 'Status' || configStatusFilter !== 'Config status' || typeFilter !== 'Type' || versionFilter !== 'Version' || alarmsFilter !== 'Alarms' || labelsFilter !== 'Labels';
   const clearDeviceFilters = () => {
@@ -368,145 +378,195 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
               </TabsList>
 
               <TabsContent value="device" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
-                {/* Search and filters */}
+                <ErrorBoundary>
+                {/* Default area above table: selection + actions OR search + filters */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
-                  <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
-                    <Icon
-                      name="search"
-                      size={18}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-                    />
-                    <Input
-                      placeholder="Search devices..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 w-full min-w-0"
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                    <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                      <SelectTrigger className="w-[120px] shrink-0">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={configStatusFilter} onValueChange={setConfigStatusFilter}>
-                      <SelectTrigger className="w-[130px] shrink-0">
-                        <SelectValue placeholder="Config status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CONFIG_STATUS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger className="w-[110px] shrink-0">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TYPE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={versionFilter} onValueChange={setVersionFilter}>
-                      <SelectTrigger className="w-[100px] shrink-0">
-                        <SelectValue placeholder="Version" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {VERSION_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={alarmsFilter} onValueChange={setAlarmsFilter}>
-                      <SelectTrigger className="w-[110px] shrink-0">
-                        <SelectValue placeholder="Alarms" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ALARMS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={labelsFilter} onValueChange={setLabelsFilter}>
-                      <SelectTrigger className="w-[110px] shrink-0">
-                        <SelectValue placeholder="Labels" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LABELS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {/* Active filters + result count */}
-                {(() => {
-                  const count = getFilteredDeviceCount({
-                    sidebarRegion: selectedRegion,
-                    statusFilter,
-                    search,
-                    configStatusFilter,
-                    typeFilter,
-                    versionFilter,
-                    alarmsFilter,
-                    labelsFilter,
-                  });
-                  const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                  if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('Status'); setSelectedRegion('all'); } });
-                  if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => setConfigStatusFilter('Config status') });
-                  if (typeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('Type') });
-                  if (versionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('Version') });
-                  if (alarmsFilter !== 'Alarms') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('Alarms') });
-                  if (labelsFilter !== 'Labels') activeFilters.push({ key: 'labels', label: `Labels: ${labelsFilter}`, onClear: () => setLabelsFilter('Labels') });
-                  if (search.trim()) activeFilters.push({ key: 'search', label: `Search: "${search.trim()}"`, onClear: () => setSearch('') });
-                  const hasActive = activeFilters.length > 0;
-                  return (
-                    <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
-                      <span className="text-sm text-muted-foreground">
-                        {count} {count === 1 ? 'result' : 'results'}
-                      </span>
-                      {activeFilters.map((f) => (
-                        <span
-                          key={f.key}
-                          className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground"
-                        >
-                          {f.label}
-                          <button
-                            type="button"
-                            onClick={f.onClear}
-                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            aria-label={`Clear ${f.label}`}
-                          >
-                            <Icon name="close" size={14} aria-hidden />
-                          </button>
-                        </span>
-                      ))}
-                      {hasActive && (
-                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearDeviceFilters}>
-                          Clear all
-                        </Button>
-                      )}
+                  {deviceSelectedCount >= 1 ? (
+                    <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0 ml-auto sm:ml-0">
+                      <Button variant="outline" size="sm">
+                        Configure
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        Add to site
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        Group
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5">
+                        <Icon name="delete" size={18} />
+                        Delete
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-1">
+                            More actions
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem>Refresh</DropdownMenuItem>
+                            <DropdownMenuItem>Reboot</DropdownMenuItem>
+                            <DropdownMenuItem>Network settings</DropdownMenuItem>
+                            <DropdownMenuItem>Update firmware</DropdownMenuItem>
+                            <DropdownMenuItem>Create backup</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
-                  );
+                  ) : (
+                    <>
+                      <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
+                        <Icon
+                          name="search"
+                          size={18}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                        />
+                        <Input
+                          placeholder="Search devices..."
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          className="pl-9 w-full min-w-0"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+                        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+                          <SelectTrigger className="w-[120px] shrink-0">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={configStatusFilter} onValueChange={setConfigStatusFilter}>
+                          <SelectTrigger className="w-[130px] shrink-0">
+                            <SelectValue placeholder="Config status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CONFIG_STATUS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={typeFilter} onValueChange={setTypeFilter}>
+                          <SelectTrigger className="w-[110px] shrink-0">
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TYPE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={versionFilter} onValueChange={setVersionFilter}>
+                          <SelectTrigger className="w-[100px] shrink-0">
+                            <SelectValue placeholder="Version" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {VERSION_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={alarmsFilter} onValueChange={setAlarmsFilter}>
+                          <SelectTrigger className="w-[110px] shrink-0">
+                            <SelectValue placeholder="Alarms" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ALARMS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={labelsFilter} onValueChange={setLabelsFilter}>
+                          <SelectTrigger className="w-[110px] shrink-0">
+                            <SelectValue placeholder="Labels" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LABELS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {/* Selected count + Clear OR active filters + result count (row above table like default view) */}
+                {deviceSelectedCount >= 1 ? (
+                  <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                    <span className="text-sm text-muted-foreground">
+                      {deviceSelectedCount} {deviceSelectedCount === 1 ? 'device' : 'devices'} selected
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-primary hover:text-primary"
+                      onClick={() => setClearSelectionTrigger((t) => t + 1)}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                ) : (() => {
+                        const count = getFilteredDeviceCount({
+                          sidebarRegion: selectedRegion,
+                          statusFilter,
+                          search,
+                          configStatusFilter,
+                          typeFilter,
+                          versionFilter,
+                          alarmsFilter,
+                          labelsFilter,
+                        });
+                        const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                        if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('Status'); setSelectedRegion('all'); } });
+                        if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => setConfigStatusFilter('Config status') });
+                        if (typeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('Type') });
+                        if (versionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('Version') });
+                        if (alarmsFilter !== 'Alarms') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('Alarms') });
+                        if (labelsFilter !== 'Labels') activeFilters.push({ key: 'labels', label: `Labels: ${labelsFilter}`, onClear: () => setLabelsFilter('Labels') });
+                        if (search.trim()) activeFilters.push({ key: 'search', label: `Search: "${search.trim()}"`, onClear: () => setSearch('') });
+                        const hasActive = activeFilters.length > 0;
+                        return (
+                          <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                            <span className="text-sm text-muted-foreground">
+                              {count} {count === 1 ? 'result' : 'results'}
+                            </span>
+                            {activeFilters.map((f) => (
+                              <span
+                                key={f.key}
+                                className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground"
+                              >
+                                {f.label}
+                                <button
+                                  type="button"
+                                  onClick={f.onClear}
+                                  className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                  aria-label={`Clear ${f.label}`}
+                                >
+                                  <Icon name="close" size={14} aria-hidden />
+                                </button>
+                              </span>
+                            ))}
+                            {hasActive && (
+                              <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearDeviceFilters}>
+                                Clear all
+                              </Button>
+                            )}
+                          </div>
+                        );
                 })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <DevicesDataTable
@@ -519,8 +579,11 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     alarmsFilter={alarmsFilter}
                     labelsFilter={labelsFilter}
                     onNavigateToDeviceDetail={onNavigateToDeviceDetail}
+                    onSelectionChange={setDeviceSelectedCount}
+                    clearSelectionTrigger={clearSelectionTrigger}
                   />
                 </div>
+                </ErrorBoundary>
               </TabsContent>
               <TabsContent value="alarms" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
