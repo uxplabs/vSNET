@@ -36,6 +36,7 @@ import { DeviceDrawer } from '@/components/device-drawer';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { Icon } from '@/components/Icon';
 import { Badge } from '@/components/ui/badge';
+import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
 export type DeviceGroup = 'Core network' | 'Radio access' | 'Edge devices' | 'Test environment';
 
@@ -52,6 +53,7 @@ export interface DeviceRow {
   version: string;
   ipAddress: string;
   deviceGroup: DeviceGroup;
+  region: string;
   labels: string[];
 }
 
@@ -106,6 +108,7 @@ function generateDevices(count: number): DeviceRow[] {
     for (let j = 0; j < labelCount && j < LABEL_POOL.length; j++) {
       labels.push(LABEL_POOL[(startIdx + j) % LABEL_POOL.length]);
     }
+    const region = NORTH_AMERICAN_REGIONS[i % NORTH_AMERICAN_REGIONS.length];
     devices.push({
       id: String(i),
       device: `${prefix}-${num}`,
@@ -119,6 +122,7 @@ function generateDevices(count: number): DeviceRow[] {
       version: VERSIONS[pi],
       ipAddress: `10.${(12 + (i % 3)).toString()}.${octet3}.${octet4}`,
       deviceGroup,
+      region,
       labels,
     });
   }
@@ -140,6 +144,20 @@ export function getDeviceSidebarCounts(devices: DeviceRow[]) {
     return acc;
   }, {} as Record<DeviceGroup, number>);
   return { region, groups };
+}
+
+/** Per-region sidebar counts (region + groups) for device groups subsections. */
+export function getDeviceSidebarCountsByRegion(devices: DeviceRow[]): Record<string, { region: ReturnType<typeof getDeviceSidebarCounts>['region']; groups: Record<DeviceGroup, number> }> {
+  const byRegion: Record<string, DeviceRow[]> = {};
+  for (const d of devices) {
+    if (!byRegion[d.region]) byRegion[d.region] = [];
+    byRegion[d.region].push(d);
+  }
+  const out: Record<string, { region: ReturnType<typeof getDeviceSidebarCounts>['region']; groups: Record<DeviceGroup, number> }> = {};
+  for (const [reg, list] of Object.entries(byRegion)) {
+    out[reg] = getDeviceSidebarCounts(list);
+  }
+  return out;
 }
 
 function StatusCell({ status }: { status: string }) {
@@ -181,21 +199,25 @@ function getColumns(
   {
     id: 'select',
     header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
+      <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(value === true)}
+          aria-label="Select all"
+        />
+      </div>
     ),
     cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
+      <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(value === true)}
+          aria-label="Select row"
+        />
+      </div>
     ),
     enableSorting: false,
     meta: { className: 'w-10' },
@@ -508,6 +530,7 @@ export function DevicesDataTable({
   const table = useReactTable({
     data,
     columns,
+    getRowId: (originalRow) => originalRow.id,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,

@@ -12,13 +12,7 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
 type NavItem = {
@@ -61,10 +56,16 @@ export interface Navbar01Props {
   leftAdornment?: React.ReactNode;
   /** Current section for nav highlight (e.g. 'dashboard', 'devices') */
   currentSection?: string;
-  /** Controlled region (when with onRegionChange) */
+  /** Controlled region (when with onRegionChange) - single string for backward compat */
   region?: string;
-  /** Callback when region changes */
+  /** Controlled regions (multiselect) */
+  regions?: string[];
+  /** Callback when region changes (single - backward compat) */
   onRegionChange?: (region: string) => void;
+  /** Callback when regions change (multiselect) */
+  onRegionsChange?: (regions: string[]) => void;
+  /** When set, region is fixed (single-region account); show label only, no dropdown */
+  fixedRegion?: string;
 }
 
 const Navbar01 = ({
@@ -75,11 +76,57 @@ const Navbar01 = ({
   leftAdornment,
   currentSection,
   region: regionProp,
+  regions: regionsProp,
   onRegionChange,
+  onRegionsChange,
+  fixedRegion,
 }: Navbar01Props) => {
-  const [internalRegion, setInternalRegion] = useState<string>('All');
-  const region = regionProp ?? internalRegion;
-  const setRegion = onRegionChange ?? setInternalRegion;
+  const [internalRegions, setInternalRegions] = useState<string[]>(['All']);
+  const regions = regionsProp ?? (regionProp != null ? [regionProp] : internalRegions);
+  const setRegions = React.useCallback(
+    (next: string[] | ((prev: string[]) => string[])) => {
+      if (onRegionsChange) {
+        // Pass functional updater so parent always applies from its latest state (fixes multi-select when menu closes between clicks)
+        if (typeof next === 'function') {
+          onRegionsChange((parentPrev: string[]) => next(parentPrev));
+        } else {
+          onRegionsChange(next);
+        }
+      } else if (onRegionChange) {
+        const value = typeof next === 'function' ? next(regions) : next;
+        onRegionChange(value[0] ?? 'All');
+      } else {
+        const value = typeof next === 'function' ? next(internalRegions) : next;
+        setInternalRegions(value);
+      }
+    },
+    [regions, internalRegions, onRegionsChange, onRegionChange]
+  );
+
+  const toggleRegion = (r: string) => {
+    setRegions((prev) => {
+      if (r === 'All') {
+        return prev.includes('All') ? [] : ['All'];
+      }
+      const next = prev.filter((x) => x !== 'All');
+      const has = next.includes(r);
+      if (has) {
+        const filtered = next.filter((x) => x !== r);
+        return filtered.length === 0 ? ['All'] : filtered;
+      }
+      return [...next, r];
+    });
+  };
+
+  const isAll = regions.length === 0 || (regions.length === 1 && regions[0] === 'All');
+  const regionDisplayList = isAll ? ['All'] : regions;
+  const regionTriggerLabel =
+    regionDisplayList.length === 0
+      ? 'All'
+      : regionDisplayList.length === 1
+        ? regionDisplayList[0]
+        : regionDisplayList.join(', ');
+  const region = regions[0] ?? 'All';
   const [activeSection, setActiveSection] = useState<string>(currentSection ?? '');
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -160,24 +207,68 @@ const Navbar01 = ({
           </NavigationMenuList>
         </NavigationMenu>
 
-        {/* Right: region, icon buttons, avatar (desktop) */}
+        {/* Right: region (fixed label for single-region account, or multiselect dropdown) */}
         <div className="hidden shrink-0 items-center gap-1 md:flex md:ml-auto">
-          <Select value={region} onValueChange={setRegion}>
-            <SelectTrigger
+          {fixedRegion != null ? (
+            <div
               className={cn(
-                'w-[140px] border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 [&>svg]:text-primary-foreground [&>span]:text-primary-foreground'
+                'flex w-[140px] items-center justify-center border border-primary-foreground/30 bg-transparent px-3 py-2 text-primary-foreground text-sm'
               )}
+              title={fixedRegion}
             >
-              <SelectValue>{region}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {REGION_OPTIONS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <span className="truncate">{fixedRegion}</span>
+            </div>
+          ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                title={regionTriggerLabel}
+                className={cn(
+                  'group w-[140px] justify-between gap-2 border border-primary-foreground/30 bg-transparent text-primary-foreground',
+                  'hover:bg-white/20 hover:text-white hover:border-white/40 [&>svg]:shrink-0 [&>svg]:text-primary-foreground hover:[&>svg]:text-white'
+                )}
+              >
+                <span className="min-w-0 truncate text-left">{regionTriggerLabel}</span>
+                <div className="flex shrink-0 items-center gap-1">
+                  {!isAll && regions.length > 1 && (
+                    <Badge variant="secondary" className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums bg-primary-foreground/20 text-primary-foreground border-0 group-hover:bg-white/30 group-hover:text-white">
+                      {regions.length}
+                    </Badge>
+                  )}
+                  <Icon name="expand_more" size={18} />
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="z-[1200] w-[240px]" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <DropdownMenuLabel>Regions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {REGION_OPTIONS.map((r) => {
+                const checked = r === 'All' ? isAll : regions.includes(r);
+                return (
+                  <DropdownMenuItem
+                    key={r}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      toggleRegion(r);
+                    }}
+                    className="cursor-pointer focus:bg-accent"
+                  >
+                    <label className="flex cursor-pointer items-center gap-3 w-full py-0.5 pointer-events-none">
+                      <Checkbox
+                        checked={checked}
+                        aria-label={`Select ${r}`}
+                        tabIndex={-1}
+                        className="pointer-events-none"
+                      />
+                      <span>{r}</span>
+                    </label>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -301,16 +392,22 @@ const Navbar01 = ({
                 );
               })}
               <div className="border-t border-border pt-4 mt-4">
-                <Select value={region} onValueChange={setRegion}>
-                  <SelectTrigger className="w-full mb-2">Region</SelectTrigger>
-                  <SelectContent>
-                    {REGION_OPTIONS.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <p className="text-sm font-medium text-muted-foreground mb-2">Region</p>
+                {fixedRegion != null ? (
+                  <p className="text-sm py-1.5">{fixedRegion}</p>
+                ) : (
+                <div className="flex flex-col gap-1.5 max-h-[200px] overflow-y-auto">
+                  {REGION_OPTIONS.map((r) => (
+                    <label key={r} className="flex cursor-pointer items-center gap-2 py-1.5 text-sm">
+                      <Checkbox
+                        checked={r === 'All' ? regions.includes('All') || regions.length === 0 : regions.includes(r)}
+                        onCheckedChange={() => toggleRegion(r)}
+                      />
+                      <span>{r}</span>
+                    </label>
+                  ))}
+                </div>
+                )}
                 <div className="flex items-center gap-2 mt-2">
                   <Button variant="ghost" size="icon" aria-label="Connection status">
                     <Icon name="wifi" size={16} />

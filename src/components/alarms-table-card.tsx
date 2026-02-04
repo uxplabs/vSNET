@@ -210,6 +210,7 @@ function alarmSourceToDeviceRow(source: string): DeviceRow {
     ipAddress: '—',
     version: '—',
     deviceGroup: 'Radio access',
+    region: 'Pacific Northwest',
     labels: [],
   };
 }

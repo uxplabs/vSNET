@@ -238,6 +238,7 @@ export function SoftwareManagementDataTable({
   const table = useReactTable({
     data,
     columns,
+    getRowId: (originalRow) => originalRow.id,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,

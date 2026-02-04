@@ -137,6 +137,7 @@ function alarmSourceToDeviceRow(source: string): DeviceRow {
     ipAddress: '—',
     version: '—',
     deviceGroup: 'Radio access',
+    region: 'Pacific Northwest',
     labels: [],
   };
 }
@@ -338,6 +339,7 @@ export function AlarmsDataTable({ search = '', severityFilter = 'Alarms' }: Alar
   const table = useReactTable({
     data,
     columns,
+    getRowId: (originalRow) => originalRow.id,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,

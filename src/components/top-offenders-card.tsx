@@ -54,6 +54,7 @@ function topOffenderToDeviceRow(row: TopOffenderRow): DeviceRow {
     ipAddress: row.ipAddress,
     version: 'v2.2',
     deviceGroup: 'Radio access',
+    region: 'Pacific Northwest',
     labels: [],
   };
 }

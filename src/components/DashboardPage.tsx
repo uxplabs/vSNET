@@ -10,14 +10,6 @@ const DashboardCapacityTab = lazy(() => import('./DashboardCapacityTab').then((m
 import { TrendBadge } from './TrendBadge';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
-import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
 const DASHBOARD_TABS = [
   { value: 'network-overview', label: 'Network overview' },
@@ -32,14 +24,17 @@ export interface DashboardPageProps {
   onSignOut?: () => void;
   onNavigate?: (page: string) => void;
   region?: string;
+  regions?: string[];
   onRegionChange?: (region: string) => void;
+  onRegionsChange?: (regions: string[]) => void;
+  fixedRegion?: string;
 }
 
 const ALL_DEVICES = { total: 500, connected: 342, disconnected: 12, kpiSyncErrors: 8 };
 const ALL_RADIO = { total: 248, connected: 228, disconnected: 20, connectedFree: 140, connectedUsed: 88, disconnectedFree: 12, disconnectedUsed: 8 };
 const ALL_ALARMS = { critical: 11, major: 14, minor: 10 };
 
-function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, onRegionChange }: DashboardPageProps) {
+function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regions, onRegionChange, onRegionsChange, fixedRegion }: DashboardPageProps) {
   const alarmsTableRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<string>(DASHBOARD_TABS[0].value);
   const [alarmsSeverityFilter, setAlarmsSeverityFilter] = useState<string>('All');
@@ -90,10 +85,10 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, onReg
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Navbar01 appName={appName} onSignOut={onSignOut} onNavigate={onNavigate} currentSection="dashboard" region={region} onRegionChange={onRegionChange} />
+      <Navbar01 appName={appName} onSignOut={onSignOut} onNavigate={onNavigate} currentSection="dashboard" region={region} regions={regions} onRegionChange={onRegionChange} onRegionsChange={onRegionsChange} fixedRegion={fixedRegion} />
       <main id="dashboard" className="flex-1 w-full px-4 py-6 md:px-6 lg:px-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="sticky top-14 z-10 -mt-6 -mb-6 flex flex-wrap items-center justify-between gap-4 bg-background/80 backdrop-blur-sm pt-6 pb-6">
+          <div className="sticky top-14 z-10 -mt-6 -mb-6 flex flex-wrap items-center gap-4 bg-background/80 backdrop-blur-sm pt-6 pb-6">
             <TabsList className="inline-flex flex-wrap h-auto gap-1 bg-muted p-1">
               {DASHBOARD_TABS.map((tab) => (
                 <TabsTrigger key={tab.value} value={tab.value}>
@@ -101,19 +96,6 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, onReg
                 </TabsTrigger>
               ))}
             </TabsList>
-            <div className="flex items-center gap-2 shrink-0">
-              <Select value={region ?? 'All'} onValueChange={(v) => onRegionChange?.(v)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Region" />
-                </SelectTrigger>
-                <SelectContent className="z-[1100]">
-                  <SelectItem value="All">All regions</SelectItem>
-                  {NORTH_AMERICAN_REGIONS.map((r) => (
-                    <SelectItem key={r} value={r}>{r}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           <div className="mt-8">
             {activeTab === 'network-overview' && (

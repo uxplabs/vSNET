@@ -17,7 +17,9 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { DevicesDataTable, DEVICES_DATA, getDeviceSidebarCounts, getFilteredDeviceCount } from './devices-data-table';
+import { Separator } from './ui/separator';
+import { Badge } from './ui/badge';
+import { DevicesDataTable, DEVICES_DATA, getDeviceSidebarCounts, getDeviceSidebarCountsByRegion, getFilteredDeviceCount } from './devices-data-table';
 import { AlarmsDataTable, getFilteredAlarmsCount } from './alarms-data-table';
 import { EventsDataTable, getFilteredEventCount } from './events-data-table';
 import { ScheduledTasksDataTable, getFilteredTaskCount } from './scheduled-tasks-data-table';
@@ -33,6 +35,29 @@ import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount } from './t
 import { ChevronDown } from 'lucide-react';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ErrorBoundary } from './error-boundary';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export interface DevicesPageProps {
   appName?: string;
@@ -41,7 +66,10 @@ export interface DevicesPageProps {
   mainTab?: string;
   onMainTabChange?: (tab: string) => void;
   region?: string;
+  regions?: string[];
   onRegionChange?: (region: string) => void;
+  onRegionsChange?: (regions: string[]) => void;
+  fixedRegion?: string;
   onNavigateToDeviceDetail?: (device: any) => void;
 }
 
@@ -68,15 +96,17 @@ const PERFORMANCE_TIME_OPTIONS = ['Last hour', 'Last 15 min', 'Last 6 hours', 'L
 const THRESHOLD_ACT_SESS_OPTIONS = ['ACT_SESS', 'All', 'ACT_SESS_1', 'ACT_SESS_2', 'ACT_SESS_3'] as const;
 
 const deviceCounts = getDeviceSidebarCounts(DEVICES_DATA);
+const deviceCountsByRegion = getDeviceSidebarCountsByRegion(DEVICES_DATA);
+const ungroupedCount = Math.max(0, deviceCounts.region.all - Object.values(deviceCounts.groups).reduce((a, b) => a + b, 0));
 
 type RegionOption = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' | 'offline';
 type DeviceGroupOption = 'Core network' | 'Radio access' | 'Edge devices' | 'Test environment';
 
-function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTabProp, onMainTabChange, region, onRegionChange, onNavigateToDeviceDetail }: DevicesPageProps) {
+
+function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTabProp, onMainTabChange, region, regions, onRegionChange, onRegionsChange, fixedRegion, onNavigateToDeviceDetail }: DevicesPageProps) {
   const [internalTab, setInternalTab] = useState('device');
-  const mainTab = mainTabProp ?? internalTab;
+  const mainTab = (mainTabProp ?? internalTab) || 'device';
   const handleMainTabChange = onMainTabChange ?? setInternalTab;
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState<RegionOption>('all');
   const [selectedGroup, setSelectedGroup] = useState<DeviceGroupOption | null>(null);
   const [search, setSearch] = useState('');
@@ -159,228 +189,235 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <SidebarProvider className="flex h-screen flex-col overflow-hidden">
       <Navbar01
         appName={appName}
         onSignOut={onSignOut}
         onNavigate={onNavigate}
         currentSection="devices"
         region={region}
+        regions={regions}
         onRegionChange={onRegionChange}
+        onRegionsChange={onRegionsChange}
+        fixedRegion={fixedRegion}
       />
-      <div className="flex flex-1 min-h-0 relative">
-        {/* Sidebar - fixed, does not scroll with main */}
-        <aside
-          className={`fixed top-14 left-0 bottom-0 z-30 transition-all duration-200 ease-in-out border-r overflow-hidden ${
-            sidebarOpen ? 'w-64' : 'w-0'
-          }`}
-          style={{ backgroundColor: '#003D54', borderColor: '#005A7A' }}
-        >
-          <div className="h-full flex flex-col" style={{ color: '#F8FAFC' }}>
-            <div className="border-b px-4 py-3" style={{ borderColor: '#005A7A' }}>
-              <h2 className="text-lg font-semibold truncate" title="Network topology">
-                Network topology
-              </h2>
-            </div>
-            <div className="flex-1 px-4 py-4 overflow-auto">
-              {/* Region section */}
-              <div className="mb-6">
-                <h3 className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-70">
-                  {region ?? 'Pacific Northwest'}
-                </h3>
-                <nav className="space-y-1">
-                  <button
-                    onClick={() => setSelectedRegion('all')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-left ${selectedRegion === 'all' ? 'bg-white/15' : 'hover:bg-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon name="devices" size={20} />
-                      <span className="text-sm">All devices</span>
-                    </div>
-                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
-                      {deviceCounts.region.all}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedRegion('disconnected')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-left ${selectedRegion === 'disconnected' ? 'bg-white/15' : 'hover:bg-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon name="link_off" size={20} />
-                      <span className="text-sm">Disconnected</span>
-                    </div>
-                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
-                      {deviceCounts.region.disconnected}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedRegion('kpiSyncErrors')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-left ${selectedRegion === 'kpiSyncErrors' ? 'bg-white/15' : 'hover:bg-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon name="sync_problem" size={20} />
-                      <span className="text-sm">KPI sync errors</span>
-                    </div>
-                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
-                      {deviceCounts.region.kpiSyncErrors}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedRegion('inMaintenance')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-left ${selectedRegion === 'inMaintenance' ? 'bg-white/15' : 'hover:bg-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon name="build" size={20} />
-                      <span className="text-sm">In maintenance</span>
-                    </div>
-                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
-                      {deviceCounts.region.inMaintenance}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedRegion('offline')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-left ${selectedRegion === 'offline' ? 'bg-white/15' : 'hover:bg-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon name="power_settings_new" size={20} />
-                      <span className="text-sm">Offline</span>
-                    </div>
-                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
-                      {deviceCounts.region.offline}
-                    </span>
-                  </button>
-                </nav>
-              </div>
-
-              {/* Device groups section */}
-              <div className="mb-6">
-                <h3 className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-70">
-                  Device groups
-                </h3>
-                <nav className="space-y-1">
-                  <button
-                    onClick={() => setSelectedGroup('Core network')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-left ${selectedGroup === 'Core network' ? 'bg-white/15' : 'hover:bg-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon name="folder" size={20} />
-                      <span className="text-sm">Core network</span>
-                    </div>
-                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
-                      {deviceCounts.groups['Core network']}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedGroup('Radio access')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-left ${selectedGroup === 'Radio access' ? 'bg-white/15' : 'hover:bg-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon name="folder" size={20} />
-                      <span className="text-sm">Radio access</span>
-                    </div>
-                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
-                      {deviceCounts.groups['Radio access']}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedGroup('Edge devices')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-left ${selectedGroup === 'Edge devices' ? 'bg-white/15' : 'hover:bg-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon name="folder" size={20} />
-                      <span className="text-sm">Edge devices</span>
-                    </div>
-                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
-                      {deviceCounts.groups['Edge devices']}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedGroup('Test environment')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-left ${selectedGroup === 'Test environment' ? 'bg-white/15' : 'hover:bg-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon name="folder" size={20} />
-                      <span className="text-sm">Test environment</span>
-                    </div>
-                    <span className="text-xs font-medium bg-white/20 px-2 py-0.5 rounded-full">
-                      {deviceCounts.groups['Test environment']}
-                    </span>
-                  </button>
-                </nav>
-              </div>
-            </div>
+      <div className="flex flex-1 min-h-0 min-w-0 bg-primary">
+        <div data-sidebar-page-bg className="h-full">
+          <Sidebar
+            variant="inset"
+            collapsible="offcanvas"
+            className="!top-14 !h-[calc(100vh-3.5rem)] !left-0"
+          >
+        <SidebarHeader className="border-b border-sidebar-border">
+          <div className="flex flex-col gap-2 p-3">
+            <span className="text-sm font-semibold text-sidebar-foreground">Network topology</span>
           </div>
-        </aside>
+        </SidebarHeader>
+        <SidebarContent>
+          {/* Ungrouped – flat item with badge (dashboard-01 style) */}
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton className="cursor-default pointer-events-none">
+                    <Icon name="list" size={18} />
+                    <span>Ungrouped</span>
+                  </SidebarMenuButton>
+                  <SidebarMenuBadge>{ungroupedCount}</SidebarMenuBadge>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
-        {/* Main content - no scroll, table spans available space */}
-        <main
-          className={`flex-1 flex flex-col min-h-0 px-4 py-6 md:px-6 lg:px-8 overflow-hidden transition-[margin] duration-200 ${
-            sidebarOpen ? 'ml-64' : 'ml-0'
-          }`}
-        >
-          <div className="flex-1 flex flex-col min-h-0 w-full">
-            <Tabs value={mainTab} onValueChange={handleMainTabChange} className="flex-1 flex flex-col min-h-0 w-full">
-              <TabsList className="inline-flex w-full justify-start h-auto gap-0 bg-transparent border-b rounded-none p-0 shrink-0">
-                <TabsTrigger
-                  value="device"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
-                >
-                  Device
-                </TabsTrigger>
-                <TabsTrigger
-                  value="alarms"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
-                >
-                  Alarms
-                </TabsTrigger>
-                <TabsTrigger
-                  value="events"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
-                >
-                  Events
-                </TabsTrigger>
-                <TabsTrigger
-                  value="conditions"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
-                >
-                  Conditions
-                </TabsTrigger>
-                <TabsTrigger
-                  value="inventory"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
-                >
-                  Inventory
-                </TabsTrigger>
-                <TabsTrigger
-                  value="scheduled-tasks"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
-                >
-                  Scheduled tasks
-                </TabsTrigger>
-                <TabsTrigger
-                  value="software-management"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
-                >
-                  Software management
-                </TabsTrigger>
-                <TabsTrigger
-                  value="reports"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
-                >
-                  Reports
-                </TabsTrigger>
-                <TabsTrigger
-                  value="performance"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2"
-                >
-                  Performance
-                </TabsTrigger>
-              </TabsList>
+          {/* Region – flat list (dashboard-01 style) */}
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              {regions && regions.length > 1 ? (
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-default">Multiregion ({regions.length})</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <ul className="list-disc list-inside space-y-0.5 text-left">
+                        {regions.map((r) => (
+                          <li key={r}>{r}</li>
+                        ))}
+                      </ul>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                (region ?? 'Pacific Northwest')
+              )}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={selectedRegion === 'all'}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('all')}>
+                      <Icon name="devices" size={18} />
+                      <span>All devices</span>
+                      <SidebarMenuBadge>{deviceCounts.region.all}</SidebarMenuBadge>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={selectedRegion === 'disconnected'}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('disconnected')}>
+                      <Icon name="link_off" size={18} />
+                      <span>Disconnected</span>
+                      <SidebarMenuBadge>{deviceCounts.region.disconnected}</SidebarMenuBadge>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={selectedRegion === 'kpiSyncErrors'}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('kpiSyncErrors')}>
+                      <Icon name="sync_problem" size={18} />
+                      <span>KPI sync errors</span>
+                      <SidebarMenuBadge>{deviceCounts.region.kpiSyncErrors}</SidebarMenuBadge>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={selectedRegion === 'inMaintenance'}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('inMaintenance')}>
+                      <Icon name="build" size={18} />
+                      <span>In maintenance</span>
+                      <SidebarMenuBadge>{deviceCounts.region.inMaintenance}</SidebarMenuBadge>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={selectedRegion === 'offline'}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('offline')}>
+                      <Icon name="power_settings_new" size={18} />
+                      <span>Offline</span>
+                      <SidebarMenuBadge>{deviceCounts.region.offline}</SidebarMenuBadge>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
-              <TabsContent value="device" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+          {/* Device groups – collapsible flat list */}
+          <Collapsible defaultOpen className="group/collapsible">
+            <SidebarGroup>
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-8 w-full shrink-0 items-center gap-2 rounded-md px-2 text-left text-xs font-medium text-sidebar-foreground/70 outline-none ring-sidebar-ring transition-[margin,opacity] duration-200 ease-linear hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0"
+                >
+                  <span className="flex flex-1">Device groups</span>
+                  <ChevronDown className="size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  {regions && regions.length > 1 ? (
+                    <>
+                      {regions.map((reg) => {
+                        const counts = deviceCountsByRegion[reg];
+                        if (!counts) return null;
+                        return (
+                          <SidebarGroup key={reg} className="pt-1">
+                            <SidebarGroupLabel className="px-2">{reg}</SidebarGroupLabel>
+                            <SidebarGroupContent>
+                              <SidebarMenu>
+                                {(['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
+                                  <SidebarMenuItem key={`${reg}-${groupName}`}>
+                                    <SidebarMenuButton asChild isActive={selectedGroup === groupName}>
+                                      <button
+                                        type="button"
+                                        className="flex w-full items-center gap-2"
+                                        onClick={() => setSelectedGroup(groupName)}
+                                      >
+                                        <Icon name="folder" size={18} />
+                                        <span>{groupName}</span>
+                                        <SidebarMenuBadge>{counts.groups[groupName] ?? 0}</SidebarMenuBadge>
+                                      </button>
+                                    </SidebarMenuButton>
+                                  </SidebarMenuItem>
+                                ))}
+                              </SidebarMenu>
+                            </SidebarGroupContent>
+                          </SidebarGroup>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <SidebarMenu>
+                      {(['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
+                        <SidebarMenuItem key={groupName}>
+                          <SidebarMenuButton asChild isActive={selectedGroup === groupName}>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2"
+                              onClick={() => setSelectedGroup(groupName)}
+                            >
+                              <Icon name="folder" size={18} />
+                              <span>{groupName}</span>
+                              <SidebarMenuBadge>{deviceCounts.groups[groupName] ?? 0}</SidebarMenuBadge>
+                            </button>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  )}
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
+        </SidebarContent>
+        <SidebarRail />
+      </Sidebar>
+        </div>
+        <SidebarInset className="min-w-0 flex-1 overflow-hidden bg-background rounded-xl shadow-lg m-2">
+          <Tabs value={mainTab} defaultValue="device" onValueChange={handleMainTabChange} className="flex flex-1 flex-col min-h-0">
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4 shrink-0" />
+                <TabsList className="inline-flex h-auto gap-0 bg-transparent p-0 shrink-0 border-0 rounded-none">
+                  <TabsTrigger value="device" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
+                    Device
+                  </TabsTrigger>
+                  <TabsTrigger value="alarms" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
+                    Alarms
+                  </TabsTrigger>
+                  <TabsTrigger value="events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
+                    Events
+                  </TabsTrigger>
+                  <TabsTrigger value="conditions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
+                    Conditions
+                  </TabsTrigger>
+                  <TabsTrigger value="inventory" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
+                    Inventory
+                  </TabsTrigger>
+                  <TabsTrigger value="scheduled-tasks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
+                    Scheduled tasks
+                  </TabsTrigger>
+                  <TabsTrigger value="software-management" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
+                    Software management
+                  </TabsTrigger>
+                  <TabsTrigger value="reports" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
+                    Reports
+                  </TabsTrigger>
+                  <TabsTrigger value="performance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
+                    Performance
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </header>
+            <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+              <div className="@container/main flex flex-1 flex-col gap-2 min-h-0 min-w-0">
+                <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6 min-h-0 overflow-hidden px-4 lg:px-6">
+              <TabsContent value="device" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 <ErrorBoundary>
                 {/* Default area above table: selection + actions OR search + filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   {deviceSelectedCount >= 1 ? (
                     <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0 ml-auto sm:ml-0">
                       <Button variant="outline" size="sm">
@@ -545,20 +582,18 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                               {count} {count === 1 ? 'result' : 'results'}
                             </span>
                             {activeFilters.map((f) => (
-                              <span
-                                key={f.key}
-                                className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground"
-                              >
+                              <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
                                 {f.label}
-                                <button
-                                  type="button"
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
                                   onClick={f.onClear}
-                                  className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                   aria-label={`Clear ${f.label}`}
                                 >
-                                  <Icon name="close" size={14} aria-hidden />
-                                </button>
-                              </span>
+                                  <Icon name="close" size={12} aria-hidden />
+                                </Button>
+                              </Badge>
                             ))}
                             {hasActive && (
                               <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearDeviceFilters}>
@@ -585,9 +620,9 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                 </div>
                 </ErrorBoundary>
               </TabsContent>
-              <TabsContent value="alarms" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+              <TabsContent value="alarms" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
@@ -691,17 +726,18 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
                       <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
                       {activeFilters.map((f) => (
-                        <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                        <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
                           {f.label}
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
                             onClick={f.onClear}
-                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             aria-label={`Clear ${f.label}`}
                           >
-                            <Icon name="close" size={14} aria-hidden />
-                          </button>
-                        </span>
+                            <Icon name="close" size={12} aria-hidden />
+                          </Button>
+                        </Badge>
                       ))}
                       {hasActive && (
                         <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearDeviceFilters}>Clear all</Button>
@@ -713,9 +749,9 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   <AlarmsDataTable search={search} severityFilter={alarmsFilter} />
                 </div>
               </TabsContent>
-              <TabsContent value="events" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+              <TabsContent value="events" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
@@ -786,17 +822,18 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
                       <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
                       {activeFilters.map((f) => (
-                        <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                        <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
                           {f.label}
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
                             onClick={f.onClear}
-                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             aria-label={`Clear ${f.label}`}
                           >
-                            <Icon name="close" size={14} aria-hidden />
-                          </button>
-                        </span>
+                            <Icon name="close" size={12} aria-hidden />
+                          </Button>
+                        </Badge>
                       ))}
                       {hasActive && (
                         <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearEventsFilters}>Clear all</Button>
@@ -813,15 +850,15 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   />
                 </div>
               </TabsContent>
-              <TabsContent value="conditions" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+              <TabsContent value="conditions" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 <p className="text-muted-foreground">Conditions content</p>
               </TabsContent>
-              <TabsContent value="inventory" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+              <TabsContent value="inventory" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 <p className="text-muted-foreground">Inventory content</p>
               </TabsContent>
-              <TabsContent value="scheduled-tasks" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+              <TabsContent value="scheduled-tasks" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
@@ -901,17 +938,18 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
                       <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
                       {activeFilters.map((f) => (
-                        <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                        <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
                           {f.label}
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
                             onClick={f.onClear}
-                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             aria-label={`Clear ${f.label}`}
                           >
-                            <Icon name="close" size={14} aria-hidden />
-                          </button>
-                        </span>
+                            <Icon name="close" size={12} aria-hidden />
+                          </Button>
+                        </Badge>
                       ))}
                       {hasActive && (
                         <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearTasksFilters}>Clear all</Button>
@@ -937,7 +975,7 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   onOpenChange={setTaskDrawerOpen}
                 />
               </TabsContent>
-              <TabsContent value="software-management" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+              <TabsContent value="software-management" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 <Tabs value={softwareManagementTab} onValueChange={setSoftwareManagementTab} className="flex-1 flex flex-col min-h-0 w-full">
                   <TabsList className="inline-flex h-9 w-fit shrink-0 self-start items-center justify-start gap-1 rounded-full bg-muted p-1 text-muted-foreground mb-6">
                     <TabsTrigger value="tasks" className="rounded-full data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">
@@ -952,7 +990,7 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   </TabsList>
                   <TabsContent value="tasks" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
@@ -1022,17 +1060,18 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
                       <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
                       {activeFilters.map((f) => (
-                        <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                        <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
                           {f.label}
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
                             onClick={f.onClear}
-                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             aria-label={`Clear ${f.label}`}
                           >
-                            <Icon name="close" size={14} aria-hidden />
-                          </button>
-                        </span>
+                            <Icon name="close" size={12} aria-hidden />
+                          </Button>
+                        </Badge>
                       ))}
                       {hasActive && (
                         <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearSoftwareFilters}>Clear all</Button>
@@ -1054,7 +1093,7 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   </TabsContent>
                   <TabsContent value="activity-log" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                     {/* Search and filters */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                       <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                         <Icon
                           name="search"
@@ -1124,17 +1163,18 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                         <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
                           <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
                           {activeFilters.map((f) => (
-                            <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                            <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
                               {f.label}
-<button
-                                type="button"
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
                                 onClick={f.onClear}
-                                className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 aria-label={`Clear ${f.label}`}
                               >
-                                <Icon name="close" size={14} aria-hidden />
-                              </button>
-                            </span>
+                                <Icon name="close" size={12} aria-hidden />
+                              </Button>
+                            </Badge>
                           ))}
                           {hasActive && (
                             <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearSoftwareFilters}>Clear all</Button>
@@ -1148,9 +1188,9 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   </TabsContent>
                 </Tabs>
               </TabsContent>
-              <TabsContent value="reports" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+              <TabsContent value="reports" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
@@ -1220,17 +1260,18 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
                       <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
                       {activeFilters.map((f) => (
-                        <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                        <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
                           {f.label}
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
                             onClick={f.onClear}
-                            className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             aria-label={`Clear ${f.label}`}
                           >
-                            <Icon name="close" size={14} aria-hidden />
-                          </button>
-                        </span>
+                            <Icon name="close" size={12} aria-hidden />
+                          </Button>
+                        </Badge>
                       ))}
                       {hasActive && (
                         <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearReportsFilters}>Clear all</Button>
@@ -1247,7 +1288,7 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   />
                 </div>
               </TabsContent>
-              <TabsContent value="performance" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+              <TabsContent value="performance" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 <Tabs value={performanceTab} onValueChange={setPerformanceTab} className="flex-1 flex flex-col min-h-0 w-full">
                   <TabsList className="inline-flex h-9 w-fit shrink-0 self-start items-center justify-start gap-1 rounded-full bg-muted p-1 text-muted-foreground mb-6">
                     <TabsTrigger value="activity" className="rounded-full data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">
@@ -1259,7 +1300,7 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   </TabsList>
                   <TabsContent value="activity" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                     {/* Search and filters */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                       <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                         <Icon
                           name="search"
@@ -1343,17 +1384,18 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                         <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
                           <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
                           {activeFilters.map((f) => (
-                            <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                            <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
                               {f.label}
-<button
-                                type="button"
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
                                 onClick={f.onClear}
-                                className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 aria-label={`Clear ${f.label}`}
                               >
-                                <Icon name="close" size={14} aria-hidden />
-                              </button>
-                            </span>
+                                <Icon name="close" size={12} aria-hidden />
+                              </Button>
+                            </Badge>
                           ))}
                           {hasActive && (
                             <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearPerformanceFilters}>Clear all</Button>
@@ -1371,7 +1413,7 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     </div>
                   </TabsContent>
                   <TabsContent value="threshold-crossing-alerts" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 mb-2 shrink-0 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                         <Select value={thresholdActSessFilter} onValueChange={setThresholdActSessFilter}>
                           <SelectTrigger className="w-[140px] shrink-0">
@@ -1396,17 +1438,18 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                         <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
                           <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
                           {activeFilters.map((f) => (
-                            <span key={f.key} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                            <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
                               {f.label}
-<button
-                                type="button"
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
                                 onClick={f.onClear}
-                                className="rounded min-w-[44px] min-h-[44px] flex items-center justify-center -my-1 hover:bg-muted-foreground/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 aria-label={`Clear ${f.label}`}
                               >
-                                <Icon name="close" size={14} aria-hidden />
-                              </button>
-                            </span>
+                                <Icon name="close" size={12} aria-hidden />
+                              </Button>
+                            </Badge>
                           ))}
                           {hasActive && (
                             <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearThresholdFilters}>Clear all</Button>
@@ -1420,11 +1463,13 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   </TabsContent>
                 </Tabs>
               </TabsContent>
-            </Tabs>
-          </div>
-        </main>
+                </div>
+              </div>
+            </div>
+          </Tabs>
+      </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
 

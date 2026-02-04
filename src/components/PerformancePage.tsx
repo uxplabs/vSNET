@@ -24,7 +24,10 @@ export interface PerformancePageProps {
   onSignOut?: () => void;
   onNavigate?: (page: string, tab?: string) => void;
   region?: string;
+  regions?: string[];
   onRegionChange?: (region: string) => void;
+  onRegionsChange?: (regions: string[]) => void;
+  fixedRegion?: string;
 }
 
 export default function PerformancePage({
@@ -32,7 +35,10 @@ export default function PerformancePage({
   onSignOut,
   onNavigate,
   region,
+  regions,
   onRegionChange,
+  onRegionsChange,
+  fixedRegion,
 }: PerformancePageProps) {
   const [performanceTab, setPerformanceTab] = useState<'lte' | 'nr'>('lte');
   const [search, setSearch] = useState('');
@@ -56,7 +62,10 @@ export default function PerformancePage({
         onNavigate={onNavigate}
         currentSection="performance"
         region={region}
+        regions={regions}
         onRegionChange={onRegionChange}
+        onRegionsChange={onRegionsChange}
+        fixedRegion={fixedRegion}
       />
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col px-4 py-6 md:px-6 lg:px-8">
         <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">

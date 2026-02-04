@@ -12,7 +12,10 @@ interface DesignSystemPageProps {
   onSignOut?: () => void;
   onNavigate?: (page: string, tab?: string) => void;
   region?: string;
+  regions?: string[];
   onRegionChange?: (region: string) => void;
+  onRegionsChange?: (regions: string[]) => void;
+  fixedRegion?: string;
 }
 
 export default function DesignSystemPage({
@@ -20,7 +23,10 @@ export default function DesignSystemPage({
   onSignOut,
   onNavigate,
   region,
+  regions,
   onRegionChange,
+  onRegionsChange,
+  fixedRegion,
 }: DesignSystemPageProps) {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
@@ -29,7 +35,10 @@ export default function DesignSystemPage({
         onSignOut={onSignOut}
         onNavigate={onNavigate}
         region={region}
+        regions={regions}
         onRegionChange={onRegionChange}
+        onRegionsChange={onRegionsChange}
+        fixedRegion={fixedRegion}
         currentSection="design-system"
       />
       <main className="flex-1 overflow-auto px-4 py-6 md:px-6 lg:px-8 space-y-6">

@@ -218,6 +218,7 @@ export function AddDeviceToLabelSheet({
   const table = useReactTable({
     data: filteredData,
     columns,
+    getRowId: (originalRow) => originalRow.id,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

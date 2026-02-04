@@ -17,7 +17,8 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [devicesTab, setDevicesTab] = useState('device')
-  const [region, setRegion] = useState<string>('All')
+  const [regions, setRegions] = useState<string[]>(['Pacific Northwest'])
+  const region = regions[0] ?? 'Pacific Northwest'
   const [selectedDevice, setSelectedDevice] = useState<DeviceRow | null>(null)
   const [scrollToNotesForDeviceId, setScrollToNotesForDeviceId] = useState<string | null>(null)
 
@@ -26,7 +27,7 @@ function App() {
     if (page === 'devices') {
       setSelectedDevice(null)
       setScrollToNotesForDeviceId(null)
-      if (tab) setDevicesTab(tab)
+      setDevicesTab(tab ?? 'device')
     }
   }
 
@@ -64,7 +65,9 @@ function App() {
           onSignOut={() => setIsAuthenticated(false)}
           onNavigate={handleNavigate}
           region={region}
-          onRegionChange={setRegion}
+          regions={regions}
+          onRegionChange={(r) => setRegions([r])}
+          onRegionsChange={setRegions}
         />
       ) : currentPage === 'device-detail' && selectedDevice ? (
         <DeviceDetailPage
@@ -74,7 +77,9 @@ function App() {
           onBack={handleBackToDevices}
           onNavigate={handleNavigate}
           region={region}
-          onRegionChange={setRegion}
+          regions={regions}
+          onRegionChange={(r) => setRegions([r])}
+          onRegionsChange={setRegions}
           scrollToNotes={scrollToNotesForDeviceId === selectedDevice.id}
           onScrollToNotesDone={() => setScrollToNotesForDeviceId(null)}
         />
@@ -85,7 +90,9 @@ function App() {
             onSignOut={() => setIsAuthenticated(false)}
             onNavigate={handleNavigate}
             region={region}
-            onRegionChange={setRegion}
+            regions={regions}
+            onRegionChange={(r) => setRegions([r])}
+            onRegionsChange={setRegions}
           />
         </div>
       ) : currentPage === 'performance' ? (
@@ -95,7 +102,9 @@ function App() {
             onSignOut={() => setIsAuthenticated(false)}
             onNavigate={handleNavigate}
             region={region}
-            onRegionChange={setRegion}
+            regions={regions}
+            onRegionChange={(r) => setRegions([r])}
+            onRegionsChange={setRegions}
           />
         </div>
       ) : currentPage === 'design-system' ? (
@@ -104,7 +113,9 @@ function App() {
           onSignOut={() => setIsAuthenticated(false)}
           onNavigate={handleNavigate}
           region={region}
-          onRegionChange={setRegion}
+          regions={regions}
+          onRegionChange={(r) => setRegions([r])}
+          onRegionsChange={setRegions}
         />
       ) : currentPage === 'administration' ? (
         <div className="h-screen overflow-hidden">
@@ -113,7 +124,9 @@ function App() {
             onSignOut={() => setIsAuthenticated(false)}
             onNavigate={handleNavigate}
             region={region}
-            onRegionChange={setRegion}
+            regions={regions}
+            onRegionChange={(r) => setRegions([r])}
+            onRegionsChange={setRegions}
           />
         </div>
       ) : (
@@ -125,7 +138,9 @@ function App() {
             mainTab={devicesTab}
             onMainTabChange={setDevicesTab}
             region={region}
-            onRegionChange={setRegion}
+            regions={regions}
+            onRegionChange={(r) => setRegions([r])}
+            onRegionsChange={setRegions}
             onNavigateToDeviceDetail={handleNavigateToDeviceDetail}
           />
         </div>

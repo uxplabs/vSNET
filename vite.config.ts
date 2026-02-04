@@ -10,4 +10,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    host: true, // listen on 0.0.0.0 so localhost and 127.0.0.1 both work
+    port: 5174,
+    strictPort: false,
+    open: true,
+  },
 })

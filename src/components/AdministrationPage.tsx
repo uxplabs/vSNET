@@ -49,7 +49,10 @@ export interface AdministrationPageProps {
   onSignOut?: () => void;
   onNavigate?: (page: string, tab?: string) => void;
   region?: string;
+  regions?: string[];
   onRegionChange?: (region: string) => void;
+  onRegionsChange?: (regions: string[]) => void;
+  fixedRegion?: string;
 }
 
 export default function AdministrationPage({
@@ -57,7 +60,10 @@ export default function AdministrationPage({
   onSignOut,
   onNavigate,
   region,
+  regions,
   onRegionChange,
+  onRegionsChange,
+  fixedRegion,
 }: AdministrationPageProps) {
   const toKey = (label: string) => label.toLowerCase().replace(/\s+/g, '-');
   const [activeSection, setActiveSection] = useState(toKey(SIDEBAR_ITEMS[0]));
@@ -80,7 +86,10 @@ export default function AdministrationPage({
         onNavigate={onNavigate}
         currentSection="administration"
         region={region}
+        regions={regions}
         onRegionChange={onRegionChange}
+        onRegionsChange={onRegionsChange}
+        fixedRegion={fixedRegion}
       />
       <div className="flex flex-1 min-h-0 relative">
         {/* Sidebar - dark background */}

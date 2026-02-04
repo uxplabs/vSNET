@@ -93,6 +93,7 @@ function toDeviceRow(d: DisconnectedDeviceRow): DeviceRow {
     version: '—',
     ipAddress: '—',
     deviceGroup: 'Radio access',
+    region: 'Pacific Northwest',
     labels: [],
   };
 }

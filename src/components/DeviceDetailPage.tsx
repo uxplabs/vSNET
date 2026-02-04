@@ -76,7 +76,10 @@ interface DeviceDetailPageProps {
   onBack?: () => void;
   onNavigate?: (page: string, tab?: string) => void;
   region?: string;
+  regions?: string[];
   onRegionChange?: (region: string) => void;
+  onRegionsChange?: (regions: string[]) => void;
+  fixedRegion?: string;
   /** When true, switch to Notes tab and scroll to the notes section (e.g. after clicking add note in devices table). */
   scrollToNotes?: boolean;
   /** Called after scroll-to-notes has been applied so parent can clear the flag. */
@@ -186,7 +189,10 @@ function DeviceDetailPage({
   onBack,
   onNavigate,
   region,
+  regions,
   onRegionChange,
+  onRegionsChange,
+  fixedRegion,
   scrollToNotes,
   onScrollToNotesDone,
 }: DeviceDetailPageProps) {
@@ -346,7 +352,10 @@ function DeviceDetailPage({
         onNavigate={onNavigate}
         currentSection="devices"
         region={region}
+        regions={regions}
         onRegionChange={onRegionChange}
+        onRegionsChange={onRegionsChange}
+        fixedRegion={fixedRegion}
       />
       <main className="flex-1 w-full px-4 py-6 md:px-6 lg:px-8 min-h-0 flex flex-col overflow-hidden">
         {/* Header - fixed at top of main */}
