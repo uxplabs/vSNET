@@ -188,21 +188,30 @@ function DeviceDetailPage({
   scrollToNotes,
   onScrollToNotesDone,
 }: DeviceDetailPageProps) {
-  const SIDEBAR_ITEMS = [
-    'Summary',
-    'Commissioning',
-    'IP interfaces',
-    'Radio nodes',
-    'NR cells',
-    'Zones',
-    'X2 connections',
-    'Performance',
-    'Files',
-    'SSH terminal',
-    'SNMP details',
-  ] as const;
+  const isDas = device.type === 'DAS';
+  const SIDEBAR_ITEMS = isDas
+    ? (['Summary', 'Radio nodes', 'Web terminal', 'SNMP details'] as const)
+    : ([
+        'Summary',
+        'Commissioning',
+        'IP interfaces',
+        'Radio nodes',
+        'NR cells',
+        'Zones',
+        'X2 connections',
+        'Performance',
+        'Files',
+        'SSH terminal',
+      ] as const);
   const toKey = (label: string) => label.toLowerCase().replace(/\s+/g, '-');
   const [activeSection, setActiveSection] = useState(toKey(SIDEBAR_ITEMS[0]));
+
+  React.useEffect(() => {
+    const keys = SIDEBAR_ITEMS.map(toKey);
+    if (!keys.includes(activeSection)) {
+      setActiveSection(toKey(SIDEBAR_ITEMS[0]));
+    }
+  }, [device.id, isDas]);
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
   const [alarmsEventsTab, setAlarmsEventsTab] = React.useState('alarms');
   const [performanceTab, setPerformanceTab] = React.useState('site');
@@ -368,15 +377,17 @@ function DeviceDetailPage({
             <div className="flex items-center gap-10 shrink-0">
               {/* Name/value pairs */}
               <div className="flex items-center gap-10 text-sm">
-                <div>
-                  <p className="text-gray-400 mb-0.5">IP interfaces</p>
-                  <div className="flex items-center gap-1.5 text-white">
-                    <Icon name="arrow_upward" size={14} className="text-green-400" />
-                    <span className="font-semibold tabular-nums">12</span>
-                    <Icon name="arrow_downward" size={14} className="text-destructive" />
-                    <span className="font-semibold tabular-nums">2</span>
+                {!isDas && (
+                  <div>
+                    <p className="text-gray-400 mb-0.5">IP interfaces</p>
+                    <div className="flex items-center gap-1.5 text-white">
+                      <Icon name="arrow_upward" size={14} className="text-green-400" />
+                      <span className="font-semibold tabular-nums">12</span>
+                      <Icon name="arrow_downward" size={14} className="text-destructive" />
+                      <span className="font-semibold tabular-nums">2</span>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div>
                   <p className="text-gray-400 mb-0.5">Radio nodes</p>
                   <div className="flex items-center gap-1.5 text-white">
@@ -386,12 +397,14 @@ function DeviceDetailPage({
                     <span className="font-semibold tabular-nums">2</span>
                   </div>
                 </div>
-                <div>
-                  <p className="text-gray-400 mb-0.5">UE sessions</p>
-                  <span className="font-semibold tabular-nums text-white">
-                    {Math.floor(Math.random() * 400 + 100)}
-                  </span>
-                </div>
+                {!isDas && (
+                  <div>
+                    <p className="text-gray-400 mb-0.5">UE sessions</p>
+                    <span className="font-semibold tabular-nums text-white">
+                      {Math.floor(Math.random() * 400 + 100)}
+                    </span>
+                  </div>
+                )}
               </div>
               {/* Major and Critical alarms */}
               <div className="flex items-center gap-10 text-sm">
@@ -1424,7 +1437,7 @@ function DeviceDetailPage({
             </Card>
           )}
 
-          {activeSection === 'ssh-terminal' && (
+          {(activeSection === 'ssh-terminal' || activeSection === 'web-terminal') && (
             <Card className="overflow-hidden">
               <div className="bg-[#1e1e1e] text-[#d4d4d4] font-mono text-sm min-h-[320px] flex flex-col">
                 <div className="flex-1 p-4 overflow-auto whitespace-pre-wrap break-all">

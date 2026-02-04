@@ -65,7 +65,7 @@ export const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string
 };
 
 const DEVICE_PREFIXES = ['eNB-SEA', 'eNB-PDX', 'RN-PHX', 'eNB-SFO', 'RN-LAS', 'eNB-NYC', 'RN-DEN', 'eNB-CHI', 'RN-ATL', 'eNB-MIA', 'RN-SEA', 'eNB-PHX', 'RN-SFO', 'eNB-LAS', 'RN-NYC', 'eNB-DEN', 'RN-CHI', 'eNB-BOS', 'RN-MIA', 'eNB-AUS'];
-const TYPES = ['SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE'];
+const TYPES = ['SN-LTE', 'SN-LTE', 'DAS', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE'];
 const STATUSES = ['Connected', 'Connected', 'Disconnected', 'Connected', 'In maintenance', 'Connected', 'Offline', 'Connected', 'Connected', 'Disconnected'];
 const ALARM_TYPES: Array<'Critical' | 'Major' | 'Minor' | 'None'> = ['None', 'Minor', 'Critical', 'Major', 'None', 'Minor', 'Critical', 'None', 'Major', 'Critical'];
 const CONFIG_STATUSES = ['Synchronized', 'Synchronized', 'Out of sync', 'Synchronized', 'Pending', 'Synchronized', 'Out of sync', 'Synchronized', 'Synchronized', 'Out of sync'];
@@ -109,7 +109,7 @@ function generateDevices(count: number): DeviceRow[] {
     devices.push({
       id: String(i),
       device: `${prefix}-${num}`,
-      type: TYPES[pi],
+      type: `${prefix}-${num}` === 'RN-ATL-029' || `${prefix}-${num}` === 'RN-NYC-035' ? 'DAS' : TYPES[pi],
       notes,
       notesUpdatedAt,
       status: STATUSES[pi],

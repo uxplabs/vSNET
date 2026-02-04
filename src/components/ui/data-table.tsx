@@ -25,9 +25,11 @@ import { TablePagination } from '@/components/ui/table-pagination';
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  /** Optional header rendered above the table inside the card */
+  header?: React.ReactNode;
 }
 
-export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({ columns, data, header }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
 
@@ -45,6 +47,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-lg border bg-card">
+        {header}
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

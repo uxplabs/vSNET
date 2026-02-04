@@ -149,6 +149,7 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
 
   const alarmConfig = ALARM_TYPE_CONFIG[device.alarmType] ?? ALARM_TYPE_CONFIG.None;
   const hasNotes = !!device.notes?.trim();
+  const isDas = device.type === 'DAS';
 
   const scrollToNotes = () => {
     if (hasNotes && notesSectionRef.current) {
@@ -213,9 +214,11 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
               >
                 Details
               </Button>
-              <Button variant="outline" size="sm" className="h-8">
-                Performance
-              </Button>
+              {!isDas && (
+                <Button variant="outline" size="sm" className="h-8">
+                  Performance
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-8 gap-1" aria-label="Actions">
@@ -233,7 +236,7 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
             </div>
           </DrawerHeader>
           <div className="flex-1 min-h-0 overflow-auto px-4 pb-4 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid gap-3 ${isDas ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <KpiCard
                 title="Alarms"
                 kpiValue={
@@ -253,16 +256,18 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
                   </div>
                 }
               />
-              <KpiCard
-                title="UE sessions with KPI"
-                kpiValue={240}
-                kpiIcon={<Icon name="smartphone" size={20} className="text-muted-foreground" />}
-                subtext="240 max"
-              />
+              {!isDas && (
+                <KpiCard
+                  title="UE sessions with KPI"
+                  kpiValue={240}
+                  kpiIcon={<Icon name="smartphone" size={20} className="text-muted-foreground" />}
+                  subtext="240 max"
+                />
+              )}
             </div>
             <Card>
               <CardContent className="pt-6 space-y-8">
-                <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
+                <div className={`grid gap-x-3 gap-y-6 text-sm ${isDas ? 'grid-cols-1' : 'grid-cols-3'}`}>
                   <div className="flex flex-col gap-1.5">
                     <span className="text-muted-foreground">Radio nodes</span>
                     <div className="flex items-center gap-3">
@@ -276,20 +281,24 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
                       </span>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground">NR cells</span>
-                    <span className="font-medium tabular-nums inline-flex items-center gap-1.5">
-                      <Icon name="arrow_upward" size={16} className="text-emerald-600 dark:text-emerald-500" />
-                      48
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground">X2 connections</span>
-                    <span className="font-medium tabular-nums inline-flex items-center gap-1.5">
-                      <Icon name="arrow_downward" size={16} className="text-destructive" />
-                      6
-                    </span>
-                  </div>
+                  {!isDas && (
+                    <>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">NR cells</span>
+                        <span className="font-medium tabular-nums inline-flex items-center gap-1.5">
+                          <Icon name="arrow_upward" size={16} className="text-emerald-600 dark:text-emerald-500" />
+                          48
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">X2 connections</span>
+                        <span className="font-medium tabular-nums inline-flex items-center gap-1.5">
+                          <Icon name="arrow_downward" size={16} className="text-destructive" />
+                          6
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                 <div className="space-y-4">

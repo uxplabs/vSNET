@@ -107,13 +107,15 @@ function App() {
           onRegionChange={setRegion}
         />
       ) : currentPage === 'administration' ? (
-        <AdministrationPage
-          appName="vSNET"
-          onSignOut={() => setIsAuthenticated(false)}
-          onNavigate={handleNavigate}
-          region={region}
-          onRegionChange={setRegion}
-        />
+        <div className="h-screen overflow-hidden">
+          <AdministrationPage
+            appName="vSNET"
+            onSignOut={() => setIsAuthenticated(false)}
+            onNavigate={handleNavigate}
+            region={region}
+            onRegionChange={setRegion}
+          />
+        </div>
       ) : (
         <div className="h-screen overflow-hidden">
           <DevicesPage

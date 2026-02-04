@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
@@ -17,14 +17,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
-import { LabelManagementDataTable, LABEL_MANAGEMENT_DATA } from './label-management-data-table';
+import {
+  LabelManagementDataTable,
+  LABEL_MANAGEMENT_DATA,
+  type LabelManagementRow,
+} from './label-management-data-table';
+import { AddDeviceToLabelSheet } from './add-device-to-label-sheet';
+import type { AddableDeviceRow } from './add-device-to-label-sheet';
 
 const REGION_OPTIONS = ['Region', 'Seattle', 'Portland', 'San Francisco', 'Phoenix', 'New York', 'All'] as const;
 const GROUP_OPTIONS = ['Group', 'Production', 'Staging', 'Testing', 'Development', 'All'] as const;
 
-function getLabelGroupsWithCounts(): { name: string; count: number }[] {
+function getLabelGroupsWithCounts(data: LabelManagementRow[]): { name: string; count: number }[] {
   const counts: Record<string, number> = {};
-  for (const row of LABEL_MANAGEMENT_DATA) {
+  for (const row of data) {
     counts[row.labelGroup] = (counts[row.labelGroup] ?? 0) + 1;
   }
   return Object.entries(counts)
@@ -37,10 +43,12 @@ export interface LabelManagementPageProps {
 }
 
 export default function LabelManagementPage({ onBack }: LabelManagementPageProps) {
+  const [labelData, setLabelData] = useState<LabelManagementRow[]>(() => [...LABEL_MANAGEMENT_DATA]);
   const [search, setSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
-  const labelGroups = useMemo(() => getLabelGroupsWithCounts(), []);
-  const [selectedGroup, setSelectedGroup] = useState(() => getLabelGroupsWithCounts()[0]?.name ?? '');
+  const [addDeviceSheetOpen, setAddDeviceSheetOpen] = useState(false);
+  const labelGroups = useMemo(() => getLabelGroupsWithCounts(labelData), [labelData]);
+  const [selectedGroup, setSelectedGroup] = useState(() => getLabelGroupsWithCounts(LABEL_MANAGEMENT_DATA)[0]?.name ?? '');
   const [regionFilter, setRegionFilter] = useState<string>('Region');
   const [groupFilter, setGroupFilter] = useState<string>('Group');
 
@@ -49,6 +57,28 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
     const q = groupSearch.toLowerCase().trim();
     return labelGroups.filter((g) => g.name.toLowerCase().includes(q));
   }, [groupSearch, labelGroups]);
+
+  const handleAddDevicesToLabel = useCallback(
+    (devices: AddableDeviceRow[]) => {
+      if (!selectedGroup || devices.length === 0) return;
+      const existingIds = new Set(
+        labelData.filter((r) => r.labelGroup === selectedGroup).map((r) => r.id)
+      );
+      const newRows: LabelManagementRow[] = devices
+        .filter((d) => !existingIds.has(d.id))
+        .map((d) => ({
+          id: d.id,
+          device: d.device,
+          deviceId: d.deviceId,
+          region: d.region,
+          labelGroup: selectedGroup,
+        }));
+      if (newRows.length > 0) {
+        setLabelData((prev) => [...prev, ...newRows]);
+      }
+    },
+    [selectedGroup, labelData]
+  );
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -141,7 +171,20 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
                 </Select>
               </div>
 
-              <LabelManagementDataTable labelGroupFilter={selectedGroup} />
+              <LabelManagementDataTable
+                data={labelData}
+                labelGroupFilter={selectedGroup}
+                onAddDevice={() => setAddDeviceSheetOpen(true)}
+              />
+
+              <Suspense fallback={null}>
+                <AddDeviceToLabelSheet
+                  open={addDeviceSheetOpen}
+                  onOpenChange={setAddDeviceSheetOpen}
+                  labelName={selectedGroup || 'label'}
+                  onAdd={handleAddDevicesToLabel}
+                />
+              </Suspense>
             </div>
           </div>
     </div>
