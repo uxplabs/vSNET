@@ -32,6 +32,7 @@ import {
 import { Checkbox } from './ui/checkbox';
 import { DeviceLink } from './ui/device-link';
 import { TablePagination } from './ui/table-pagination';
+import { toast } from 'sonner';
 import { DEVICES_DATA } from './devices-data-table';
 import type { DeviceRow } from './devices-data-table';
 
@@ -238,10 +239,16 @@ export function AddDeviceToLabelSheet({
 
   const handleSave = React.useCallback(() => {
     const rows = table.getFilteredSelectedRowModel().rows.map((r) => r.original);
+    const count = rows.length;
     onAdd?.(rows);
     setRowSelection({});
     onOpenChange(false);
-  }, [onAdd, table, onOpenChange]);
+    toast.success(
+      count === 1
+        ? `1 device added to ${labelName}`
+        : `${count} devices added to ${labelName}`
+    );
+  }, [onAdd, table, onOpenChange, labelName]);
 
   const handleCancel = React.useCallback(() => {
     setRowSelection({});

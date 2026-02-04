@@ -264,6 +264,7 @@ function DeviceDetailPage({
   const handleSaveSnmpEdit = React.useCallback(() => {
     setSnmpValues(snmpEditDraft);
     setSnmpEditDrawerOpen(false);
+    toast.success('SNMP configuration saved');
   }, [snmpEditDraft]);
 
   const handleCancelSnmpEdit = React.useCallback(() => {
