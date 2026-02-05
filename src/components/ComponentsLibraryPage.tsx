@@ -519,11 +519,21 @@ function ComponentsLibraryPage() {
                 </div>
               </ComponentCard>
 
-              {/* Calendar */}
-              <ComponentCard id="calendar" title="Calendar" description="Date picker component">
-                <Calendar mode="single" className="rounded-md border w-fit" />
-              </ComponentCard>
             </div>
+
+            {/* Calendar - outside grid for proper sizing */}
+            <Card id="calendar" className="scroll-mt-4">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base">Calendar</CardTitle>
+                <CardDescription>Date picker component for selecting dates</CardDescription>
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={new Date()}
+                />
+              </CardContent>
+            </Card>
           </section>
         )}
 

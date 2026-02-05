@@ -207,67 +207,69 @@ const Navbar01 = ({
           </NavigationMenuList>
         </NavigationMenu>
 
-        {/* Right: region (fixed label for single-region account, or multiselect dropdown) */}
+        {/* Right: region (fixed label for single-region account, or multiselect dropdown) - hidden on administration */}
         <div className="hidden shrink-0 items-center gap-1 md:flex md:ml-auto">
-          {fixedRegion != null ? (
-            <div
-              className={cn(
-                'flex w-[140px] items-center justify-center border border-primary-foreground/30 bg-transparent px-3 py-2 text-primary-foreground text-sm'
-              )}
-              title={fixedRegion}
-            >
-              <span className="truncate">{fixedRegion}</span>
-            </div>
-          ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                title={regionTriggerLabel}
+          {currentSection !== 'administration' && (
+            fixedRegion != null ? (
+              <div
                 className={cn(
-                  'group w-[140px] justify-between gap-2 border border-primary-foreground/30 bg-transparent text-primary-foreground',
-                  'hover:bg-white/20 hover:text-white hover:border-white/40 [&>svg]:shrink-0 [&>svg]:text-primary-foreground hover:[&>svg]:text-white'
+                  'flex w-[140px] items-center justify-center border border-primary-foreground/30 bg-transparent px-3 py-2 text-primary-foreground text-sm'
                 )}
+                title={fixedRegion}
               >
-                <span className="min-w-0 truncate text-left">{regionTriggerLabel}</span>
-                <div className="flex shrink-0 items-center gap-1">
-                  {!isAll && regions.length > 1 && (
-                    <Badge variant="secondary" className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums bg-primary-foreground/20 text-primary-foreground border-0 group-hover:bg-white/30 group-hover:text-white">
-                      {regions.length}
-                    </Badge>
+                <span className="truncate">{fixedRegion}</span>
+              </div>
+            ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  title={regionTriggerLabel}
+                  className={cn(
+                    'group w-[140px] justify-between gap-2 border border-primary-foreground/30 bg-transparent text-primary-foreground',
+                    'hover:bg-white/20 hover:text-white hover:border-white/40 [&>svg]:shrink-0 [&>svg]:text-primary-foreground hover:[&>svg]:text-white'
                   )}
-                  <Icon name="expand_more" size={18} />
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" sideOffset={4} className="z-[9999] w-[240px]" onCloseAutoFocus={(e) => e.preventDefault()}>
-              <DropdownMenuLabel>Regions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {REGION_OPTIONS.map((r) => {
-                const checked = r === 'All' ? isAll : regions.includes(r);
-                return (
-                  <DropdownMenuItem
-                    key={r}
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      toggleRegion(r);
-                    }}
-                    className="cursor-pointer focus:bg-accent"
-                  >
-                    <label className="flex cursor-pointer items-center gap-3 w-full py-0.5 pointer-events-none">
-                      <Checkbox
-                        checked={checked}
-                        aria-label={`Select ${r}`}
-                        tabIndex={-1}
-                        className="pointer-events-none"
-                      />
-                      <span>{r}</span>
-                    </label>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                >
+                  <span className="min-w-0 truncate text-left">{regionTriggerLabel}</span>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {!isAll && regions.length > 1 && (
+                      <Badge variant="secondary" className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums bg-primary-foreground/20 text-primary-foreground border-0 group-hover:bg-white/30 group-hover:text-white">
+                        {regions.length}
+                      </Badge>
+                    )}
+                    <Icon name="expand_more" size={18} />
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={4} className="z-[9999] w-[240px]" onCloseAutoFocus={(e) => e.preventDefault()}>
+                <DropdownMenuLabel>Regions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {REGION_OPTIONS.map((r) => {
+                  const checked = r === 'All' ? isAll : regions.includes(r);
+                  return (
+                    <DropdownMenuItem
+                      key={r}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        toggleRegion(r);
+                      }}
+                      className="cursor-pointer focus:bg-accent"
+                    >
+                      <label className="flex cursor-pointer items-center gap-3 w-full py-0.5 pointer-events-none">
+                        <Checkbox
+                          checked={checked}
+                          aria-label={`Select ${r}`}
+                          tabIndex={-1}
+                          className="pointer-events-none"
+                        />
+                        <span>{r}</span>
+                      </label>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            )
           )}
           <Button
             variant="ghost"
@@ -397,23 +399,27 @@ const Navbar01 = ({
                 );
               })}
               <div className="border-t border-border pt-4 mt-4">
-                <p className="text-sm font-medium text-muted-foreground mb-2">Region</p>
-                {fixedRegion != null ? (
-                  <p className="text-sm py-1.5">{fixedRegion}</p>
-                ) : (
-                <div className="flex flex-col gap-1.5 max-h-[200px] overflow-y-auto">
-                  {REGION_OPTIONS.map((r) => (
-                    <label key={r} className="flex cursor-pointer items-center gap-2 py-1.5 text-sm">
-                      <Checkbox
-                        checked={r === 'All' ? regions.includes('All') || regions.length === 0 : regions.includes(r)}
-                        onCheckedChange={() => toggleRegion(r)}
-                      />
-                      <span>{r}</span>
-                    </label>
-                  ))}
-                </div>
+                {currentSection !== 'administration' && (
+                  <>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Region</p>
+                    {fixedRegion != null ? (
+                      <p className="text-sm py-1.5">{fixedRegion}</p>
+                    ) : (
+                    <div className="flex flex-col gap-1.5 max-h-[200px] overflow-y-auto mb-4">
+                      {REGION_OPTIONS.map((r) => (
+                        <label key={r} className="flex cursor-pointer items-center gap-2 py-1.5 text-sm">
+                          <Checkbox
+                            checked={r === 'All' ? regions.includes('All') || regions.length === 0 : regions.includes(r)}
+                            onCheckedChange={() => toggleRegion(r)}
+                          />
+                          <span>{r}</span>
+                        </label>
+                      ))}
+                    </div>
+                    )}
+                  </>
                 )}
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-2">
                   <Button variant="ghost" size="icon" aria-label="Connection status">
                     <Icon name="wifi" size={16} />
                   </Button>
