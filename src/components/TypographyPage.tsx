@@ -23,18 +23,17 @@ const TYPE_SCALE = [
 
 // Font weights
 const FONT_WEIGHTS = [
+  { name: 'font-light', weight: '300', description: 'Subtle text, captions' },
   { name: 'font-normal', weight: '400', description: 'Body text, paragraphs' },
-  { name: 'font-medium', weight: '500', description: 'Labels, emphasis' },
   { name: 'font-semibold', weight: '600', description: 'Headings, buttons' },
-  { name: 'font-bold', weight: '700', description: 'Strong emphasis' },
-  { name: 'font-extrabold', weight: '800', description: 'Hero text, large headings' },
+  { name: 'font-bold', weight: '700', description: 'Strong emphasis, titles' },
 ];
 
 /**
  * Official shadcn typography tokens (from CLI: npm run shadcn -- add typography-demo).
  */
 const SHADCN_TYPOGRAPHY_TOKENS = [
-  { token: 'h1', classes: 'scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl', weight: '800', lineHeight: '2.5rem' },
+  { token: 'h1', classes: 'scroll-m-20 text-4xl font-bold tracking-tight lg:text-5xl', weight: '700', lineHeight: '2.5rem' },
   { token: 'h2', classes: 'scroll-m-20 text-3xl font-semibold tracking-tight', weight: '600', lineHeight: '2.25rem' },
   { token: 'h3', classes: 'scroll-m-20 text-2xl font-semibold tracking-tight', weight: '600', lineHeight: '1.75rem' },
   { token: 'h4', classes: 'scroll-m-20 text-xl font-semibold tracking-tight', weight: '600', lineHeight: '1.75rem' },
@@ -54,7 +53,7 @@ function TypographyPage() {
         <CardHeader>
           <CardTitle>Typography</CardTitle>
           <CardDescription>
-            Type system using <strong>TheSans C4</strong> typeface with Tailwind CSS utilities.
+            Type system using <strong>Segoe UI</strong> typeface with Tailwind CSS utilities.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -85,7 +84,7 @@ function TypographyPage() {
         <CardHeader>
           <CardTitle className="text-base">Font Weights</CardTitle>
           <CardDescription>
-            Available font weights for TheSans C4
+            Available font weights for Segoe UI
           </CardDescription>
         </CardHeader>
         <CardContent>

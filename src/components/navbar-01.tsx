@@ -171,7 +171,7 @@ const Navbar01 = ({
           {leftAdornment}
           <a
             href="#"
-            className="flex shrink-0 items-center gap-4 font-semibold text-primary-foreground min-w-0 sm:gap-6"
+            className="flex shrink-0 items-center gap-4 text-primary-foreground min-w-0 sm:gap-6"
           >
             <img
               src="/Logo.svg"
@@ -179,7 +179,8 @@ const Navbar01 = ({
               className="h-[16px] w-auto shrink-0 object-contain object-left"
               aria-hidden
             />
-            <span className="hidden text-lg tracking-tight sm:inline-block">{appName}</span>
+            <span className="hidden h-4 w-px bg-primary-foreground/30 sm:inline-block" aria-hidden />
+            <span className="hidden text-lg font-bold tracking-tight sm:inline-block" style={{ WebkitTextStroke: '0.5px currentColor' }}>{appName}</span>
           </a>
         </div>
 
@@ -373,14 +374,15 @@ const Navbar01 = ({
             </SheetTrigger>
           <SheetContent side="right" className="w-[280px] sm:w-[320px]">
             <SheetHeader>
-              <SheetTitle className="flex items-center gap-6 text-left text-lg tracking-tight">
+              <SheetTitle className="flex items-center gap-4 text-left text-lg tracking-tight">
                 <img
                   src="/Logo.svg"
                   alt=""
                   className="h-[16px] w-auto object-contain object-left"
                   aria-hidden
                 />
-                {appName}
+                <span className="h-4 w-px bg-border" aria-hidden />
+                <span className="font-bold">{appName}</span>
               </SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col gap-1 mt-8">

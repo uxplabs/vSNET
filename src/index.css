@@ -24,100 +24,44 @@
   -webkit-font-smoothing: antialiased;
 }
 
-/* TheSans C4 (LucasFonts) – public/fonts/ */
+/* Segoe UI – Microsoft font family */
 @font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-2_ExtraLight.otf") format("opentype");
-  font-weight: 200;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-2iExtraLightIta.otf") format("opentype");
-  font-weight: 200;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-3_Light.otf") format("opentype");
+  font-family: "Segoe UI";
+  src: url("/fonts/segoeuil.ttf") format("truetype");
   font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-3iLightItalic.otf") format("opentype");
-  font-weight: 300;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-4_SemiLight.otf") format("opentype");
+  font-family: "Segoe UI";
+  src: url("/fonts/segoeuisl.ttf") format("truetype");
   font-weight: 350;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-4iSemiLightIta.otf") format("opentype");
-  font-weight: 350;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-5_Plain.otf") format("opentype");
+  font-family: "Segoe UI";
+  src: url("/fonts/segoeui.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-5iPlainItalic.otf") format("opentype");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-6_SemiBold.otf") format("opentype");
+  font-family: "Segoe UI";
+  src: url("/fonts/seguisb.ttf") format("truetype");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-6iSemiBoldIta.otf") format("opentype");
-  font-weight: 600;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-7_Bold.otf") format("opentype");
+  font-family: "Segoe UI";
+  src: url("/fonts/segoeuib.ttf") format("truetype");
   font-weight: 700;
   font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "TheSans C4";
-  src: url("/fonts/TheSansC4s-7iBoldItalic.otf") format("opentype");
-  font-weight: 700;
-  font-style: italic;
   font-display: swap;
 }
 
@@ -261,8 +205,8 @@
     --destructive-foreground: #FAFAFA;
     /* Radius */
     --radius: 0.5rem;
-    /* Typography – TheSans C4 (LucasFonts). Add @font-face in index.html or here if self-hosting. */
-    --font-sans: "TheSans C4", "TheSans", ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    /* Typography – Segoe UI (Microsoft). */
+    --font-sans: "Segoe UI", ui-sans-serif, system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
@@ -343,7 +287,7 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: var(--font-sans); /* TheSans C4 */
+    font-family: var(--font-sans); /* Segoe UI */
   }
 }
 

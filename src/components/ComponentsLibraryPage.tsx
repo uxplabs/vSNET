@@ -309,7 +309,7 @@ function ComponentsLibraryPage() {
             <CardHeader>
               <CardTitle>shadcn/ui Component Library</CardTitle>
               <CardDescription>
-                All components added via <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">npx shadcn@latest add</code>. Using TheSans C4 typeface and Material Icons.
+                All components added via <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">npx shadcn@latest add</code>. Using Segoe UI typeface and Material Icons.
               </CardDescription>
             </CardHeader>
             <CardContent>
