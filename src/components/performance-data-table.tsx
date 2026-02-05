@@ -35,7 +35,7 @@ function MetricCell({ value, format, severity }: { value: number; format: 'pct' 
   const icon = severity === 'critical'
     ? <Icon name="error" size={14} className="text-destructive shrink-0" aria-hidden />
     : severity === 'warning'
-      ? <Icon name="warning" size={14} className="text-amber-600 dark:text-amber-500 shrink-0" aria-hidden />
+      ? <Icon name="warning" size={14} className="text-warning shrink-0" aria-hidden />
       : null;
   return (
     <span className="inline-flex items-center justify-end gap-1 w-full">

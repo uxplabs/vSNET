@@ -44,8 +44,8 @@ export interface AlarmDrawerAlarm {
 
 const SEVERITY_ICON: Record<AlarmSeverity, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
-  Major: { name: 'error_outline', className: 'text-amber-600 dark:text-amber-500' },
-  Minor: { name: 'warning', className: 'text-amber-600 dark:text-amber-500' },
+  Major: { name: 'error_outline', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-warning' },
 };
 
 export interface AlarmDrawerProps {

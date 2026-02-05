@@ -31,11 +31,12 @@ import { NameValueField, EditableLabelsField } from '@/components/ui/editable-va
 import type { DeviceRow } from './devices-data-table';
 import { AlarmDrawer } from './alarm-drawer';
 import type { AlarmDrawerAlarm } from './alarm-drawer';
+import { ConfigMismatchSheet } from './config-mismatch-sheet';
 
 const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
-  Major: { name: 'error_outline', className: 'text-amber-600 dark:text-amber-500' },
-  Minor: { name: 'warning', className: 'text-amber-600 dark:text-amber-500' },
+  Major: { name: 'error_outline', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-warning' },
   None: { name: 'check_circle', className: 'text-muted-foreground' },
 };
 
@@ -65,8 +66,8 @@ const MOCK_NOTES: NoteMessage[] = [
 
 const SEVERITY_ICON: Record<AlarmSeverity, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
-  Major: { name: 'error_outline', className: 'text-amber-600 dark:text-amber-500' },
-  Minor: { name: 'warning', className: 'text-amber-600 dark:text-amber-500' },
+  Major: { name: 'error_outline', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-warning' },
 };
 
 const DRAWER_ALARM_TYPES = ['Device disconnected', 'Link down', 'Radio link failure', 'Config mismatch'];
@@ -140,6 +141,7 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
   const [alarmDrawerOpen, setAlarmDrawerOpen] = React.useState(false);
   const [selectedAlarm, setSelectedAlarm] = React.useState<AlarmDrawerAlarm | null>(null);
+  const [configMismatchSheetOpen, setConfigMismatchSheetOpen] = React.useState(false);
   const [summaryValues, setSummaryValues] = React.useState(() => ({
     hostname: device?.device ?? '',
     location: device?.deviceGroup ?? '',
@@ -202,7 +204,7 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
               </Button>
             </DrawerClose>
             <DrawerTitle className="text-xl font-semibold">{device.device}</DrawerTitle>
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-4 pt-1">
               <Badge variant="secondary" className="font-normal">
                 {device.type}
               </Badge>
@@ -224,6 +226,21 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
                 </TooltipTrigger>
                 <TooltipContent>{notesTooltip}</TooltipContent>
               </Tooltip>
+              {device.configMismatch != null && device.configMismatch > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 text-sm text-warning hover:underline"
+                      onClick={() => setConfigMismatchSheetOpen(true)}
+                    >
+                      <Icon name="difference" size={18} className="shrink-0" />
+                      <span className="tabular-nums">{device.configMismatch}</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>View configuration mismatches</TooltipContent>
+                </Tooltip>
+              )}
             </div>
             <div className="flex items-center gap-2 pt-3">
               <Button
@@ -611,6 +628,12 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
         alarm={selectedAlarm}
         open={alarmDrawerOpen}
         onOpenChange={setAlarmDrawerOpen}
+      />
+      <ConfigMismatchSheet
+        open={configMismatchSheetOpen}
+        deviceName={device?.device ?? ''}
+        mismatchCount={device?.configMismatch ?? 0}
+        onOpenChange={setConfigMismatchSheetOpen}
       />
     </Drawer>
   );

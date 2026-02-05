@@ -32,7 +32,7 @@ export const DEVICE_MIGRATION_DATA: DeviceMigrationRow[] = [
 
 const STATUS_ICON: Record<DeviceMigrationRow['status'], { name: string; className: string }> = {
   'Completed': { name: 'check_circle', className: 'text-green-600 dark:text-green-500' },
-  'In progress': { name: 'sync', className: 'text-amber-600 dark:text-amber-500' },
+  'In progress': { name: 'sync', className: 'text-warning' },
   'Pending': { name: 'schedule', className: 'text-muted-foreground' },
   'Failed': { name: 'error', className: 'text-destructive' },
 };

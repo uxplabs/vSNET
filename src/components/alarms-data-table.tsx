@@ -50,6 +50,7 @@ export interface AlarmRow {
   timestamp: string;
   updated: string;
   source: string;
+  region: string;
   managedObject: string;
   type: string;
   ticketId: string;
@@ -58,13 +59,39 @@ export interface AlarmRow {
 
 const SEVERITY_ICON: Record<AlarmSeverity, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
-  Major: { name: 'error_outline', className: 'text-amber-600 dark:text-amber-500' },
-  Minor: { name: 'warning', className: 'text-amber-600 dark:text-amber-500' },
+  Major: { name: 'error_outline', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-warning' },
 };
 
 const SOURCE_PREFIXES = ['eNB-SEA', 'eNB-PDX', 'RN-PHX', 'eNB-SFO', 'RN-LAS', 'eNB-NYC', 'RN-DEN', 'eNB-CHI', 'RN-ATL', 'eNB-MIA', 'RN-SEA', 'eNB-PHX', 'RN-SFO', 'eNB-LAS', 'RN-NYC'];
 const TYPES = ['Device disconnected', 'Link down', 'Radio link failure', 'Config mismatch'];
 const OWNERS = ['J. Smith', 'A. Jones', 'M. Lee', 'K. Brown', '—'];
+
+// Map city codes to regions
+const CITY_TO_REGION: Record<string, string> = {
+  SEA: 'Pacific Northwest',
+  PDX: 'Pacific Northwest',
+  SFO: 'Northern California',
+  PHX: 'Desert Southwest',
+  LAS: 'Desert Southwest',
+  DEN: 'Mountain West',
+  CHI: 'Great Lakes',
+  NYC: 'Northeast',
+  ATL: 'Southeast',
+  MIA: 'Florida',
+  BOS: 'New England',
+  AUS: 'Texas',
+};
+
+function getRegionFromSource(source: string): string {
+  // Extract city code from source like "eNB-SEA-001" or "RN-PHX-003"
+  const parts = source.split('-');
+  if (parts.length >= 2) {
+    const cityCode = parts[1];
+    return CITY_TO_REGION[cityCode] || 'Pacific Northwest';
+  }
+  return 'Pacific Northwest';
+}
 
 function generateAlarms(count: number): AlarmRow[] {
   const severities: AlarmSeverity[] = ['Critical', 'Major', 'Minor'];
@@ -87,6 +114,7 @@ function generateAlarms(count: number): AlarmRow[] {
       timestamp: ts,
       updated: up,
       source,
+      region: getRegionFromSource(source),
       managedObject: (i % 2 === 0 ? 'Cell-' : 'Radio-') + ((i % 12) + 1),
       type: TYPES[i % TYPES.length],
       ticketId: hasTicket ? `TKT-${1000 + i}` : '—',
@@ -101,10 +129,14 @@ export const ALARMS_DATA: AlarmRow[] = generateAlarms(124);
 export interface AlarmTableFilters {
   search?: string;
   severityFilter?: string;
+  regionFilter?: string;
 }
 
 function filterAlarms(alarms: AlarmRow[], filters: AlarmTableFilters): AlarmRow[] {
   let result = alarms;
+  if (filters.regionFilter && filters.regionFilter !== 'Region') {
+    result = result.filter((a) => a.region === filters.regionFilter);
+  }
   if (filters.search?.trim()) {
     const q = filters.search.trim().toLowerCase();
     result = result.filter(
@@ -151,156 +183,178 @@ export function getAlarmCounts(alarms: AlarmRow[]) {
   };
 }
 
-const columns: ColumnDef<AlarmRow>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    meta: { className: 'w-10' },
-  },
-  {
-    accessorKey: 'severity',
-    header: ({ column }) => (
-      <SortableHeader column={column}>Alarms</SortableHeader>
-    ),
-    sortingFn: (rowA, rowB) => {
-      const order: Record<AlarmSeverity, number> = { Critical: 0, Major: 1, Minor: 2 };
-      const a = order[rowA.original.severity] ?? 3;
-      const b = order[rowB.original.severity] ?? 3;
-      return a - b;
+function getColumns(showRegionColumn: boolean): ColumnDef<AlarmRow>[] {
+  return [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      meta: { className: 'w-10' },
     },
-    cell: ({ row }) => {
-      const severity = row.getValue('severity') as AlarmSeverity;
-      const { name: iconName, className: iconClass } = SEVERITY_ICON[severity];
-      return (
-        <span className="inline-flex items-center gap-2">
-          <Icon name={iconName} size={18} className={`shrink-0 ${iconClass}`} />
-          {severity}
-        </span>
-      );
+    {
+      accessorKey: 'severity',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Alarms</SortableHeader>
+      ),
+      sortingFn: (rowA, rowB) => {
+        const order: Record<AlarmSeverity, number> = { Critical: 0, Major: 1, Minor: 2 };
+        const a = order[rowA.original.severity] ?? 3;
+        const b = order[rowB.original.severity] ?? 3;
+        return a - b;
+      },
+      cell: ({ row }) => {
+        const severity = row.getValue('severity') as AlarmSeverity;
+        const { name: iconName, className: iconClass } = SEVERITY_ICON[severity];
+        return (
+          <span className="inline-flex items-center gap-2">
+            <Icon name={iconName} size={18} className={`shrink-0 ${iconClass}`} />
+            {severity}
+          </span>
+        );
+      },
     },
-  },
-  {
-    accessorKey: 'timestamp',
-    header: ({ column }) => (
-      <SortableHeader column={column}>Time occurred</SortableHeader>
-    ),
-    cell: ({ row }) => {
-      const value = row.getValue('timestamp') as string;
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="block truncate max-w-[10ch] tabular-nums text-sm">
-              {value}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{value}</TooltipContent>
-        </Tooltip>
-      );
+    {
+      accessorKey: 'timestamp',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Time occurred</SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const value = row.getValue('timestamp') as string;
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="block truncate max-w-[10ch] tabular-nums text-sm">
+                {value}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{value}</TooltipContent>
+          </Tooltip>
+        );
+      },
     },
-  },
-  {
-    accessorKey: 'updated',
-    header: ({ column }) => (
-      <SortableHeader column={column}>Time updated</SortableHeader>
-    ),
-    cell: ({ row }) => {
-      const value = row.getValue('updated') as string;
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="block truncate max-w-[10ch] tabular-nums text-sm">
-              {value}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{value}</TooltipContent>
-        </Tooltip>
-      );
+    {
+      accessorKey: 'updated',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Time updated</SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const value = row.getValue('updated') as string;
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="block truncate max-w-[10ch] tabular-nums text-sm">
+                {value}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{value}</TooltipContent>
+          </Tooltip>
+        );
+      },
     },
-  },
-  {
-    accessorKey: 'source',
-    header: ({ column }) => (
-      <SortableHeader column={column}>Source</SortableHeader>
-    ),
-    cell: ({ row }) => <DeviceLink value={row.getValue('source') as string} maxLength={16} />,
-  },
-  {
-    accessorKey: 'managedObject',
-    header: ({ column }) => (
-      <SortableHeader column={column}>Managed object</SortableHeader>
-    ),
-    cell: ({ row }) => row.getValue('managedObject') as string,
-  },
-  {
-    accessorKey: 'type',
-    header: ({ column }) => (
-      <SortableHeader column={column}>Alarm type</SortableHeader>
-    ),
-    cell: ({ row }) => row.getValue('type') as string,
-    meta: { className: 'min-w-[21ch]' },
-  },
-  {
-    accessorKey: 'ticketId',
-    header: ({ column }) => (
-      <SortableHeader column={column}>Ticket ID</SortableHeader>
-    ),
-    cell: ({ row }) => row.getValue('ticketId') as string,
-  },
-  {
-    accessorKey: 'owner',
-    header: ({ column }) => (
-      <SortableHeader column={column}>Owner</SortableHeader>
-    ),
-    cell: ({ row }) => row.getValue('owner') as string,
-  },
-  {
-    id: 'actions',
-    header: '',
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="More actions">
-            <Icon name="more_vert" size={20} />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem>View details</DropdownMenuItem>
-          <DropdownMenuItem>Assign ticket</DropdownMenuItem>
-          <DropdownMenuItem>Acknowledge</DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive">Clear alarm</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
-    enableSorting: false,
-    meta: {
-      className: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+    {
+      accessorKey: 'source',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Source</SortableHeader>
+      ),
+      cell: ({ row }) => <DeviceLink value={row.getValue('source') as string} maxLength={16} />,
     },
-  },
-];
+    ...(showRegionColumn ? [{
+      accessorKey: 'region',
+      header: ({ column }: { column: any }) => (
+        <SortableHeader column={column}>Region</SortableHeader>
+      ),
+      cell: ({ row }: { row: any }) => (
+        <span className="text-muted-foreground">{row.getValue('region') as string}</span>
+      ),
+    } as ColumnDef<AlarmRow>] : []),
+    {
+      accessorKey: 'managedObject',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Managed object</SortableHeader>
+      ),
+      cell: ({ row }) => row.getValue('managedObject') as string,
+    },
+    {
+      accessorKey: 'type',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Alarm type</SortableHeader>
+      ),
+      cell: ({ row }) => row.getValue('type') as string,
+      meta: { className: 'min-w-[21ch]' },
+    },
+    {
+      accessorKey: 'ticketId',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Ticket ID</SortableHeader>
+      ),
+      cell: ({ row }) => row.getValue('ticketId') as string,
+    },
+    {
+      accessorKey: 'owner',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Owner</SortableHeader>
+      ),
+      cell: ({ row }) => row.getValue('owner') as string,
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: () => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="More actions">
+              <Icon name="more_vert" size={20} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>View details</DropdownMenuItem>
+            <DropdownMenuItem>Assign ticket</DropdownMenuItem>
+            <DropdownMenuItem>Acknowledge</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive">Clear alarm</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      enableSorting: false,
+      meta: {
+        className: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+      },
+    },
+  ];
+}
 
 export interface AlarmsDataTableProps {
   search?: string;
   severityFilter?: string;
+  /** Selected regions from global nav - if multiple, show Region column */
+  selectedRegions?: string[];
+  /** Filter by specific region from table filter dropdown */
+  regionFilter?: string;
 }
 
-export function AlarmsDataTable({ search = '', severityFilter = 'Alarms' }: AlarmsDataTableProps = {}) {
+export function AlarmsDataTable({ 
+  search = '', 
+  severityFilter = 'Alarms',
+  selectedRegions = [],
+  regionFilter = 'Region',
+}: AlarmsDataTableProps = {}) {
+  const showRegionColumn = selectedRegions.length > 1;
+  const columns = React.useMemo(() => getColumns(showRegionColumn), [showRegionColumn]);
   const pageSize = useResponsivePageSize();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [selectedAlarm, setSelectedAlarm] = React.useState<AlarmRow | null>(null);
@@ -328,8 +382,8 @@ export function AlarmsDataTable({ search = '', severityFilter = 'Alarms' }: Alar
   });
 
   const data = React.useMemo(
-    () => filterAlarms(ALARMS_DATA, { search, severityFilter }),
-    [search, severityFilter]
+    () => filterAlarms(ALARMS_DATA, { search, severityFilter, regionFilter }),
+    [search, severityFilter, regionFilter]
   );
 
   React.useEffect(() => {

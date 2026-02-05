@@ -21,6 +21,7 @@ export interface DashboardAlarmsTabProps {
   alarmsSeverityFilter: string;
   onSeverityFilterChange: (value: string) => void;
   region?: string;
+  regions?: string[];
   alarmsTableRef: React.RefObject<HTMLDivElement | null>;
   scrollToAlarmsAndFilter: (severity: string) => void;
 }
@@ -30,6 +31,7 @@ export function DashboardAlarmsTab({
   alarmsSeverityFilter,
   onSeverityFilterChange,
   region,
+  regions,
   alarmsTableRef,
   scrollToAlarmsAndFilter,
 }: DashboardAlarmsTabProps) {
@@ -70,7 +72,7 @@ export function DashboardAlarmsTab({
               title="Major"
               className="hover:bg-muted/40"
               kpiValue={overviewData.alarms.major}
-              kpiIcon={<Icon name="error_outline" size={48} className="text-amber-600 dark:text-amber-500" />}
+              kpiIcon={<Icon name="error_outline" size={48} className="text-warning" />}
               trendBadge={<TrendBadge direction="down">↓ 2</TrendBadge>}
               sparkLineData={[
                 { name: '1', value: overviewData.alarms.major + 2 },
@@ -92,7 +94,7 @@ export function DashboardAlarmsTab({
               title="Minor"
               className="hover:bg-muted/40"
               kpiValue={overviewData.alarms.minor}
-              kpiIcon={<Icon name="warning" size={48} className="text-amber-600 dark:text-amber-500" />}
+              kpiIcon={<Icon name="warning" size={48} className="text-warning" />}
               trendBadge={<TrendBadge direction="up">↑ 5</TrendBadge>}
               sparkLineData={[
                 { name: '1', value: overviewData.alarms.minor - 3 },
@@ -117,6 +119,7 @@ export function DashboardAlarmsTab({
           severityFilter={alarmsSeverityFilter}
           onSeverityFilterChange={onSeverityFilterChange}
           regionFilter={region}
+          selectedRegions={regions}
           pageSize={15}
         />
       </section>

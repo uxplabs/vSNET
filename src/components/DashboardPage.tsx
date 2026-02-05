@@ -42,23 +42,44 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
 
   const overviewData = useMemo(() => {
     const agg = getAggregatedRegionData();
-    const regionRow = region && region !== 'All' ? getRegionRow(region) : null;
-    if (!regionRow) {
-      const ratio = 1;
+    
+    // Check if "All" is selected or no specific regions
+    const isAll = !regions || regions.length === 0 || regions.includes('All');
+    
+    if (isAll) {
       return {
         devices: ALL_DEVICES,
         radio: ALL_RADIO,
         alarms: ALL_ALARMS,
       };
     }
-    const ratio = regionRow.totalDevices / agg.totalDevices;
+    
+    // Aggregate data from all selected regions
+    const aggregatedDevices = { total: 0, connected: 0, disconnected: 0, kpiSyncErrors: 0 };
+    
+    regions.forEach((r) => {
+      const regionRow = getRegionRow(r);
+      if (regionRow) {
+        aggregatedDevices.total += regionRow.totalDevices;
+        aggregatedDevices.connected += regionRow.connected;
+        aggregatedDevices.disconnected += regionRow.disconnected;
+        aggregatedDevices.kpiSyncErrors += regionRow.kpiSyncErrors;
+      }
+    });
+    
+    // If no valid regions found, return all data
+    if (aggregatedDevices.total === 0) {
+      return {
+        devices: ALL_DEVICES,
+        radio: ALL_RADIO,
+        alarms: ALL_ALARMS,
+      };
+    }
+    
+    const ratio = aggregatedDevices.total / agg.totalDevices;
+    
     return {
-      devices: {
-        total: regionRow.totalDevices,
-        connected: regionRow.connected,
-        disconnected: regionRow.disconnected,
-        kpiSyncErrors: regionRow.kpiSyncErrors,
-      },
+      devices: aggregatedDevices,
       radio: {
         total: Math.round(ALL_RADIO.total * ratio),
         connected: Math.round(ALL_RADIO.connected * ratio),
@@ -74,7 +95,7 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
         minor: Math.max(0, Math.round(ALL_ALARMS.minor * ratio)),
       },
     };
-  }, [region]);
+  }, [regions]);
 
   const scrollToAlarmsAndFilter = useCallback((severity: string) => {
     setAlarmsSeverityFilter(severity);
@@ -119,7 +140,7 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
                     {mapVisible && (
                       <div className="mb-6">
                         <Suspense fallback={<div className="rounded-lg border bg-card h-[400px] flex items-center justify-center bg-muted/30"><span className="text-muted-foreground text-sm">Loading map…</span></div>}>
-                          <RegionsMap region={region} onRegionChange={onRegionChange} />
+                          <RegionsMap region={region} regions={regions} onRegionChange={onRegionChange} />
                         </Suspense>
                       </div>
                     )}
@@ -166,7 +187,7 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
                       <ChartCard
                         title="KPI sync error"
                         kpiValue={overviewData.devices.kpiSyncErrors}
-                        kpiIcon={<Icon name="sync_problem" size={36} className="text-amber-600 dark:text-amber-500" />}
+                        kpiIcon={<Icon name="sync_problem" size={36} className="text-warning" />}
                         trendBadge={<TrendBadge direction="down">↓ 2</TrendBadge>}
                         sparkLineData={[
                           { name: '1', value: overviewData.devices.kpiSyncErrors + 4 },
@@ -244,7 +265,7 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
                       <ChartCard
                         title="Major"
                         kpiValue={overviewData.alarms.major}
-                        kpiIcon={<Icon name="error_outline" size={48} className="text-amber-600 dark:text-amber-500" />}
+                        kpiIcon={<Icon name="error_outline" size={48} className="text-warning" />}
                         trendBadge={<TrendBadge direction="down">↓ 2</TrendBadge>}
                         sparkLineData={[
                           { name: '1', value: overviewData.alarms.major + 2 },
@@ -257,7 +278,7 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
                       <ChartCard
                         title="Minor"
                         kpiValue={overviewData.alarms.minor}
-                        kpiIcon={<Icon name="warning" size={48} className="text-amber-600 dark:text-amber-500" />}
+                        kpiIcon={<Icon name="warning" size={48} className="text-warning" />}
                         trendBadge={<TrendBadge direction="up">↑ 5</TrendBadge>}
                         sparkLineData={[
                           { name: '1', value: overviewData.alarms.minor - 3 },
@@ -274,7 +295,7 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
                       <Icon name="public" size={20} className="text-muted-foreground" />
                       Regions
                     </h2>
-                    <RegionsDataTable regionFilter={region} />
+                    <RegionsDataTable regionsFilter={regions} />
                   </section>
                 </div>
             )}
@@ -285,6 +306,7 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
                     alarmsSeverityFilter={alarmsSeverityFilter}
                     onSeverityFilterChange={setAlarmsSeverityFilter}
                     region={region}
+                    regions={regions}
                     alarmsTableRef={alarmsTableRef}
                     scrollToAlarmsAndFilter={scrollToAlarmsAndFilter}
                   />

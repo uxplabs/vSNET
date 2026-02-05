@@ -126,14 +126,20 @@ const regionsColumns: ColumnDef<RegionRow>[] = [
 
 export interface RegionsDataTableProps {
   regionFilter?: string;
+  regionsFilter?: string[];
 }
 
-export function RegionsDataTable({ regionFilter }: RegionsDataTableProps) {
+export function RegionsDataTable({ regionFilter, regionsFilter }: RegionsDataTableProps) {
   const data = React.useMemo(() => {
+    // Use regionsFilter array if provided
+    if (regionsFilter && regionsFilter.length > 0 && !regionsFilter.includes('All')) {
+      return REGIONS_DATA.filter((r) => regionsFilter.includes(r.region));
+    }
+    // Fall back to single regionFilter for backward compatibility
     if (regionFilter && regionFilter !== 'All') {
       return REGIONS_DATA.filter((r) => r.region === regionFilter);
     }
     return REGIONS_DATA;
-  }, [regionFilter]);
+  }, [regionFilter, regionsFilter]);
   return <DataTable columns={regionsColumns} data={data} />;
 }

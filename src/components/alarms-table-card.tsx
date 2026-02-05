@@ -60,8 +60,8 @@ const TIMESTAMP_OPTIONS = ['All', 'Last 24h', 'Last 7 days', 'Last 30 days'] as 
 
 const SEVERITY_ICON: Record<AlarmSeverity, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
-  Major: { name: 'error_outline', className: 'text-amber-600 dark:text-amber-500' },
-  Minor: { name: 'warning', className: 'text-amber-600 dark:text-amber-500' },
+  Major: { name: 'error_outline', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-warning' },
 };
 
 export const ALARMS_TABLE_DATA: AlarmTableRow[] = [
@@ -193,6 +193,7 @@ export interface AlarmsTableCardProps {
   severityFilter?: string;
   onSeverityFilterChange?: (value: string) => void;
   regionFilter?: string;
+  selectedRegions?: string[];
   /** Fixed page size (overrides responsive calculation). Use for dashboard/embedded tables. */
   pageSize?: number;
 }
@@ -215,7 +216,7 @@ function alarmSourceToDeviceRow(source: string): DeviceRow {
   };
 }
 
-export function AlarmsTableCard({ severityFilter: severityFilterProp, onSeverityFilterChange, regionFilter, pageSize: pageSizeProp }: AlarmsTableCardProps = {}) {
+export function AlarmsTableCard({ severityFilter: severityFilterProp, onSeverityFilterChange, regionFilter, selectedRegions, pageSize: pageSizeProp }: AlarmsTableCardProps = {}) {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [selectedAlarm, setSelectedAlarm] = React.useState<AlarmTableRow | null>(null);
   const [deviceDrawerOpen, setDeviceDrawerOpen] = React.useState(false);
@@ -249,11 +250,16 @@ export function AlarmsTableCard({ severityFilter: severityFilterProp, onSeverity
   }, [pageSize]);
 
   const filteredData = React.useMemo(() => {
+    // Use selectedRegions array if provided
+    if (selectedRegions && selectedRegions.length > 0 && !selectedRegions.includes('All')) {
+      return ALARMS_TABLE_DATA.filter((a) => selectedRegions.includes(a.region));
+    }
+    // Fall back to single regionFilter for backward compatibility
     if (regionFilter && regionFilter !== 'All') {
       return ALARMS_TABLE_DATA.filter((a) => a.region === regionFilter);
     }
     return ALARMS_TABLE_DATA;
-  }, [regionFilter]);
+  }, [regionFilter, selectedRegions]);
 
   const columnFilters = React.useMemo<ColumnFiltersState>(() => {
     const filters: ColumnFiltersState = [];

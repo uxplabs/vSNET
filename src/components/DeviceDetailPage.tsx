@@ -48,6 +48,7 @@ import { RadioNodesDataTable, RADIO_NODES_STATUS_OPTIONS, RADIO_NODES_MODEL_OPTI
 import { AddRadioNodeSheet, type AddRadioNodeFormData } from './add-radio-node-sheet';
 import { toast } from 'sonner';
 import { NrCellsDataTable, NR_CELLS_DATA } from './nr-cells-data-table';
+import { ConfigMismatchSheet } from './config-mismatch-sheet';
 import { ZonesDataTable, ZONES_DATA } from './zones-data-table';
 import { X2ConnectionsDataTable } from './x2-connections-data-table';
 import { DebugLogsDataTable } from './debug-logs-data-table';
@@ -240,6 +241,7 @@ function DeviceDetailPage({
   const [radioNodesStatusFilter, setRadioNodesStatusFilter] = useState('Status');
   const [radioNodesModelFilter, setRadioNodesModelFilter] = useState('Model');
   const [addRadioNodeSheetOpen, setAddRadioNodeSheetOpen] = useState(false);
+  const [configMismatchSheetOpen, setConfigMismatchSheetOpen] = useState(false);
   const [resourcesTimeRange, setResourcesTimeRange] = useState<(typeof RESOURCES_TIME_RANGES)[number]>(RESOURCES_TIME_RANGES[0]);
   const [cellSearch, setCellSearch] = useState('');
   const [cellTimeRange, setCellTimeRange] = useState<(typeof CELL_TIME_RANGES)[number]>(CELL_TIME_RANGES[0]);
@@ -384,6 +386,24 @@ function DeviceDetailPage({
                   </span>
                   <span className="text-sm text-gray-500">•</span>
                   <DeviceStatus status={device.status} variant="dark" iconSize={14} className="text-sm" />
+                  {device.configMismatch != null && device.configMismatch > 0 && (
+                    <>
+                      <span className="text-sm text-gray-500">•</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 text-sm text-warning hover:underline"
+                            onClick={() => setConfigMismatchSheetOpen(true)}
+                          >
+                            <Icon name="difference" size={16} className="shrink-0" />
+                            <span>{device.configMismatch} config {device.configMismatch === 1 ? 'mismatch' : 'mismatches'}</span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>View configuration mismatches</TooltipContent>
+                      </Tooltip>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -431,7 +451,7 @@ function DeviceDetailPage({
                 <div>
                   <p className="text-gray-400 mb-0.5">Major</p>
                   <div className="flex items-center gap-1.5">
-                    <Icon name="error_outline" size={14} className="text-amber-400" />
+                    <Icon name="error_outline" size={14} className="text-warning" />
                     <span className="font-semibold tabular-nums text-white">{Math.floor(device.alarms * 0.4)}</span>
                   </div>
                 </div>
@@ -1625,6 +1645,12 @@ function DeviceDetailPage({
         onSubmit={(data: AddRadioNodeFormData) => {
           toast.success(data.mode === 'upload' ? 'Radio node(s) added from configuration file' : 'Radio node added');
         }}
+      />
+      <ConfigMismatchSheet
+        open={configMismatchSheetOpen}
+        deviceName={device.device}
+        mismatchCount={device.configMismatch ?? 0}
+        onOpenChange={setConfigMismatchSheetOpen}
       />
     </div>
     </TooltipProvider>

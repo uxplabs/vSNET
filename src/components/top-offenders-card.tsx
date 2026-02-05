@@ -75,8 +75,8 @@ export interface TopOffenderRow {
 
 const ALARM_TYPE_ICON: Record<AlarmType, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
-  Major: { name: 'error_outline', className: 'text-amber-600 dark:text-amber-500' },
-  Minor: { name: 'warning', className: 'text-amber-600 dark:text-amber-500' },
+  Major: { name: 'error_outline', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-warning' },
 };
 
 const TOP_OFFENDERS_DATA: TopOffenderRow[] = [

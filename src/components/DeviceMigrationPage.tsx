@@ -27,7 +27,7 @@ export default function DeviceMigrationPage({ onBack }: DeviceMigrationPageProps
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground mb-1">Status</p>
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              <span className="h-2 w-2 rounded-full bg-warning" />
               <span className="text-sm font-semibold">In progress</span>
             </div>
           </CardContent>

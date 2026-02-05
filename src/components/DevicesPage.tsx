@@ -32,6 +32,7 @@ import { ActivityLogDataTable } from './activity-log-data-table';
 import { ReportsDataTable, getFilteredReportCount } from './reports-data-table';
 import { PerformanceDataTable, getFilteredPerformanceCount } from './performance-data-table';
 import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount } from './threshold-crossing-alerts-data-table';
+import { GoldenConfigDataTable } from './golden-config-data-table';
 import { ChevronDown } from 'lucide-react';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ErrorBoundary } from './error-boundary';
@@ -110,6 +111,7 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
   const [selectedRegion, setSelectedRegion] = useState<RegionOption>('all');
   const [selectedGroup, setSelectedGroup] = useState<DeviceGroupOption | null>(null);
   const [search, setSearch] = useState('');
+  const [regionFilter, setRegionFilter] = useState<string>('Region');
   const [statusFilter, setStatusFilter] = useState<string>('Status');
   const [configStatusFilter, setConfigStatusFilter] = useState<string>('Config status');
   const [typeFilter, setTypeFilter] = useState<string>('Type');
@@ -145,13 +147,13 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
   const [deviceSelectedCount, setDeviceSelectedCount] = useState(0);
   const [clearSelectionTrigger, setClearSelectionTrigger] = useState(0);
 
-  const deviceFiltersActive = search !== '' || statusFilter !== 'Status' || configStatusFilter !== 'Config status' || typeFilter !== 'Type' || versionFilter !== 'Version' || alarmsFilter !== 'Alarms' || labelsFilter !== 'Labels';
+  const deviceFiltersActive = search !== '' || regionFilter !== 'Region' || statusFilter !== 'Status' || configStatusFilter !== 'Config status' || typeFilter !== 'Type' || versionFilter !== 'Version' || alarmsFilter !== 'Alarms' || labelsFilter !== 'Labels';
   const clearDeviceFilters = () => {
-    setSearch(''); setStatusFilter('Status'); setSelectedRegion('all'); setConfigStatusFilter('Config status'); setTypeFilter('Type'); setVersionFilter('Version'); setAlarmsFilter('Alarms'); setLabelsFilter('Labels');
+    setSearch(''); setRegionFilter('Region'); setStatusFilter('Status'); setSelectedRegion('all'); setConfigStatusFilter('Config status'); setTypeFilter('Type'); setVersionFilter('Version'); setAlarmsFilter('Alarms'); setLabelsFilter('Labels');
   };
-  const eventsFiltersActive = eventsSearch !== '' || eventsTypeFilter !== 'Type' || eventsSeverityFilter !== 'Severity' || eventsSourceFilter !== 'Source';
+  const eventsFiltersActive = eventsSearch !== '' || regionFilter !== 'Region' || eventsTypeFilter !== 'Type' || eventsSeverityFilter !== 'Severity' || eventsSourceFilter !== 'Source';
   const clearEventsFilters = () => {
-    setEventsSearch(''); setEventsTypeFilter('Type'); setEventsSeverityFilter('Severity'); setEventsSourceFilter('Source');
+    setEventsSearch(''); setRegionFilter('Region'); setEventsTypeFilter('Type'); setEventsSeverityFilter('Severity'); setEventsSourceFilter('Source');
   };
   const tasksFiltersActive = tasksSearch !== '' || tasksTypeFilter !== 'Type' || tasksStatusFilter !== 'Status' || tasksDomainFilter !== 'Domain';
   const clearTasksFilters = () => {
@@ -402,6 +404,9 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   <TabsTrigger value="software-management" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
                     Software management
                   </TabsTrigger>
+                  <TabsTrigger value="golden-configuration" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
+                    Golden configuration
+                  </TabsTrigger>
                   <TabsTrigger value="reports" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
                     Reports
                   </TabsTrigger>
@@ -465,6 +470,21 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                         />
                       </div>
                       <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+                        {regions && regions.length > 1 && (
+                          <Select value={regionFilter} onValueChange={setRegionFilter}>
+                            <SelectTrigger className="w-[140px] shrink-0">
+                              <SelectValue placeholder="Region" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Region">Region</SelectItem>
+                              {regions.map((r) => (
+                                <SelectItem key={r} value={r}>
+                                  {r}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                         <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                           <SelectTrigger className="w-[120px] shrink-0">
                             <SelectValue placeholder="Status" />
@@ -568,6 +588,7 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                           labelsFilter,
                         });
                         const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                        if (regionFilter !== 'Region') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('Region') });
                         if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('Status'); setSelectedRegion('all'); } });
                         if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => setConfigStatusFilter('Config status') });
                         if (typeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('Type') });
@@ -605,7 +626,9 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                 })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <DevicesDataTable
+                    selectedRegions={regions}
                     sidebarRegion={selectedRegion}
+                    regionFilter={regionFilter}
                     statusFilter={statusFilter}
                     search={search}
                     configStatusFilter={configStatusFilter}
@@ -637,6 +660,21 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+                    {regions && regions.length > 1 && (
+                      <Select value={regionFilter} onValueChange={setRegionFilter}>
+                        <SelectTrigger className="w-[140px] shrink-0">
+                          <SelectValue placeholder="Region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Region">Region</SelectItem>
+                          {regions.map((r) => (
+                            <SelectItem key={r} value={r}>
+                              {r}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger className="w-[120px] shrink-0">
                         <SelectValue placeholder="Status" />
@@ -712,8 +750,9 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   </div>
                 </div>
                 {(() => {
-                  const count = getFilteredAlarmsCount({ search, severityFilter: alarmsFilter });
+                  const count = getFilteredAlarmsCount({ search, severityFilter: alarmsFilter, regionFilter });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                  if (regionFilter !== 'Region') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('Region') });
                   if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => setStatusFilter('Status') });
                   if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => setConfigStatusFilter('Config status') });
                   if (typeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('Type') });
@@ -746,7 +785,7 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   );
                 })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <AlarmsDataTable search={search} severityFilter={alarmsFilter} />
+                  <AlarmsDataTable search={search} severityFilter={alarmsFilter} selectedRegions={regions} regionFilter={regionFilter} />
                 </div>
               </TabsContent>
               <TabsContent value="events" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
@@ -766,6 +805,21 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+                    {regions && regions.length > 1 && (
+                      <Select value={regionFilter} onValueChange={setRegionFilter}>
+                        <SelectTrigger className="w-[140px] shrink-0">
+                          <SelectValue placeholder="Region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Region">Region</SelectItem>
+                          {regions.map((r) => (
+                            <SelectItem key={r} value={r}>
+                              {r}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <Select value={eventsTypeFilter} onValueChange={setEventsTypeFilter}>
                       <SelectTrigger className="w-[160px] shrink-0">
                         <SelectValue placeholder="Type" />
@@ -811,8 +865,10 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     typeFilter: eventsTypeFilter,
                     severityFilter: eventsSeverityFilter,
                     sourceFilter: eventsSourceFilter,
+                    regionFilter,
                   });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                  if (regionFilter !== 'Region') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('Region') });
                   if (eventsTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${eventsTypeFilter}`, onClear: () => setEventsTypeFilter('Type') });
                   if (eventsSeverityFilter !== 'Severity') activeFilters.push({ key: 'severity', label: `Severity: ${eventsSeverityFilter}`, onClear: () => setEventsSeverityFilter('Severity') });
                   if (eventsSourceFilter !== 'Source') activeFilters.push({ key: 'source', label: `Source: ${eventsSourceFilter}`, onClear: () => setEventsSourceFilter('Source') });
@@ -847,6 +903,8 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     typeFilter={eventsTypeFilter}
                     severityFilter={eventsSeverityFilter}
                     sourceFilter={eventsSourceFilter}
+                    selectedRegions={regions}
+                    regionFilter={regionFilter}
                   />
                 </div>
               </TabsContent>
@@ -1187,6 +1245,11 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     </div>
                   </TabsContent>
                 </Tabs>
+              </TabsContent>
+              <TabsContent value="golden-configuration" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  <GoldenConfigDataTable />
+                </div>
               </TabsContent>
               <TabsContent value="reports" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}

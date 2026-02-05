@@ -37,6 +37,7 @@ import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { Icon } from '@/components/Icon';
 import { Badge } from '@/components/ui/badge';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
+import { ConfigMismatchSheet } from './config-mismatch-sheet';
 
 export type DeviceGroup = 'Core network' | 'Radio access' | 'Edge devices' | 'Test environment';
 
@@ -49,6 +50,7 @@ export interface DeviceRow {
   status: string;
   alarms: number;
   alarmType: 'Critical' | 'Major' | 'Minor' | 'None';
+  configMismatch?: number;
   configStatus: string;
   version: string;
   ipAddress: string;
@@ -61,8 +63,8 @@ const LABEL_POOL = ['production', 'lte', '5g', 'core', 'radio', 'maintenance', '
 
 export const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
-  Major: { name: 'error_outline', className: 'text-amber-600 dark:text-amber-500' },
-  Minor: { name: 'warning', className: 'text-amber-600 dark:text-amber-500' },
+  Major: { name: 'error_outline', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-warning' },
   None: { name: 'check_circle', className: 'text-muted-foreground' },
 };
 
@@ -109,16 +111,21 @@ function generateDevices(count: number): DeviceRow[] {
       labels.push(LABEL_POOL[(startIdx + j) % LABEL_POOL.length]);
     }
     const region = NORTH_AMERICAN_REGIONS[i % NORTH_AMERICAN_REGIONS.length];
+    const deviceName = `${prefix}-${num}`;
+    const configMismatch = deviceName === 'RN-LAS-005' ? 24 : deviceName === 'eNB-SFO-004' ? 2 : undefined;
+    const status = deviceName === 'RN-LAS-005' ? 'Connected' : STATUSES[pi];
+    const configStatus = deviceName === 'RN-LAS-005' ? 'Synchronized' : CONFIG_STATUSES[pi];
     devices.push({
       id: String(i),
-      device: `${prefix}-${num}`,
-      type: `${prefix}-${num}` === 'RN-ATL-029' || `${prefix}-${num}` === 'RN-NYC-035' ? 'DAS' : TYPES[pi],
+      device: deviceName,
+      type: deviceName === 'RN-ATL-029' || deviceName === 'RN-NYC-035' ? 'DAS' : TYPES[pi],
       notes,
       notesUpdatedAt,
-      status: STATUSES[pi],
+      status,
       alarms: alarm.count,
       alarmType: alarm.type,
-      configStatus: CONFIG_STATUSES[pi],
+      configMismatch,
+      configStatus,
       version: VERSIONS[pi],
       ipAddress: `10.${(12 + (i % 3)).toString()}.${octet3}.${octet4}`,
       deviceGroup,
@@ -193,7 +200,9 @@ function StatusCell({ status }: { status: string }) {
 function getColumns(
   onDeviceClick: (device: DeviceRow) => void,
   onNavigateToDeviceDetail?: (device: DeviceRow) => void,
-  onAddNoteClick?: (device: DeviceRow) => void
+  onAddNoteClick?: (device: DeviceRow) => void,
+  onConfigMismatchClick?: (device: DeviceRow) => void,
+  showRegionColumn?: boolean
 ): ColumnDef<DeviceRow>[] {
   return [
   {
@@ -233,6 +242,13 @@ function getColumns(
       />
     ),
   },
+  ...(showRegionColumn ? [{
+    accessorKey: 'region',
+    header: ({ column }: { column: any }) => <SortableHeader column={column}>Region</SortableHeader>,
+    cell: ({ row }: { row: any }) => (
+      <span className="text-muted-foreground">{row.getValue('region') as string}</span>
+    ),
+  } as ColumnDef<DeviceRow>] : []),
   {
     accessorKey: 'type',
     header: ({ column }) => <SortableHeader column={column}>Type</SortableHeader>,
@@ -318,6 +334,32 @@ function getColumns(
     meta: { className: 'w-[10rem] pr-8' },
   },
   {
+    accessorKey: 'configMismatch',
+    header: ({ column }) => <SortableHeader column={column}>Config mismatch</SortableHeader>,
+    cell: ({ row }) => {
+      const count = row.getValue('configMismatch') as number | undefined;
+      if (!count) return null;
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 hover:underline"
+              onClick={(e) => {
+                e.stopPropagation();
+                onConfigMismatchClick?.(row.original);
+              }}
+            >
+              <Icon name="difference" size={18} className="text-warning shrink-0" />
+              <span className="tabular-nums">{count}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>View configuration mismatches</TooltipContent>
+        </Tooltip>
+      );
+    },
+  },
+  {
     accessorKey: 'version',
     header: ({ column }) => <SortableHeader column={column}>Version</SortableHeader>,
     cell: ({ row }) => <span className="tabular-nums">{row.getValue('version')}</span>,
@@ -369,6 +411,7 @@ export type SidebarRegionFilter = 'all' | 'disconnected' | 'kpiSyncErrors' | 'in
 
 export interface DeviceTableFilters {
   sidebarRegion?: SidebarRegionFilter;
+  regionFilter?: string;
   statusFilter?: string;
   search?: string;
   configStatusFilter?: string;
@@ -386,7 +429,11 @@ interface DevicesDataTableProps {
   onSelectionChange?: (selectedCount: number) => void;
   /** When this value changes, row selection is cleared (e.g. parent increments when user clicks Clear). */
   clearSelectionTrigger?: number;
+  /** Selected regions from global nav - if multiple, show Region column */
+  selectedRegions?: string[];
   sidebarRegion?: SidebarRegionFilter;
+  /** Filter by specific region from table filter dropdown */
+  regionFilter?: string;
   statusFilter?: string;
   search?: string;
   configStatusFilter?: string;
@@ -414,6 +461,9 @@ function filterBySidebarRegion(devices: DeviceRow[], region: SidebarRegionFilter
 
 function applyDeviceFilters(devices: DeviceRow[], filters: DeviceTableFilters): DeviceRow[] {
   let result = filterBySidebarRegion(devices, filters.sidebarRegion ?? 'all');
+  if (filters.regionFilter && filters.regionFilter !== 'Region') {
+    result = result.filter((d) => d.region === filters.regionFilter);
+  }
   if (filters.statusFilter && filters.statusFilter !== 'Status') {
     result = result.filter((d) => d.status === filters.statusFilter);
   }
@@ -453,7 +503,9 @@ export function DevicesDataTable({
   onAddNoteClick,
   onSelectionChange,
   clearSelectionTrigger,
+  selectedRegions = [],
   sidebarRegion = 'all',
+  regionFilter = 'Region',
   statusFilter = 'Status',
   search = '',
   configStatusFilter = 'Config status',
@@ -462,6 +514,7 @@ export function DevicesDataTable({
   alarmsFilter = 'Alarms',
   labelsFilter = 'Labels',
 }: DevicesDataTableProps = {}) {
+  const showRegionColumn = selectedRegions.length > 1;
   const pageSize = useResponsivePageSize();
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'alarms', desc: false },
@@ -473,6 +526,9 @@ export function DevicesDataTable({
   });
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [selectedDevice, setSelectedDevice] = React.useState<DeviceRow | null>(null);
+  const [configMismatchSheetOpen, setConfigMismatchSheetOpen] = React.useState(false);
+  const [configMismatchDevice, setConfigMismatchDevice] = React.useState<DeviceRow | null>(null);
+  const [mismatchOverrides, setMismatchOverrides] = React.useState<Record<string, number>>({});
 
   const selectedCount = React.useMemo(
     () => Object.keys(rowSelection).filter((key) => rowSelection[key]).length,
@@ -494,15 +550,30 @@ export function DevicesDataTable({
     setDrawerOpen(true);
   }, []);
 
+  const handleConfigMismatchClick = React.useCallback((device: DeviceRow) => {
+    setConfigMismatchDevice(device);
+    setConfigMismatchSheetOpen(true);
+  }, []);
+
+  const handleMismatchCountChange = React.useCallback((newCount: number) => {
+    if (configMismatchDevice) {
+      setMismatchOverrides((prev) => ({
+        ...prev,
+        [configMismatchDevice.id]: newCount,
+      }));
+    }
+  }, [configMismatchDevice]);
+
   const columns = React.useMemo(
-    () => getColumns(handleDeviceClick, onNavigateToDeviceDetail, onAddNoteClick),
-    [handleDeviceClick, onNavigateToDeviceDetail, onAddNoteClick]
+    () => getColumns(handleDeviceClick, onNavigateToDeviceDetail, onAddNoteClick, handleConfigMismatchClick, showRegionColumn),
+    [handleDeviceClick, onNavigateToDeviceDetail, onAddNoteClick, handleConfigMismatchClick, showRegionColumn]
   );
 
   const data = React.useMemo(
-    () =>
-      applyDeviceFilters(DEVICES_DATA, {
+    () => {
+      const filtered = applyDeviceFilters(DEVICES_DATA, {
         sidebarRegion,
+        regionFilter,
         statusFilter,
         search,
         configStatusFilter,
@@ -510,9 +581,21 @@ export function DevicesDataTable({
         versionFilter,
         alarmsFilter,
         labelsFilter,
-      }),
+      });
+      // Apply mismatch count overrides
+      return filtered.map((device) => {
+        if (mismatchOverrides[device.id] !== undefined) {
+          return {
+            ...device,
+            configMismatch: mismatchOverrides[device.id] || undefined,
+          };
+        }
+        return device;
+      });
+    },
     [
       sidebarRegion,
+      regionFilter,
       statusFilter,
       search,
       configStatusFilter,
@@ -520,6 +603,7 @@ export function DevicesDataTable({
       versionFilter,
       alarmsFilter,
       labelsFilter,
+      mismatchOverrides,
     ]
   );
 
@@ -543,7 +627,7 @@ export function DevicesDataTable({
   return (
     <TooltipProvider delayDuration={300}>
     <div className="flex flex-col flex-1 min-h-0 gap-4 h-full">
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden rounded-lg border bg-card">
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto rounded-lg border bg-card">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -592,6 +676,13 @@ export function DevicesDataTable({
       open={drawerOpen}
       onOpenChange={setDrawerOpen}
       onNavigateToDetails={onNavigateToDeviceDetail}
+    />
+    <ConfigMismatchSheet
+      open={configMismatchSheetOpen}
+      deviceName={configMismatchDevice?.device ?? ''}
+      mismatchCount={configMismatchDevice?.configMismatch ?? 0}
+      onOpenChange={setConfigMismatchSheetOpen}
+      onMismatchCountChange={handleMismatchCountChange}
     />
     </TooltipProvider>
   );

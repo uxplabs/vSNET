@@ -106,27 +106,48 @@ function getRegionCenter(region: string): [number, number] | null {
   return i >= 0 ? (REGION_COORDS[i] ?? null) : null;
 }
 
-function MapViewUpdater({ region }: { region: string | undefined }) {
+function MapViewUpdater({ region, regions }: { region: string | undefined; regions?: string[] }) {
   const map = useMap();
   useEffect(() => {
-    if (region && region !== 'All') {
+    // Check if multiple regions are selected
+    const isAll = !regions || regions.length === 0 || regions.includes('All');
+    const activeRegions = isAll ? [] : regions;
+    
+    if (activeRegions.length === 1) {
+      // Single region selected - zoom to it
+      const center = getRegionCenter(activeRegions[0]);
+      if (center) {
+        map.setView(center, 7, { animate: true });
+      }
+    } else if (activeRegions.length > 1) {
+      // Multiple regions - fit bounds to show all
+      const bounds: [number, number][] = activeRegions
+        .map((r) => getRegionCenter(r))
+        .filter((c): c is [number, number] => c !== null);
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50], animate: true });
+      }
+    } else if (region && region !== 'All') {
+      // Fallback to single region prop
       const center = getRegionCenter(region);
       if (center) {
         map.setView(center, 7, { animate: true });
       }
     } else {
+      // Show all
       map.setView([39.5, -98], 4, { animate: true });
     }
-  }, [map, region]);
+  }, [map, region, regions]);
   return null;
 }
 
 export interface RegionsMapProps {
   region?: string;
+  regions?: string[];
   onRegionChange?: (region: string) => void;
 }
 
-export function RegionsMap({ region, onRegionChange }: RegionsMapProps) {
+export function RegionsMap({ region, regions, onRegionChange }: RegionsMapProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -137,11 +158,20 @@ export function RegionsMap({ region, onRegionChange }: RegionsMapProps) {
       region: r,
       pos: REGION_COORDS[i] ?? ([40, -100] as [number, number]),
     }));
+    
+    // Check if multiple regions are selected
+    const isAll = !regions || regions.length === 0 || regions.includes('All');
+    
+    if (!isAll && regions && regions.length > 0) {
+      return list.filter((m) => regions.includes(m.region.region));
+    }
+    
+    // Fallback to single region prop
     if (region && region !== 'All') {
       return list.filter((m) => m.region.region === region);
     }
     return list;
-  }, [region]);
+  }, [region, regions]);
 
   if (!mounted) {
     return (
@@ -151,21 +181,29 @@ export function RegionsMap({ region, onRegionChange }: RegionsMapProps) {
     );
   }
 
+  // Determine initial center and zoom based on regions
+  const isAll = !regions || regions.length === 0 || regions.includes('All');
+  const activeRegions = isAll ? [] : regions;
+  const initialCenter = activeRegions.length === 1 
+    ? (getRegionCenter(activeRegions[0]) ?? [39.5, -98]) 
+    : (region && region !== 'All' ? (getRegionCenter(region) ?? [39.5, -98]) : [39.5, -98]);
+  const initialZoom = activeRegions.length === 1 ? 7 : (region && region !== 'All' ? 7 : 4);
+
   return (
     <div className="relative z-0 isolate rounded-lg border bg-card overflow-hidden h-[400px] w-full">
       <MapContainer
-        center={region && region !== 'All' ? (getRegionCenter(region) ?? [39.5, -98]) : [39.5, -98]}
-        zoom={region && region !== 'All' ? 7 : 4}
+        center={initialCenter as [number, number]}
+        zoom={initialZoom}
         scrollWheelZoom={false}
         className="h-full w-full"
       >
-        <MapViewUpdater region={region} />
+        <MapViewUpdater region={region} regions={regions} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {markers.map(({ region: r, pos }) => {
-          const isZoomed = !!(region && region !== 'All');
+          const isZoomed = activeRegions.length === 1 || !!(region && region !== 'All' && activeRegions.length === 0);
           return (
             <Marker
               key={r.region}

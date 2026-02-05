@@ -240,7 +240,7 @@ const Navbar01 = ({
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="z-[1200] w-[240px]" onCloseAutoFocus={(e) => e.preventDefault()}>
+            <DropdownMenuContent align="start" sideOffset={4} className="z-[9999] w-[240px]" onCloseAutoFocus={(e) => e.preventDefault()}>
               <DropdownMenuLabel>Regions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {REGION_OPTIONS.map((r) => {
@@ -304,7 +304,7 @@ const Navbar01 = ({
                 <Icon name={theme === 'dark' ? 'dark_mode' : theme === 'light' ? 'light_mode' : 'contrast'} size={16} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" sideOffset={4} className="z-[9999]">
               <DropdownMenuLabel>Theme</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleThemeChange('light')}>
@@ -331,7 +331,7 @@ const Navbar01 = ({
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" sideOffset={4} className="z-[9999] w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
@@ -341,6 +341,11 @@ const Navbar01 = ({
               <DropdownMenuItem>
                 <Icon name="settings" size={16} className="mr-2" />
                 Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onNavigate?.('design-system')}>
+                <Icon name="palette" size={16} className="mr-2" />
+                Design System
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onSignOut}>
@@ -459,6 +464,11 @@ const Navbar01 = ({
                       <DropdownMenuItem>
                         <Icon name="settings" size={16} className="mr-2" />
                         Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => onNavigate?.('design-system')}>
+                        <Icon name="palette" size={16} className="mr-2" />
+                        Design System
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={onSignOut}>

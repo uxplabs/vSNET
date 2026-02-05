@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Navbar01 } from './navbar-01';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Tabs, TabsContent, TabsListUnderline, TabsTriggerUnderline } from './ui/tabs';
 import ColorTokensPage from './ColorTokensPage';
 import TypographyPage from './TypographyPage';
 import ComponentsLibraryPage from './ComponentsLibraryPage';
@@ -44,25 +44,24 @@ export default function DesignSystemPage({
       <main className="flex-1 overflow-auto px-4 py-6 md:px-6 lg:px-8 space-y-6">
         <div>
           <p className="text-sm text-muted-foreground uppercase tracking-[0.3em] mb-2">Design system</p>
-          <h1 className="text-3xl font-semibold tracking-tight">vSNET components & tokens</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">vSNET Components & Tokens</h1>
           <p className="text-muted-foreground mt-2 max-w-3xl">
-            Reference for all UI tokens, typography, and shadcn/ui components included in the project.
-            Use this page to keep implementations consistent with the design system.
+            Comprehensive reference for UI components, design tokens, and typography. Use this documentation to maintain consistency across the application.
           </p>
         </div>
         <Tabs defaultValue="components" className="space-y-6">
-          <TabsList className="justify-start">
-            <TabsTrigger value="components">Components</TabsTrigger>
-            <TabsTrigger value="colors">Color tokens</TabsTrigger>
-            <TabsTrigger value="typography">Typography</TabsTrigger>
-          </TabsList>
-          <TabsContent value="components" className="space-y-6">
+          <TabsListUnderline className="w-full justify-start border-b">
+            <TabsTriggerUnderline value="components">Components</TabsTriggerUnderline>
+            <TabsTriggerUnderline value="tokens">Design Tokens</TabsTriggerUnderline>
+            <TabsTriggerUnderline value="typography">Typography</TabsTriggerUnderline>
+          </TabsListUnderline>
+          <TabsContent value="components" className="space-y-6 pt-2">
             <ComponentsLibraryPage />
           </TabsContent>
-          <TabsContent value="colors">
+          <TabsContent value="tokens" className="pt-2">
             <ColorTokensPage />
           </TabsContent>
-          <TabsContent value="typography">
+          <TabsContent value="typography" className="pt-2">
             <TypographyPage />
           </TabsContent>
         </Tabs>
