@@ -352,6 +352,14 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                                         </SidebarMenuButton>
                                       </SidebarMenuItem>
                                     ))}
+                                    <SidebarMenuItem>
+                                      <SidebarMenuButton asChild>
+                                        <button type="button" className="flex w-full items-center gap-2 text-muted-foreground hover:text-foreground">
+                                          <Icon name="add" size={18} />
+                                          <span>Add group</span>
+                                        </button>
+                                      </SidebarMenuButton>
+                                    </SidebarMenuItem>
                                   </SidebarMenu>
                                 </SidebarGroupContent>
                               </CollapsibleContent>
@@ -377,6 +385,14 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <button type="button" className="flex w-full items-center gap-2 text-muted-foreground hover:text-foreground">
+                            <Icon name="add" size={18} />
+                            <span>Add group</span>
+                          </button>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
                     </SidebarMenu>
                   )}
                 </SidebarGroupContent>
