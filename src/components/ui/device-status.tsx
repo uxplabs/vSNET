@@ -13,13 +13,21 @@ export interface DeviceStatusProps {
  */
 export function DeviceStatus({ status, className, iconSize = 16, variant = 'default' }: DeviceStatusProps) {
   const isConnected = status === 'Connected';
-  const iconClass = variant === 'dark'
-    ? isConnected ? 'text-gray-400 shrink-0' : 'text-red-400 shrink-0'
-    : isConnected ? 'text-muted-foreground shrink-0' : 'text-destructive shrink-0';
+  const isMaintenance = status === 'In maintenance';
+
+  const iconName = isMaintenance ? 'build' : isConnected ? 'link' : 'link_off';
+
+  let iconClass: string;
+  if (variant === 'dark') {
+    iconClass = isMaintenance ? 'text-warning shrink-0' : isConnected ? 'text-gray-400 shrink-0' : 'text-red-400 shrink-0';
+  } else {
+    iconClass = isMaintenance ? 'text-warning shrink-0' : isConnected ? 'text-muted-foreground shrink-0' : 'text-destructive shrink-0';
+  }
+
   const textClass = variant === 'dark' ? 'text-gray-300' : '';
   return (
     <span className={`inline-flex items-center gap-2 min-w-0 ${textClass} ${className ?? ''}`}>
-      <Icon name={isConnected ? 'link' : 'link_off'} size={iconSize} className={iconClass} />
+      <Icon name={iconName} size={iconSize} className={iconClass} />
       <span className="truncate">{status}</span>
     </span>
   );

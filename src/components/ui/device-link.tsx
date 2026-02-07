@@ -4,6 +4,23 @@ import * as React from 'react';
 import { Icon } from '@/components/Icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
+// Context for opening the device sheet from any DeviceLink
+const DeviceLinkContext = React.createContext<((deviceName: string) => void) | null>(null);
+
+export function DeviceLinkProvider({
+  onDeviceClick,
+  children,
+}: {
+  onDeviceClick: (deviceName: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <DeviceLinkContext.Provider value={onDeviceClick}>
+      {children}
+    </DeviceLinkContext.Provider>
+  );
+}
+
 interface DeviceLinkProps {
   value: string;
   maxLength?: number;
@@ -12,21 +29,26 @@ interface DeviceLinkProps {
 }
 
 export function DeviceLink({ value, maxLength, className = '', onClick }: DeviceLinkProps) {
+  const contextOnClick = React.useContext(DeviceLinkContext);
   const display = maxLength && value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    onClick?.();
+    if (onClick) {
+      onClick();
+    } else if (contextOnClick) {
+      contextOnClick(value);
+    }
   };
 
   const link = (
     <a
       href="#"
-      className={`group inline-flex items-center gap-2 min-w-0 text-link hover:underline ${className}`}
+      className={`group inline-flex items-center gap-2 min-w-0 text-link no-underline ${className}`}
       onClick={handleClick}
     >
       <span
-        className="font-medium truncate"
+        className="font-medium truncate group-hover:underline"
         style={maxLength ? { maxWidth: `${maxLength}ch` } : undefined}
       >
         {display}

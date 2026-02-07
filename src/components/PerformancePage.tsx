@@ -116,31 +116,25 @@ export default function PerformancePage({
                       ))}
                     </SelectContent>
                   </Select>
-                  <div className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-muted p-1" role="group">
-                    <Button
-                      variant={statusFilter === 'all' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="h-7 rounded-full"
-                      onClick={() => setStatusFilter('all')}
-                    >
-                      All
-                    </Button>
-                    <Button
-                      variant={statusFilter === 'good' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="h-7 rounded-full"
-                      onClick={() => setStatusFilter('good')}
-                    >
-                      Good
-                    </Button>
-                    <Button
-                      variant={statusFilter === 'bad' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="h-7 rounded-full"
-                      onClick={() => setStatusFilter('bad')}
-                    >
-                      Bad
-                    </Button>
+                  <div className="inline-flex items-center rounded-md border border-input shadow-sm shrink-0">
+                    {([
+                      { value: 'all', label: 'All' },
+                      { value: 'good', label: 'Good' },
+                      { value: 'bad', label: 'Bad' },
+                    ] as const).map((opt, i, arr) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setStatusFilter(opt.value as 'all' | 'good' | 'bad')}
+                        className={`h-9 px-3 text-sm font-medium transition-colors ${
+                          statusFilter === opt.value
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-background text-foreground hover:bg-muted'
+                        } ${i === 0 ? 'rounded-l-md' : ''} ${i === arr.length - 1 ? 'rounded-r-md' : ''} ${i > 0 ? 'border-l border-input' : ''}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
                   {filtersActive && (
                     <Button variant="ghost" size="sm" className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground" onClick={clearFilters}>

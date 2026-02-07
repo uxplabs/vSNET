@@ -8,8 +8,8 @@ import { Icon } from './Icon';
 const PADDING = 24;
 const GAP = 16;
 const CORNER_RADIUS = 8;
-const LOGO_WIDTH = 206;
-const LOGO_HEIGHT = 120;
+const LOGO_WIDTH = 100;
+const LOGO_HEIGHT = 56;
 const AUTH_CREDENTIALS = {
   username: 'udoe@acme.com',
   password: '2PVWyHwYA6fv-7dKZ',
@@ -62,7 +62,7 @@ function LoginPage({ onLogin, onLoginWithSSO, appName = 'AMS' }: LoginPageProps)
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
-          <DialogHeader className="space-y-4 text-center sm:text-center">
+          <DialogHeader className="space-y-6 text-center sm:text-center">
             <div className="flex justify-center">
               <img
                 src="/airspan_logo.svg"
@@ -73,12 +73,13 @@ function LoginPage({ onLogin, onLoginWithSSO, appName = 'AMS' }: LoginPageProps)
               />
             </div>
             <div className="space-y-1">
-              <DialogTitle className="text-2xl font-semibold tracking-tight text-card-foreground">
+              <DialogTitle className="text-4xl font-black tracking-tight text-primary">
                 {appName}
               </DialogTitle>
+              <p className="text-sm text-muted-foreground">Airspan Management System</p>
             </div>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-8">
             <div className="space-y-2">
               <Label htmlFor="login-username" className="text-card-foreground">
                 Username

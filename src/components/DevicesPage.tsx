@@ -32,6 +32,7 @@ import { ActivityLogDataTable } from './activity-log-data-table';
 import { ReportsDataTable, getFilteredReportCount } from './reports-data-table';
 import { PerformanceDataTable, getFilteredPerformanceCount } from './performance-data-table';
 import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount } from './threshold-crossing-alerts-data-table';
+import { InventoryDataTable, getFilteredInventoryCount, INVENTORY_STATUS_OPTIONS, INVENTORY_TYPE_OPTIONS, INVENTORY_VERSION_OPTIONS, INVENTORY_ALARM_OPTIONS } from './inventory-data-table';
 import { ChevronDown } from 'lucide-react';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ErrorBoundary } from './error-boundary';
@@ -138,6 +139,12 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [performanceTimeFilter, setPerformanceTimeFilter] = useState<string>('Last hour');
   const [performanceStatusFilter, setPerformanceStatusFilter] = useState<'all' | 'good' | 'bad'>('all');
   const [thresholdActSessFilter, setThresholdActSessFilter] = useState<string>('ACT_SESS');
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [inventoryViewFilter, setInventoryViewFilter] = useState('all');
+  const [inventoryStatusFilter, setInventoryStatusFilter] = useState<string>('Status');
+  const [inventoryTypeFilter, setInventoryTypeFilter] = useState<string>('Type');
+  const [inventoryVersionFilter, setInventoryVersionFilter] = useState<string>('Version');
+  const [inventoryAlarmFilter, setInventoryAlarmFilter] = useState<string>('Alarms');
   const [softwareManagementTab, setSoftwareManagementTab] = useState('tasks');
   const [performanceTab, setPerformanceTab] = useState('activity');
   const [selectedTask, setSelectedTask] = useState<ScheduledTaskRow | null>(null);
@@ -145,7 +152,6 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
   const [deviceSelectedCount, setDeviceSelectedCount] = useState(0);
   const [clearSelectionTrigger, setClearSelectionTrigger] = useState(0);
-
   const deviceFiltersActive = search !== '' || regionFilter !== 'Region' || statusFilter !== 'Status' || configStatusFilter !== 'Config status' || typeFilter !== 'Type' || versionFilter !== 'Version' || alarmsFilter !== 'Alarms' || labelsFilter !== 'Labels';
   const clearDeviceFilters = () => {
     setSearch(''); setRegionFilter('Region'); setStatusFilter('Status'); setSelectedRegion('all'); setConfigStatusFilter('Config status'); setTypeFilter('Type'); setVersionFilter('Version'); setAlarmsFilter('Alarms'); setLabelsFilter('Labels');
@@ -161,6 +167,10 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const softwareFiltersActive = softwareSearch !== '' || softwareTypeFilter !== 'Type' || softwareStatusFilter !== 'Status' || softwareVersionFilter !== 'Version';
   const clearSoftwareFilters = () => {
     setSoftwareSearch(''); setSoftwareTypeFilter('Type'); setSoftwareStatusFilter('Status'); setSoftwareVersionFilter('Version');
+  };
+  const inventoryFiltersActive = inventorySearch !== '' || inventoryViewFilter !== 'all' || inventoryStatusFilter !== 'Status' || inventoryTypeFilter !== 'Type' || inventoryVersionFilter !== 'Version' || inventoryAlarmFilter !== 'Alarms';
+  const clearInventoryFilters = () => {
+    setInventorySearch(''); setInventoryViewFilter('all'); setInventoryStatusFilter('Status'); setInventoryTypeFilter('Type'); setInventoryVersionFilter('Version'); setInventoryAlarmFilter('Alarms');
   };
   const reportsFiltersActive = reportsSearch !== '' || reportsTypeFilter !== 'Type' || reportsTaskFilter !== 'Task' || reportsCreatedFilter !== 'Created';
   const clearReportsFilters = () => {
@@ -935,8 +945,139 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
               <TabsContent value="conditions" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 <p className="text-muted-foreground">Conditions content</p>
               </TabsContent>
-              <TabsContent value="inventory" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
-                <p className="text-muted-foreground">Inventory content</p>
+              <TabsContent value="inventory" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+                {/* Search + Button Group + Filters + Export */}
+                <div className="flex flex-wrap items-center gap-3 shrink-0 mb-3">
+                  <div className="relative">
+                    <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search inventory…"
+                      value={inventorySearch}
+                      onChange={(e) => setInventorySearch(e.target.value)}
+                      className="h-9 w-64 rounded-md border border-input bg-background pl-9 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    />
+                  </div>
+                  {/* Button group: view filter */}
+                  <div className="inline-flex items-center rounded-md border border-input shadow-sm">
+                    {([
+                      { value: 'all', label: 'All' },
+                      { value: 'radio-nodes', label: 'Radio nodes' },
+                      { value: 'nr-cells', label: 'NR cells' },
+                    ] as const).map((opt, i, arr) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setInventoryViewFilter(opt.value)}
+                        className={`h-9 px-3 text-sm font-medium transition-colors ${
+                          inventoryViewFilter === opt.value
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-background text-foreground hover:bg-muted'
+                        } ${i === 0 ? 'rounded-l-md' : ''} ${i === arr.length - 1 ? 'rounded-r-md' : ''} ${i > 0 ? 'border-l border-input' : ''}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Filters */}
+                  <Select value={inventoryStatusFilter} onValueChange={setInventoryStatusFilter}>
+                    <SelectTrigger className="w-[110px] shrink-0">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INVENTORY_STATUS_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={inventoryTypeFilter} onValueChange={setInventoryTypeFilter}>
+                    <SelectTrigger className="w-[130px] shrink-0">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INVENTORY_TYPE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={inventoryVersionFilter} onValueChange={setInventoryVersionFilter}>
+                    <SelectTrigger className="w-[120px] shrink-0">
+                      <SelectValue placeholder="Version" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INVENTORY_VERSION_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={inventoryAlarmFilter} onValueChange={setInventoryAlarmFilter}>
+                    <SelectTrigger className="w-[120px] shrink-0">
+                      <SelectValue placeholder="Alarms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INVENTORY_ALARM_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="ml-auto">
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <Icon name="download" size={16} />
+                      Export
+                    </Button>
+                  </div>
+                </div>
+                {/* Active filters + result count */}
+                {(() => {
+                  const count = getFilteredInventoryCount({
+                    search: inventorySearch,
+                    viewFilter: inventoryViewFilter,
+                    statusFilter: inventoryStatusFilter,
+                    typeFilter: inventoryTypeFilter,
+                    versionFilter: inventoryVersionFilter,
+                    alarmFilter: inventoryAlarmFilter,
+                  });
+                  const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
+                  if (inventoryViewFilter !== 'all') activeFilters.push({ key: 'view', label: `View: ${inventoryViewFilter === 'radio-nodes' ? 'Radio nodes' : 'NR cells'}`, onClear: () => setInventoryViewFilter('all') });
+                  if (inventoryStatusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${inventoryStatusFilter}`, onClear: () => setInventoryStatusFilter('Status') });
+                  if (inventoryTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${inventoryTypeFilter}`, onClear: () => setInventoryTypeFilter('Type') });
+                  if (inventoryVersionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${inventoryVersionFilter}`, onClear: () => setInventoryVersionFilter('Version') });
+                  if (inventoryAlarmFilter !== 'Alarms') activeFilters.push({ key: 'alarm', label: `Alarms: ${inventoryAlarmFilter}`, onClear: () => setInventoryAlarmFilter('Alarms') });
+                  if (inventorySearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${inventorySearch.trim()}"`, onClear: () => setInventorySearch('') });
+                  const hasActive = activeFilters.length > 0;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                      <span className="text-sm text-muted-foreground">{count} {count === 1 ? 'result' : 'results'}</span>
+                      {activeFilters.map((f) => (
+                        <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
+                          {f.label}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
+                            onClick={f.onClear}
+                            aria-label={`Clear ${f.label}`}
+                          >
+                            <Icon name="close" size={12} aria-hidden />
+                          </Button>
+                        </Badge>
+                      ))}
+                      {hasActive && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground" onClick={clearInventoryFilters}>Clear all</Button>
+                      )}
+                    </div>
+                  );
+                })()}
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  <InventoryDataTable
+                    search={inventorySearch}
+                    viewFilter={inventoryViewFilter}
+                    statusFilter={inventoryStatusFilter}
+                    typeFilter={inventoryTypeFilter}
+                    versionFilter={inventoryVersionFilter}
+                    alarmFilter={inventoryAlarmFilter}
+                  />
+                </div>
               </TabsContent>
               <TabsContent value="scheduled-tasks" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}
@@ -1421,31 +1562,25 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                             ))}
                           </SelectContent>
                         </Select>
-                        <div className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-muted p-1" role="group">
-                          <Button
-                            variant={performanceStatusFilter === 'all' ? 'secondary' : 'ghost'}
-                            size="sm"
-                            className="h-7 rounded-full"
-                            onClick={() => setPerformanceStatusFilter('all')}
-                          >
-                            All
-                          </Button>
-                          <Button
-                            variant={performanceStatusFilter === 'good' ? 'secondary' : 'ghost'}
-                            size="sm"
-                            className="h-7 rounded-full"
-                            onClick={() => setPerformanceStatusFilter('good')}
-                          >
-                            Good
-                          </Button>
-                          <Button
-                            variant={performanceStatusFilter === 'bad' ? 'secondary' : 'ghost'}
-                            size="sm"
-                            className="h-7 rounded-full"
-                            onClick={() => setPerformanceStatusFilter('bad')}
-                          >
-                            Bad
-                          </Button>
+                        <div className="inline-flex items-center rounded-md border border-input shadow-sm shrink-0">
+                          {([
+                            { value: 'all', label: 'All' },
+                            { value: 'good', label: 'Good' },
+                            { value: 'bad', label: 'Bad' },
+                          ] as const).map((opt, i, arr) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setPerformanceStatusFilter(opt.value)}
+                              className={`h-9 px-3 text-sm font-medium transition-colors ${
+                                performanceStatusFilter === opt.value
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-background text-foreground hover:bg-muted'
+                              } ${i === 0 ? 'rounded-l-md' : ''} ${i === arr.length - 1 ? 'rounded-r-md' : ''} ${i > 0 ? 'border-l border-input' : ''}`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
                         </div>
                       </div>
                     </div>

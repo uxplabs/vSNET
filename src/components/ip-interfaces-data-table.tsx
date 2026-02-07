@@ -77,6 +77,7 @@ const columns: ColumnDef<IpInterfaceRow>[] = [
     cell: ({ row }) => {
       const alarms = row.original.alarms;
       const alarmType = row.original.alarmType;
+      if (alarms === 0) return <span className="text-muted-foreground tabular-nums">0</span>;
       const config = ALARM_TYPE_CONFIG[alarmType] ?? ALARM_TYPE_CONFIG.None;
       return (
         <span className="inline-flex items-center gap-2">

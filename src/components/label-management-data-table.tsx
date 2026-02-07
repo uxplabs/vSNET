@@ -109,7 +109,8 @@ const columns: ColumnDef<LabelManagementRow>[] = [
     ),
     enableSorting: false,
     meta: {
-      className: 'sticky right-0 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',
+      headerClassName: 'sticky right-0 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',
+      cellClassName: 'sticky right-0 bg-card group-hover:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',
     },
   },
 ];

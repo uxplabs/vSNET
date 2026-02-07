@@ -93,7 +93,8 @@ const columns: ColumnDef<ReportRow>[] = [
     ),
     enableSorting: false,
     meta: {
-      className: 'sticky right-0 bg-card',
+      headerClassName: 'sticky right-0 bg-card',
+      cellClassName: 'sticky right-0 bg-card group-hover:!bg-muted transition-colors',
     },
   },
 ];
@@ -172,7 +173,7 @@ export function ReportsDataTable({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={`px-4 py-3 h-12 ${(header.column.columnDef.meta as { className?: string })?.className ?? ''}`}
+                    className={`px-4 py-3 h-12 ${((header.column.columnDef.meta as { headerClassName?: string; className?: string })?.headerClassName ?? (header.column.columnDef.meta as { className?: string })?.className) ?? ''}`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -185,11 +186,11 @@ export function ReportsDataTable({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className="group">
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={`px-4 py-3 ${(cell.column.columnDef.meta as { className?: string })?.className ?? ''}`}
+                      className={`px-4 py-3 ${((cell.column.columnDef.meta as { cellClassName?: string; className?: string })?.cellClassName ?? (cell.column.columnDef.meta as { className?: string })?.className) ?? ''}`}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>

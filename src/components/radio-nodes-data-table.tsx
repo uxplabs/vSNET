@@ -7,7 +7,7 @@ import { SortableHeader } from '@/components/ui/sortable-header';
 import { Icon } from '@/components/Icon';
 import { DeviceStatus } from '@/components/ui/device-status';
 import { DeviceLink } from '@/components/ui/device-link';
-import { Checkbox } from '@/components/ui/checkbox';
+
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ALARM_TYPE_CONFIG } from './devices-data-table';
 
@@ -46,7 +46,7 @@ const columns: ColumnDef<RadioNodeRow>[] = [
     accessorKey: 'name',
     header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
     cell: ({ row }) => (
-      <span className="block truncate max-w-[12rem] font-medium">{row.getValue('name') as string}</span>
+      <DeviceLink value={row.getValue('name') as string} maxLength={20} />
     ),
     meta: { className: 'max-w-[12rem]' },
   },
@@ -72,9 +72,16 @@ const columns: ColumnDef<RadioNodeRow>[] = [
   {
     accessorKey: 'enabled',
     header: ({ column }) => <SortableHeader column={column}>Enabled</SortableHeader>,
-    cell: ({ row }) => (
-      <Checkbox checked={row.getValue('enabled')} disabled aria-label="Enabled" />
-    ),
+    cell: ({ row }) => {
+      const enabled = row.getValue('enabled') as boolean;
+      return (
+        <Icon
+          name={enabled ? 'check_circle' : 'cancel'}
+          size={18}
+          className={enabled ? 'text-success' : 'text-muted-foreground'}
+        />
+      );
+    },
   },
   {
     accessorKey: 'alarms',
@@ -82,6 +89,7 @@ const columns: ColumnDef<RadioNodeRow>[] = [
     cell: ({ row }) => {
       const alarms = row.original.alarms;
       const alarmType = row.original.alarmType;
+      if (alarms === 0) return <span className="text-muted-foreground tabular-nums">0</span>;
       const config = ALARM_TYPE_CONFIG[alarmType] ?? ALARM_TYPE_CONFIG.None;
       return (
         <span className="inline-flex items-center gap-2 min-w-0">

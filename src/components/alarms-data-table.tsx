@@ -183,7 +183,7 @@ export function getAlarmCounts(alarms: AlarmRow[]) {
   };
 }
 
-function getColumns(showRegionColumn: boolean): ColumnDef<AlarmRow>[] {
+function getColumns(showRegionColumn: boolean, onAlarmClick?: (alarm: AlarmRow) => void): ColumnDef<AlarmRow>[] {
   return [
     {
       id: 'select',
@@ -222,10 +222,23 @@ function getColumns(showRegionColumn: boolean): ColumnDef<AlarmRow>[] {
         const severity = row.getValue('severity') as AlarmSeverity;
         const { name: iconName, className: iconClass } = SEVERITY_ICON[severity];
         return (
-          <span className="inline-flex items-center gap-2">
+          <button
+            type="button"
+            className="group/alarm inline-flex items-center gap-2 cursor-pointer text-left"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAlarmClick?.(row.original);
+            }}
+          >
             <Icon name={iconName} size={18} className={`shrink-0 ${iconClass}`} />
-            {severity}
-          </span>
+            <span className="group-hover/alarm:underline">{severity}</span>
+            <Icon
+              name="open_in_new"
+              size={16}
+              className="shrink-0 opacity-0 group-hover/alarm:opacity-70 transition-opacity text-muted-foreground"
+              aria-hidden
+            />
+          </button>
         );
       },
     },
@@ -332,7 +345,8 @@ function getColumns(showRegionColumn: boolean): ColumnDef<AlarmRow>[] {
       ),
       enableSorting: false,
       meta: {
-        className: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+        headerClassName: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+        cellClassName: 'sticky right-0 w-14 text-right pr-4 bg-card group-hover:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
       },
     },
   ];
@@ -354,7 +368,6 @@ export function AlarmsDataTable({
   regionFilter = 'Region',
 }: AlarmsDataTableProps = {}) {
   const showRegionColumn = selectedRegions.length > 1;
-  const columns = React.useMemo(() => getColumns(showRegionColumn), [showRegionColumn]);
   const pageSize = useResponsivePageSize();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [selectedAlarm, setSelectedAlarm] = React.useState<AlarmRow | null>(null);
@@ -371,6 +384,8 @@ export function AlarmsDataTable({
     setSelectedAlarm(alarm);
     setDrawerOpen(true);
   }, []);
+
+  const columns = React.useMemo(() => getColumns(showRegionColumn, openAlarmDrawer), [showRegionColumn, openAlarmDrawer]);
 
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'severity', desc: false },
@@ -414,7 +429,7 @@ export function AlarmsDataTable({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={`px-4 py-3 h-12 ${(header.column.columnDef.meta as { className?: string })?.className ?? ''}`}
+                    className={`px-4 py-3 h-12 ${((header.column.columnDef.meta as { headerClassName?: string; className?: string })?.headerClassName ?? (header.column.columnDef.meta as { className?: string })?.className) ?? ''}`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -430,13 +445,12 @@ export function AlarmsDataTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => openAlarmDrawer(row.original)}
+                  className="group"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={`px-4 py-3 ${(cell.column.columnDef.meta as { className?: string })?.className ?? ''}`}
+                      className={`px-4 py-3 ${((cell.column.columnDef.meta as { cellClassName?: string; className?: string })?.cellClassName ?? (cell.column.columnDef.meta as { className?: string })?.className) ?? ''}`}
                       onClick={cell.column.id === 'select' || cell.column.id === 'actions' ? (e) => e.stopPropagation() : undefined}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

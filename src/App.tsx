@@ -1,6 +1,11 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Toaster } from './components/ui/sonner'
 import { TooltipProvider } from './components/ui/tooltip'
+import { DeviceLinkProvider } from './components/ui/device-link'
+import { DeviceDrawer } from './components/device-drawer'
+import { RadioNodeDrawer, findRadioNode } from './components/radio-node-drawer'
+import { DEVICES_DATA } from './components/devices-data-table'
+import type { RadioNodeRow } from './components/radio-nodes-data-table'
 import LoginPage from './components/LoginPage'
 import DashboardPage from './components/DashboardPage'
 import DevicesPage from './components/DevicesPage'
@@ -21,6 +26,49 @@ function App() {
   const region = regions[0] ?? 'Pacific Northwest'
   const [selectedDevice, setSelectedDevice] = useState<DeviceRow | null>(null)
   const [scrollToNotesForDeviceId, setScrollToNotesForDeviceId] = useState<string | null>(null)
+  const [globalDrawerOpen, setGlobalDrawerOpen] = useState(false)
+  const [globalDrawerDevice, setGlobalDrawerDevice] = useState<DeviceRow | null>(null)
+  const [radioNodeDrawerOpen, setRadioNodeDrawerOpen] = useState(false)
+  const [globalRadioNode, setGlobalRadioNode] = useState<RadioNodeRow | null>(null)
+
+  const handleDeviceLinkClick = useCallback((deviceName: string) => {
+    // Check if this is a radio node (e.g. "Radio Node 1", "RN-001")
+    if (/^Radio Node \d+$/i.test(deviceName) || /^RN-\d+$/i.test(deviceName)) {
+      const rn = findRadioNode(deviceName)
+      if (rn) {
+        setGlobalRadioNode(rn)
+        setRadioNodeDrawerOpen(true)
+        return
+      }
+    }
+
+    // Exact match first, then fall back to matching prefix (e.g. eNB-SEA)
+    let device = DEVICES_DATA.find((d) => d.device === deviceName)
+    if (!device) {
+      const prefix = deviceName.replace(/-\d+$/, '')
+      device = DEVICES_DATA.find((d) => d.device.startsWith(prefix + '-'))
+    }
+    if (!device) {
+      // Create a synthetic device for items not in DEVICES_DATA
+      device = {
+        id: deviceName,
+        device: deviceName,
+        type: 'SN-LTE',
+        notes: '',
+        status: 'Connected',
+        alarms: 0,
+        alarmType: 'None' as const,
+        configStatus: '—',
+        ipAddress: '—',
+        version: '—',
+        deviceGroup: 'Radio access',
+        region: 'Pacific Northwest',
+        labels: [],
+      }
+    }
+    setGlobalDrawerDevice(device)
+    setGlobalDrawerOpen(true)
+  }, [])
 
   const handleNavigate = (page: string, tab?: string) => {
     setCurrentPage(page as Page)
@@ -58,6 +106,7 @@ function App() {
   }
 
   return (
+    <DeviceLinkProvider onDeviceClick={handleDeviceLinkClick}>
     <TooltipProvider delayDuration={300}>
       {currentPage === 'dashboard' ? (
         <DashboardPage
@@ -146,7 +195,25 @@ function App() {
         </div>
       )}
       <Toaster />
+      <DeviceDrawer
+        device={globalDrawerDevice}
+        open={globalDrawerOpen}
+        onOpenChange={setGlobalDrawerOpen}
+        onNavigateToDetails={handleNavigateToDeviceDetail}
+      />
+      <RadioNodeDrawer
+        radioNode={globalRadioNode}
+        open={radioNodeDrawerOpen}
+        onOpenChange={setRadioNodeDrawerOpen}
+        onNavigateToHost={(name) => {
+          // Find the parent device for the radio node and navigate to its detail page
+          const idx = parseInt(name.replace(/\D/g, ''), 10) || 1
+          const device = DEVICES_DATA[Math.min(idx - 1, DEVICES_DATA.length - 1)]
+          if (device) handleNavigateToDeviceDetail(device)
+        }}
+      />
     </TooltipProvider>
+    </DeviceLinkProvider>
   )
 }
 

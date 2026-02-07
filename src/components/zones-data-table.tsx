@@ -4,7 +4,7 @@ import * as React from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { SortableHeader } from '@/components/ui/sortable-header';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Icon } from '@/components/Icon';
 import { Input } from '@/components/ui/input';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -53,9 +53,16 @@ const columns: ColumnDef<ZoneRow>[] = [
   {
     accessorKey: 'e911Enabled',
     header: ({ column }) => <SortableHeader column={column}>911 enabled</SortableHeader>,
-    cell: ({ row }) => (
-      <Checkbox checked={row.getValue('e911Enabled')} disabled aria-label="911 enabled" />
-    ),
+    cell: ({ row }) => {
+      const enabled = row.getValue('e911Enabled') as boolean;
+      return (
+        <Icon
+          name={enabled ? 'check_circle' : 'cancel'}
+          size={18}
+          className={enabled ? 'text-success' : 'text-muted-foreground'}
+        />
+      );
+    },
   },
   {
     accessorKey: 'priority',

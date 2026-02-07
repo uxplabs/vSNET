@@ -197,7 +197,7 @@ body {
     --popover-foreground: #0F172A;
     /* Status */
     --success: #009B3A;
-    --warning: #D97706;
+    --warning: #EAB308;
     --destructive: #D13C59;
     --destructive-foreground: #FAFAFA;
     /* Radius */
@@ -276,7 +276,7 @@ body {
     --popover-foreground: #F8FAFC;
     /* Status */
     --success: #006C28;
-    --warning: #F59E0B;
+    --warning: #FACC15;
     --destructive: #8A0821;
     --destructive-foreground: #FAFAFA;
   }

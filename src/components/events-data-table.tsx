@@ -33,6 +33,7 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { DeviceLink } from '@/components/ui/device-link';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { AlarmDrawer, type AlarmDrawerAlarm } from '@/components/alarm-drawer';
 
 export type EventSeverity = 'Critical' | 'Major' | 'Minor' | 'Info';
 
@@ -81,20 +82,20 @@ function getRegionFromSource(source: string): string {
 
 export const EVENTS_DATA: EventRow[] = [
   { id: 'EVT-1001', timestamp: '2025-01-27 09:12', updated: '2025-01-27 09:15', type: 'Configuration change', severity: 'Info', source: 'eNB-SEA-001', region: 'Pacific Northwest', managedObject: 'Cell-1' },
-  { id: 'EVT-1002', timestamp: '2025-01-27 08:45', updated: '2025-01-27 09:00', type: 'Connection', severity: 'Major', source: 'RN-PDX-002', region: 'Pacific Northwest', managedObject: 'Radio-2' },
-  { id: 'EVT-1003', timestamp: '2025-01-27 08:30', updated: '2025-01-27 08:35', type: 'Performance', severity: 'Minor', source: 'eNB-PHX-001', region: 'Desert Southwest', managedObject: 'Cell-3' },
-  { id: 'EVT-1004', timestamp: '2025-01-27 08:15', updated: '2025-01-27 08:20', type: 'Configuration change', severity: 'Critical', source: 'eNB-NYC-001', region: 'Northeast', managedObject: 'Cell-4' },
-  { id: 'EVT-1005', timestamp: '2025-01-27 07:58', updated: '2025-01-27 08:10', type: 'Connection', severity: 'Info', source: 'RN-SFO-003', region: 'Northern California', managedObject: 'Radio-5' },
-  { id: 'EVT-1006', timestamp: '2025-01-27 07:42', updated: '2025-01-27 07:45', type: 'Security', severity: 'Minor', source: 'RN-LAS-001', region: 'Desert Southwest', managedObject: 'Radio-6' },
-  { id: 'EVT-1007', timestamp: '2025-01-27 07:20', updated: '2025-01-27 07:30', type: 'System', severity: 'Info', source: 'eNB-CHI-002', region: 'Great Lakes', managedObject: 'Cell-7' },
-  { id: 'EVT-1008', timestamp: '2025-01-27 06:55', updated: '2025-01-27 07:05', type: 'Connection', severity: 'Critical', source: 'eNB-MIA-002', region: 'Florida', managedObject: 'Cell-8' },
-  { id: 'EVT-1009', timestamp: '2025-01-27 06:30', updated: '2025-01-27 06:32', type: 'Performance', severity: 'Major', source: 'RN-DEN-002', region: 'Mountain West', managedObject: 'Radio-9' },
-  { id: 'EVT-1010', timestamp: '2025-01-27 06:10', updated: '2025-01-27 06:25', type: 'Configuration change', severity: 'Info', source: 'RN-ATL-005', region: 'Southeast', managedObject: 'Radio-10' },
-  { id: 'EVT-1011', timestamp: '2025-01-27 05:45', updated: '2025-01-27 05:50', type: 'System', severity: 'Minor', source: 'eNB-BOS-001', region: 'New England', managedObject: 'Cell-11' },
-  { id: 'EVT-1012', timestamp: '2025-01-27 05:20', updated: '2025-01-27 05:25', type: 'Security', severity: 'Info', source: 'RN-NYC-003', region: 'Northeast', managedObject: 'Radio-12' },
+  { id: 'EVT-1002', timestamp: '2025-01-27 08:45', updated: '2025-01-27 09:00', type: 'Connection', severity: 'Major', source: 'eNB-PDX-002', region: 'Pacific Northwest', managedObject: 'Radio-2' },
+  { id: 'EVT-1003', timestamp: '2025-01-27 08:30', updated: '2025-01-27 08:35', type: 'Performance', severity: 'Minor', source: 'RN-PHX-003', region: 'Desert Southwest', managedObject: 'Cell-3' },
+  { id: 'EVT-1004', timestamp: '2025-01-27 08:15', updated: '2025-01-27 08:20', type: 'Configuration change', severity: 'Critical', source: 'eNB-NYC-006', region: 'Northeast', managedObject: 'Cell-4' },
+  { id: 'EVT-1005', timestamp: '2025-01-27 07:58', updated: '2025-01-27 08:10', type: 'Connection', severity: 'Info', source: 'RN-SFO-013', region: 'Northern California', managedObject: 'Radio-5' },
+  { id: 'EVT-1006', timestamp: '2025-01-27 07:42', updated: '2025-01-27 07:45', type: 'Security', severity: 'Minor', source: 'RN-LAS-005', region: 'Desert Southwest', managedObject: 'Radio-6' },
+  { id: 'EVT-1007', timestamp: '2025-01-27 07:20', updated: '2025-01-27 07:30', type: 'System', severity: 'Info', source: 'eNB-CHI-008', region: 'Great Lakes', managedObject: 'Cell-7' },
+  { id: 'EVT-1008', timestamp: '2025-01-27 06:55', updated: '2025-01-27 07:05', type: 'Connection', severity: 'Critical', source: 'eNB-MIA-010', region: 'Florida', managedObject: 'Cell-8' },
+  { id: 'EVT-1009', timestamp: '2025-01-27 06:30', updated: '2025-01-27 06:32', type: 'Performance', severity: 'Major', source: 'RN-DEN-007', region: 'Mountain West', managedObject: 'Radio-9' },
+  { id: 'EVT-1010', timestamp: '2025-01-27 06:10', updated: '2025-01-27 06:25', type: 'Configuration change', severity: 'Info', source: 'RN-ATL-009', region: 'Southeast', managedObject: 'Radio-10' },
+  { id: 'EVT-1011', timestamp: '2025-01-27 05:45', updated: '2025-01-27 05:50', type: 'System', severity: 'Minor', source: 'eNB-BOS-018', region: 'New England', managedObject: 'Cell-11' },
+  { id: 'EVT-1012', timestamp: '2025-01-27 05:20', updated: '2025-01-27 05:25', type: 'Security', severity: 'Info', source: 'RN-NYC-015', region: 'Northeast', managedObject: 'Radio-12' },
 ];
 
-function getColumns(showRegionColumn: boolean): ColumnDef<EventRow>[] {
+function getColumns(showRegionColumn: boolean, onSeverityClick?: (event: EventRow) => void): ColumnDef<EventRow>[] {
   return [
     {
       id: 'select',
@@ -132,6 +133,28 @@ function getColumns(showRegionColumn: boolean): ColumnDef<EventRow>[] {
       cell: ({ row }) => {
         const severity = row.getValue('severity') as EventSeverity;
         const { name: iconName, className: iconClass } = SEVERITY_ICON[severity];
+        const isClickable = severity !== 'Info' && onSeverityClick;
+        if (isClickable) {
+          return (
+            <button
+              type="button"
+              className="group/alarm inline-flex items-center gap-2 cursor-pointer text-left"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSeverityClick(row.original);
+              }}
+            >
+              <Icon name={iconName} size={18} className={`shrink-0 ${iconClass}`} />
+              <span className="group-hover/alarm:underline">{severity}</span>
+              <Icon
+                name="open_in_new"
+                size={16}
+                className="shrink-0 opacity-0 group-hover/alarm:opacity-70 transition-opacity text-muted-foreground"
+                aria-hidden
+              />
+            </button>
+          );
+        }
         return (
           <span className="inline-flex items-center gap-2">
             <Icon name={iconName} size={18} className={`shrink-0 ${iconClass}`} />
@@ -209,7 +232,8 @@ function getColumns(showRegionColumn: boolean): ColumnDef<EventRow>[] {
       ),
       enableSorting: false,
       meta: {
-        className: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+        headerClassName: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+        cellClassName: 'sticky right-0 w-14 text-right pr-4 bg-card group-hover:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
       },
     },
   ];
@@ -277,7 +301,26 @@ export function EventsDataTable({
   regionFilter = 'Region',
 }: EventsDataTableProps = {}) {
   const showRegionColumn = selectedRegions.length > 1;
-  const columns = React.useMemo(() => getColumns(showRegionColumn), [showRegionColumn]);
+  const [alarmDrawerOpen, setAlarmDrawerOpen] = React.useState(false);
+  const [selectedAlarm, setSelectedAlarm] = React.useState<AlarmDrawerAlarm | null>(null);
+
+  const handleSeverityClick = React.useCallback((event: EventRow) => {
+    const alarm: AlarmDrawerAlarm = {
+      id: event.id,
+      severity: event.severity as 'Critical' | 'Major' | 'Minor',
+      timestamp: event.timestamp,
+      updated: event.updated,
+      source: event.source,
+      region: event.region,
+      managedObject: event.managedObject,
+      type: event.type,
+      owner: '—',
+    };
+    setSelectedAlarm(alarm);
+    setAlarmDrawerOpen(true);
+  }, []);
+
+  const columns = React.useMemo(() => getColumns(showRegionColumn, handleSeverityClick), [showRegionColumn, handleSeverityClick]);
   const responsivePageSize = useResponsivePageSize();
   const pageSize = pageSizeProp ?? responsivePageSize;
   const [sorting, setSorting] = React.useState<SortingState>([
@@ -322,7 +365,7 @@ export function EventsDataTable({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={`px-4 py-3 h-12 ${(header.column.columnDef.meta as { className?: string })?.className ?? ''}`}
+                    className={`px-4 py-3 h-12 ${((header.column.columnDef.meta as { headerClassName?: string; className?: string })?.headerClassName ?? (header.column.columnDef.meta as { className?: string })?.className) ?? ''}`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -335,11 +378,11 @@ export function EventsDataTable({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'} className="group">
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={`px-4 py-3 ${(cell.column.columnDef.meta as { className?: string })?.className ?? ''}`}
+                      className={`px-4 py-3 ${((cell.column.columnDef.meta as { cellClassName?: string; className?: string })?.cellClassName ?? (cell.column.columnDef.meta as { className?: string })?.className) ?? ''}`}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -358,6 +401,11 @@ export function EventsDataTable({
       </div>
       <TablePagination table={table} className="justify-end shrink-0" />
     </div>
+    <AlarmDrawer
+      alarm={selectedAlarm}
+      open={alarmDrawerOpen}
+      onOpenChange={setAlarmDrawerOpen}
+    />
     </TooltipProvider>
   );
 }

@@ -32,6 +32,7 @@ import type { DeviceRow } from './devices-data-table';
 import { AlarmDrawer } from './alarm-drawer';
 import type { AlarmDrawerAlarm } from './alarm-drawer';
 import { ConfigMismatchSheet } from './config-mismatch-sheet';
+import { DeviceStatus } from '@/components/ui/device-status';
 
 const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
@@ -192,6 +193,12 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
       <DrawerContent className="left-auto right-0 top-0 bottom-0 h-full w-[560px] max-w-[90vw] rounded-l-[10px] rounded-t-none mt-0 [&>div:first-child]:hidden">
         <TooltipProvider delayDuration={300}>
         <div className="flex flex-col h-full min-h-0">
+          {device?.status === 'In maintenance' && (
+            <div className="shrink-0 h-4 bg-warning rounded-tl-[10px]" />
+          )}
+          {device?.status === 'Disconnected' && (
+            <div className="shrink-0 h-4 bg-destructive rounded-tl-[10px]" />
+          )}
           <DrawerHeader className="relative pr-12 shrink-0">
             <DrawerClose asChild>
               <Button
@@ -204,10 +211,31 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
               </Button>
             </DrawerClose>
             <DrawerTitle className="text-xl font-semibold">{device.device}</DrawerTitle>
-            <div className="flex items-center gap-4 pt-1">
+            <div className="flex items-center gap-3 pt-1">
               <Badge variant="secondary" className="font-normal">
                 {device.type}
               </Badge>
+              <span className="text-sm text-muted-foreground/50">•</span>
+              <DeviceStatus status={device.status} iconSize={14} className="text-sm" />
+              {device.configMismatch != null && device.configMismatch > 0 && (
+                <>
+                  <span className="text-sm text-muted-foreground/50">•</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 text-sm text-warning hover:underline"
+                        onClick={() => setConfigMismatchSheetOpen(true)}
+                      >
+                        <Icon name="difference" size={16} className="shrink-0" />
+                        <span className="tabular-nums">{device.configMismatch} config {device.configMismatch === 1 ? 'mismatch' : 'mismatches'}</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>View configuration mismatches</TooltipContent>
+                  </Tooltip>
+                </>
+              )}
+              <span className="text-sm text-muted-foreground/50">•</span>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -226,21 +254,6 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
                 </TooltipTrigger>
                 <TooltipContent>{notesTooltip}</TooltipContent>
               </Tooltip>
-              {device.configMismatch != null && device.configMismatch > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 text-sm text-warning hover:underline"
-                      onClick={() => setConfigMismatchSheetOpen(true)}
-                    >
-                      <Icon name="difference" size={18} className="shrink-0" />
-                      <span className="tabular-nums">{device.configMismatch}</span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>View configuration mismatches</TooltipContent>
-                </Tooltip>
-              )}
             </div>
             <div className="flex items-center gap-2 pt-3">
               <Button
@@ -553,17 +566,25 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
                         return (
                           <TableRow
                             key={i}
-                            className="cursor-pointer hover:bg-muted/50 transition-colors"
-                            onClick={() => {
-                              setSelectedAlarm(alarmForDrawer);
-                              setAlarmDrawerOpen(true);
-                            }}
                           >
                             <TableCell className="py-1.5 px-2">
-                              <span className="inline-flex items-center gap-1.5 text-xs">
+                              <button
+                                type="button"
+                                className="group/alarm inline-flex items-center gap-1.5 text-xs cursor-pointer text-left"
+                                onClick={() => {
+                                  setSelectedAlarm(alarmForDrawer);
+                                  setAlarmDrawerOpen(true);
+                                }}
+                              >
                                 <Icon name={cfg.name} size={14} className={`shrink-0 ${cfg.className}`} />
-                                {alarm.severity}
-                              </span>
+                                <span className="group-hover/alarm:underline">{alarm.severity}</span>
+                                <Icon
+                                  name="open_in_new"
+                                  size={12}
+                                  className="shrink-0 opacity-0 group-hover/alarm:opacity-70 transition-opacity text-muted-foreground"
+                                  aria-hidden
+                                />
+                              </button>
                             </TableCell>
                             <TableCell className="py-1.5 px-2 text-xs tabular-nums">{alarm.timestamp}</TableCell>
                             <TableCell className="py-1.5 px-2 text-xs tabular-nums">{alarm.updated}</TableCell>

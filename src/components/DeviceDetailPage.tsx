@@ -361,7 +361,14 @@ function DeviceDetailPage({
       />
       <main className="flex-1 w-full px-4 py-6 md:px-6 lg:px-8 min-h-0 flex flex-col overflow-hidden">
         {/* Header - fixed at top of main */}
-        <div className="shrink-0 bg-gray-900 -mx-4 -mt-6 mb-6 px-4 py-6 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8 rounded-b-lg">
+        <div className="shrink-0 bg-gray-900 -mx-4 -mt-6 mb-6 md:-mx-6 lg:-mx-8 rounded-b-lg overflow-hidden">
+          {device.status === 'In maintenance' && (
+            <div className="h-4 bg-warning" />
+          )}
+          {device.status === 'Disconnected' && (
+            <div className="h-4 bg-destructive" />
+          )}
+        <div className="px-4 py-6 md:px-6 lg:px-8">
           <div className="flex items-start justify-between gap-12 flex-wrap">
             <div className="flex items-start gap-3">
               <Button
@@ -483,6 +490,7 @@ function DeviceDetailPage({
               </div>
             </div>
           </div>
+        </div>
         </div>
 
         <div className="flex gap-8 flex-1 min-h-0 overflow-hidden">
@@ -1214,18 +1222,20 @@ function DeviceDetailPage({
                               ))}
                             </SelectContent>
                           </Select>
-                          <div className="inline-flex rounded-md border bg-background p-1">
-                            {CELL_STATUS_OPTIONS.map((opt) => (
-                              <Button
+                          <div className="inline-flex items-center rounded-md border border-input shadow-sm shrink-0">
+                            {CELL_STATUS_OPTIONS.map((opt, i, arr) => (
+                              <button
                                 key={opt}
-                                variant={cellStatusFilter === opt ? 'secondary' : 'ghost'}
-                                size="sm"
-                                className="h-8 px-3 capitalize"
-                                aria-pressed={cellStatusFilter === opt}
+                                type="button"
                                 onClick={() => setCellStatusFilter(opt)}
+                                className={`h-9 px-3 text-sm font-medium capitalize transition-colors ${
+                                  cellStatusFilter === opt
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-background text-foreground hover:bg-muted'
+                                } ${i === 0 ? 'rounded-l-md' : ''} ${i === arr.length - 1 ? 'rounded-r-md' : ''} ${i > 0 ? 'border-l border-input' : ''}`}
                               >
                                 {opt}
-                              </Button>
+                              </button>
                             ))}
                           </div>
                         </div>

@@ -100,6 +100,8 @@ const COLOR_TOKEN_SECTIONS: TokenSection[] = [
     title: 'Status',
     tokens: [
       { name: 'Success', dark: '#006C28', light: '#009B3A' },
+      { name: 'Warning', dark: '#FACC15', light: '#EAB308' },
+      { name: 'Warning-foreground', dark: '#422006', light: '#422006' },
       { name: 'Destructive', dark: '#8A0821', light: '#D13C59' },
       { name: 'Destructive-foreground', dark: '#FAFAFA', light: '#FAFAFA' },
     ],
