@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Icon } from './Icon';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { StatCard } from './ui/stat-card';
 import { KpiDonutCard } from './KpiDonutCard';
 
 interface CapacityOverview {
@@ -35,7 +35,7 @@ export interface DashboardCapacityTabProps {
 const STORAGE_DATA = [
   { title: 'Log files storage', used: 138, total: 256 },
   { title: 'PM files storage', used: 182, total: 320 },
-  { title: 'vSNET database', used: 420, total: 512 },
+  { title: 'AMS database', used: 420, total: 512 },
   { title: 'KPI database', used: 268, total: 384 },
 ] as const;
 
@@ -50,61 +50,41 @@ export function DashboardCapacityTab({ overviewData }: DashboardCapacityTabProps
       ? (offlineDevices / overviewData.devices.total) * 100
       : 0;
 
-  const renderMetricCard = (
-    title: string,
-    iconName: string,
-    numerator: number,
-    denominator: number,
-    percent: number
-  ) => (
-    <Card key={title}>
-      <CardHeader className="space-y-2 pb-2">
-        <CardTitle className="text-base font-semibold">
-          {title}
-        </CardTitle>
-        <div className="flex items-baseline gap-2">
-          <Icon
-            name={iconName}
-            size={24}
-            className="text-muted-foreground shrink-0"
-            aria-hidden
-          />
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-semibold tabular-nums text-foreground">
-              {numerator.toLocaleString()}
-            </span>
-            <span className="text-muted-foreground text-lg tabular-nums">
-              / {denominator.toLocaleString()}
-            </span>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <p className="text-sm text-muted-foreground">
-          {percent.toFixed(1)}% of capacity
-        </p>
-      </CardContent>
-    </Card>
-  );
-
   return (
     <div className="space-y-8">
       <section>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-          {renderMetricCard(
-            'Registered devices',
-            'inventory_2',
-            registeredDevices,
-            REGISTERED_DEVICE_CAPACITY,
-            registeredPercent
-          )}
-          {renderMetricCard(
-            'Offline devices',
-            'power_off',
-            offlineDevices,
-            overviewData.devices.total,
-            offlinePercent
-          )}
+          <StatCard
+            name="Registered devices"
+            value={`${registeredDevices.toLocaleString()} / ${REGISTERED_DEVICE_CAPACITY.toLocaleString()}`}
+            icon={<Icon name="inventory_2" size={16} />}
+            change={`${registeredPercent.toFixed(1)}%`}
+            changeDirection="up"
+            changeLabel="of capacity"
+            sparkline={[
+              { value: Math.round(registeredDevices * 0.88) },
+              { value: Math.round(registeredDevices * 0.91) },
+              { value: Math.round(registeredDevices * 0.94) },
+              { value: Math.round(registeredDevices * 0.97) },
+              { value: registeredDevices },
+            ]}
+          />
+          <StatCard
+            name="Offline devices"
+            value={`${offlineDevices.toLocaleString()} / ${overviewData.devices.total.toLocaleString()}`}
+            icon={<Icon name="power_off" size={16} />}
+            change={`${offlinePercent.toFixed(1)}%`}
+            changeDirection="down"
+            changeLabel="of total"
+            sparkline={[
+              { value: offlineDevices + 2 },
+              { value: offlineDevices + 5 },
+              { value: offlineDevices + 1 },
+              { value: offlineDevices + 3 },
+              { value: offlineDevices },
+            ]}
+            sparklineColor="var(--destructive)"
+          />
         </div>
       </section>
 

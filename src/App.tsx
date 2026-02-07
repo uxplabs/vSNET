@@ -48,7 +48,7 @@ function App() {
     return (
       <>
         <LoginPage
-          appName="vSNET"
+          appName="AMS"
           onLogin={async () => setIsAuthenticated(true)}
           onLoginWithSSO={async () => setIsAuthenticated(true)}
         />
@@ -61,7 +61,7 @@ function App() {
     <TooltipProvider delayDuration={300}>
       {currentPage === 'dashboard' ? (
         <DashboardPage
-          appName="vSNET"
+          appName="AMS"
           onSignOut={() => setIsAuthenticated(false)}
           onNavigate={handleNavigate}
           region={region}
@@ -72,7 +72,7 @@ function App() {
       ) : currentPage === 'device-detail' && selectedDevice ? (
         <DeviceDetailPage
           device={selectedDevice}
-          appName="vSNET"
+          appName="AMS"
           onSignOut={() => setIsAuthenticated(false)}
           onBack={handleBackToDevices}
           onNavigate={handleNavigate}
@@ -86,7 +86,7 @@ function App() {
       ) : currentPage === 'tasks' ? (
         <div className="h-screen overflow-hidden">
           <TasksPage
-            appName="vSNET"
+            appName="AMS"
             onSignOut={() => setIsAuthenticated(false)}
             onNavigate={handleNavigate}
             region={region}
@@ -98,7 +98,7 @@ function App() {
       ) : currentPage === 'performance' ? (
         <div className="h-screen overflow-hidden">
           <PerformancePage
-            appName="vSNET"
+            appName="AMS"
             onSignOut={() => setIsAuthenticated(false)}
             onNavigate={handleNavigate}
             region={region}
@@ -109,7 +109,7 @@ function App() {
         </div>
       ) : currentPage === 'design-system' ? (
         <DesignSystemPage
-          appName="vSNET"
+          appName="AMS"
           onSignOut={() => setIsAuthenticated(false)}
           onNavigate={handleNavigate}
           region={region}
@@ -120,7 +120,7 @@ function App() {
       ) : currentPage === 'administration' ? (
         <div className="h-screen overflow-hidden">
           <AdministrationPage
-            appName="vSNET"
+            appName="AMS"
             onSignOut={() => setIsAuthenticated(false)}
             onNavigate={handleNavigate}
             region={region}
@@ -132,7 +132,7 @@ function App() {
       ) : (
         <div className="h-screen overflow-hidden">
           <DevicesPage
-            appName="vSNET"
+            appName="AMS"
             onSignOut={() => setIsAuthenticated(false)}
             onNavigate={handleNavigate}
             mainTab={devicesTab}

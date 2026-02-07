@@ -34,7 +34,7 @@ export default function FileManagementPage({ onBack }: FileManagementPageProps) 
   const [debugLogsDays, setDebugLogsDays] = useState('7');
   const [errorBundlesDays, setErrorBundlesDays] = useState('14');
   const [deviceDbBackupsDays, setDeviceDbBackupsDays] = useState('30');
-  const [vsnetDbBackupsMb, setVsnetDbBackupsMb] = useState('2048');
+  const [amsDbBackupsMb, setVsnetDbBackupsMb] = useState('2048');
   const [cmBackupAutoSync, setCmBackupAutoSync] = useState(true);
   const [cmFileFormat, setCmFileFormat] = useState('CSV');
   const [deviceDbBackupAutoSync, setDeviceDbBackupAutoSync] = useState(false);
@@ -160,12 +160,12 @@ export default function FileManagementPage({ onBack }: FileManagementPageProps) 
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="vsnet-db-backups-mb">vSNET database backups (MB)</Label>
+                  <Label htmlFor="ams-db-backups-mb">AMS database backups (MB)</Label>
                   <Input
-                    id="vsnet-db-backups-mb"
+                    id="ams-db-backups-mb"
                     type="number"
                     min={1}
-                    value={vsnetDbBackupsMb}
+                    value={amsDbBackupsMb}
                     onChange={(e) => setVsnetDbBackupsMb(e.target.value)}
                     className="w-full max-w-xs"
                   />

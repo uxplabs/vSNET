@@ -9,7 +9,7 @@ export interface NavbarProps {
   className?: string;
 }
 
-function Navbar({ appName = 'vSNET', onSignOut, className }: NavbarProps) {
+function Navbar({ appName = 'AMS', onSignOut, className }: NavbarProps) {
   return (
     <header
       className={cn(

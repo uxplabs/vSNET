@@ -5,14 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/Icon';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -24,37 +16,37 @@ import { cn } from '@/lib/utils';
 interface ConfigMismatchItem {
   id: string;
   parameter: string;
-  currentConfig: string;
-  templateConfig: string;
+  goldStandard: string;
+  configured: string;
   ignored: boolean;
 }
 
-// All possible mismatch parameters
+// All possible mismatch parameters (TR-069 / device model paths)
 const ALL_MISMATCH_PARAMETERS: Omit<ConfigMismatchItem, 'ignored'>[] = [
-  { id: '1', parameter: 'TX Power', currentConfig: '23 dBm', templateConfig: '20 dBm' },
-  { id: '2', parameter: 'Bandwidth', currentConfig: '20 MHz', templateConfig: '10 MHz' },
-  { id: '3', parameter: 'PCI', currentConfig: '101', templateConfig: '105' },
-  { id: '4', parameter: 'Cell ID', currentConfig: '1', templateConfig: '2' },
-  { id: '5', parameter: 'TAC', currentConfig: '1000', templateConfig: '1001' },
-  { id: '6', parameter: 'Max UE Count', currentConfig: '64', templateConfig: '128' },
-  { id: '7', parameter: 'DL MIMO Mode', currentConfig: '2x2', templateConfig: '4x4' },
-  { id: '8', parameter: 'Handover Threshold', currentConfig: '-110 dBm', templateConfig: '-105 dBm' },
-  { id: '9', parameter: 'UL MIMO Mode', currentConfig: '1x2', templateConfig: '2x2' },
-  { id: '10', parameter: 'Timer T300', currentConfig: '1000 ms', templateConfig: '2000 ms' },
-  { id: '11', parameter: 'Timer T301', currentConfig: '1000 ms', templateConfig: '1500 ms' },
-  { id: '12', parameter: 'SRS Periodicity', currentConfig: '40 ms', templateConfig: '20 ms' },
-  { id: '13', parameter: 'PRACH Config Index', currentConfig: '0', templateConfig: '3' },
-  { id: '14', parameter: 'Root Sequence Index', currentConfig: '0', templateConfig: '22' },
-  { id: '15', parameter: 'Reference Signal Power', currentConfig: '-3 dB', templateConfig: '0 dB' },
-  { id: '16', parameter: 'EARFCN', currentConfig: '55990', templateConfig: '55240' },
-  { id: '17', parameter: 'Frequency Band', currentConfig: 'Band 48', templateConfig: 'Band 46' },
-  { id: '18', parameter: 'Admin State', currentConfig: 'Enabled', templateConfig: 'Disabled' },
-  { id: '19', parameter: 'PLMN', currentConfig: '311-480', templateConfig: '310-260' },
-  { id: '20', parameter: 'Sync Signal Period', currentConfig: '5 ms', templateConfig: '10 ms' },
-  { id: '21', parameter: 'PUSCH Power Offset', currentConfig: '0 dB', templateConfig: '3 dB' },
-  { id: '22', parameter: 'PUCCH Power Offset', currentConfig: '0 dB', templateConfig: '2 dB' },
-  { id: '23', parameter: 'CQI Report Mode', currentConfig: 'Periodic', templateConfig: 'Aperiodic' },
-  { id: '24', parameter: 'Antenna Port Count', currentConfig: '2', templateConfig: '4' },
+  { id: '1', parameter: 'InternetGatewayDevice.System.AdminAAA.User.9000.SNMPPrivProtocol', goldStandard: 'AES', configured: 'DES' },
+  { id: '2', parameter: 'InternetGatewayDevice.System.AdminAAA.User.9000.SNMPAuthProtocol', goldStandard: 'SHA', configured: 'MD5' },
+  { id: '3', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.RF.ReferenceSignalPower', goldStandard: '0', configured: '-3' },
+  { id: '4', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.RF.PhyCellID', goldStandard: '105', configured: '101' },
+  { id: '5', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.RF.EARFCNDL', goldStandard: '55240', configured: '55990' },
+  { id: '6', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.RF.DLBandwidth', goldStandard: '50', configured: '100' },
+  { id: '7', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.RF.ULBandwidth', goldStandard: '50', configured: '100' },
+  { id: '8', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.Mobility.IdleMode.IRAT.UTRA.UTRANFDDFreq.1.Priority', goldStandard: '3', configured: '5' },
+  { id: '9', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.Mobility.ConnMode.EUTRA.A3Offset', goldStandard: '6', configured: '3' },
+  { id: '10', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.Mobility.ConnMode.EUTRA.HysteresisA3', goldStandard: '2', configured: '1' },
+  { id: '11', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.Mobility.ConnMode.EUTRA.TimeToTriggerA3', goldStandard: '480', configured: '320' },
+  { id: '12', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.MAC.RACH.PreambleTransMax', goldStandard: '10', configured: '6' },
+  { id: '13', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.MAC.RACH.RootSequenceIndex', goldStandard: '22', configured: '0' },
+  { id: '14', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.PHY.PUSCH.Enable64QAM', goldStandard: 'true', configured: 'false' },
+  { id: '15', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.PHY.SRS.SRSBandwidthConfig', goldStandard: '7', configured: '3' },
+  { id: '16', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.RAN.PHY.AntennaInfo.AntennaPortsCount', goldStandard: '4', configured: '2' },
+  { id: '17', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.EPC.TAC', goldStandard: '1001', configured: '1000' },
+  { id: '18', parameter: 'InternetGatewayDevice.Services.FAPService.1.CellConfig.LTE.EPC.PLMNList.1.PLMNID', goldStandard: '310260', configured: '311480' },
+  { id: '19', parameter: 'InternetGatewayDevice.Services.FAPService.1.FAPControl.LTE.AdminState', goldStandard: 'Enabled', configured: 'Disabled' },
+  { id: '20', parameter: 'InternetGatewayDevice.Services.FAPService.1.FAPControl.LTE.SelfConfig.SONConfigParam.CellReselectionPriority', goldStandard: '7', configured: '5' },
+  { id: '21', parameter: 'InternetGatewayDevice.Services.FAPService.1.Transport.SCTP.AssocMaxRetrans', goldStandard: '10', configured: '5' },
+  { id: '22', parameter: 'InternetGatewayDevice.Services.FAPService.1.Transport.Security.Secret.1.Type', goldStandard: 'SharedKey', configured: 'PSK' },
+  { id: '23', parameter: 'InternetGatewayDevice.ManagementServer.PeriodicInformInterval', goldStandard: '3600', configured: '900' },
+  { id: '24', parameter: 'InternetGatewayDevice.ManagementServer.CWMPRetryMinimumWaitInterval', goldStandard: '30', configured: '10' },
 ];
 
 function generateMismatchData(count: number): ConfigMismatchItem[] {
@@ -183,11 +175,6 @@ export function ConfigMismatchSheet({
     setSelectedRows(new Set());
   };
 
-  const handleApplyAll = () => {
-    onApply?.();
-    onOpenChange(false);
-  };
-
   // Clear selection when switching tabs
   React.useEffect(() => {
     setSelectedRows(new Set());
@@ -195,7 +182,7 @@ export function ConfigMismatchSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
+      <SheetContent side="right" className="w-full sm:max-w-3xl p-0 flex flex-col">
         {/* Header */}
         <SheetHeader className="px-6 py-4 border-b shrink-0">
           <SheetTitle>Configuration mismatch</SheetTitle>
@@ -264,74 +251,123 @@ export function ConfigMismatchSheet({
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-auto px-6 py-4">
+        <div className="flex-1 min-h-0 flex flex-col px-6 py-4">
           {displayedItems.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
               {activeTab === 'mismatches' ? 'No mismatches' : 'No ignored items'}
             </div>
           ) : (
-            <div className="rounded-lg border bg-card overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px] px-4 py-3">
-                      <Checkbox
-                        checked={allSelected}
-                        ref={(el) => {
-                          if (el) (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = someSelected;
-                        }}
-                        onCheckedChange={toggleSelectAll}
-                        aria-label="Select all"
-                      />
-                    </TableHead>
-                    <TableHead className="px-4 py-3">Parameter</TableHead>
-                    <TableHead className="px-4 py-3">Current config</TableHead>
-                    <TableHead className="px-4 py-3">Template config</TableHead>
-                    <TableHead className="px-4 py-3 w-[140px]" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayedItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="px-4">
+            <div className="flex-1 min-h-0 flex flex-col rounded-lg border bg-card overflow-hidden">
+              {/* Sticky header */}
+              <div className="shrink-0 border-b">
+                <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: 44 }} />
+                    <col />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 140 }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className="h-10 px-4 py-3 text-left align-middle font-medium text-muted-foreground">
                         <Checkbox
-                          checked={selectedRows.has(item.id)}
-                          onCheckedChange={() => toggleRow(item.id)}
-                          aria-label={`Select ${item.parameter}`}
+                          checked={allSelected}
+                          ref={(el) => {
+                            if (el) (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = someSelected;
+                          }}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label="Select all"
                         />
-                      </TableCell>
-                      <TableCell className="px-4 font-medium">{item.parameter}</TableCell>
-                      <TableCell className="px-4 text-muted-foreground">{item.currentConfig}</TableCell>
-                      <TableCell className="px-4">{item.templateConfig}</TableCell>
-                      <TableCell className="px-4">
-                        <div className="flex items-center justify-end gap-2">
-                          {appliedItems.has(item.id) ? (
-                            <span className="inline-flex items-center gap-1.5 text-sm text-green-600 dark:text-green-500">
-                              <Icon name="check_circle" size={16} className="shrink-0" />
-                              Applied
-                            </span>
-                          ) : activeTab === 'mismatches' ? (
-                            <>
-                              <Button size="sm" className="h-7" onClick={() => handleApplyItem(item.id)}>
-                                Apply
+                      </th>
+                      <th className="h-10 px-4 py-3 text-left align-middle font-medium text-muted-foreground">Parameter</th>
+                      <th className="h-10 px-4 py-3 text-left align-middle font-medium text-muted-foreground">Gold standard</th>
+                      <th className="h-10 px-4 py-3 text-left align-middle font-medium text-muted-foreground">Configured</th>
+                      <th className="h-10 px-4 py-3" />
+                    </tr>
+                  </thead>
+                </table>
+              </div>
+              {/* Scrollable body */}
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: 44 }} />
+                    <col />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: 140 }} />
+                  </colgroup>
+                  <tbody>
+                    {displayedItems.map((item) => (
+                      <tr key={item.id} className="border-b transition-colors hover:bg-muted/50">
+                        <td className="p-2 px-4 align-middle">
+                          <Checkbox
+                            checked={selectedRows.has(item.id)}
+                            onCheckedChange={() => toggleRow(item.id)}
+                            aria-label={`Select ${item.parameter}`}
+                          />
+                        </td>
+                        <td className="p-2 px-4 align-middle">
+                          <span className="text-xs font-mono text-muted-foreground break-all leading-relaxed">{item.parameter}</span>
+                        </td>
+                        <td className="p-2 px-4 align-middle font-medium">
+                          <span className="inline-block bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded text-sm">{item.goldStandard}</span>
+                        </td>
+                        <td className="p-2 px-4 align-middle">
+                          <span className="inline-block bg-muted px-1.5 py-0.5 rounded text-sm text-muted-foreground">{item.configured}</span>
+                        </td>
+                        <td className="p-2 px-4 align-middle">
+                          <div className="flex items-center justify-end gap-2">
+                            {appliedItems.has(item.id) ? (
+                              <span className="inline-flex items-center gap-1.5 text-sm text-green-600 dark:text-green-500">
+                                <Icon name="check_circle" size={16} className="shrink-0" />
+                                Applied
+                              </span>
+                            ) : activeTab === 'mismatches' ? (
+                              <>
+                                <Button size="sm" className="h-7" onClick={() => handleApplyItem(item.id)}>
+                                  Apply
+                                </Button>
+                                <Button size="sm" variant="outline" className="h-7" onClick={() => handleIgnoreItem(item.id)}>
+                                  Ignore
+                                </Button>
+                              </>
+                            ) : (
+                              <Button size="sm" variant="outline" className="h-7" onClick={() => handleUnignoreItem(item.id)}>
+                                Unignore
                               </Button>
-                              <Button size="sm" variant="outline" className="h-7" onClick={() => handleIgnoreItem(item.id)}>
-                                Ignore
-                              </Button>
-                            </>
-                          ) : (
-                            <Button size="sm" variant="outline" className="h-7" onClick={() => handleUnignoreItem(item.id)}>
-                              Unignore
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
+        </div>
+
+        {/* Fixed Bottom Button Bar */}
+        <div className="shrink-0 border-t bg-background px-6 py-4">
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button variant="outline" onClick={() => {
+              setItems((prev) => prev.map((item) => ({ ...item, ignored: true })));
+              setSelectedRows(new Set());
+            }}>
+              Ignore all
+            </Button>
+            <Button onClick={() => {
+              setAppliedItems(new Set(mismatches.map((item) => item.id)));
+              setSelectedRows(new Set());
+            }}>
+              Apply all
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

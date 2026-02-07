@@ -26,11 +26,14 @@ import type { ScheduledTaskRow } from './scheduled-tasks-data-table';
 import { ScheduledTaskDrawer } from './scheduled-task-drawer';
 import { AddScheduledTaskDialog } from './add-scheduled-task-dialog';
 import { TaskTemplatesDataTable, TASK_TEMPLATES_DATA } from './task-templates-data-table';
+import { GoldenConfigTasksDataTable, GOLDEN_CONFIG_TASKS_DATA } from './golden-config-tasks-data-table';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
 const DOMAIN_OPTIONS = ['Domain', 'All', ...NORTH_AMERICAN_REGIONS, 'Core network', 'Radio access', 'Edge devices'] as const;
 const NODE_TYPE_OPTIONS = ['Node type', 'All', 'eNB', 'RN'] as const;
 const SCOPE_OPTIONS = ['Scope', 'All', 'Global', 'Local'] as const;
+const GOLDEN_NODE_TYPE_OPTIONS = ['Node type', 'All', 'SN-LTE', 'CU', 'VCU', 'RCP', 'DAS'] as const;
+const GOLDEN_STATUS_OPTIONS = ['Last run', 'All', 'Pass', 'Fail'] as const;
 
 export interface TasksPageProps {
   appName?: string;
@@ -44,7 +47,7 @@ export interface TasksPageProps {
 }
 
 export default function TasksPage({
-  appName = 'vSNET',
+  appName = 'AMS',
   onSignOut,
   onNavigate,
   region,
@@ -65,6 +68,9 @@ export default function TasksPage({
   const [selectedTask, setSelectedTask] = useState<ScheduledTaskRow | null>(null);
   const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+  const [goldenConfigSearch, setGoldenConfigSearch] = useState('');
+  const [goldenConfigNodeTypeFilter, setGoldenConfigNodeTypeFilter] = useState<string>('Node type');
+  const [goldenConfigStatusFilter, setGoldenConfigStatusFilter] = useState<string>('Last run');
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -74,6 +80,7 @@ export default function TasksPage({
         onSignOut={onSignOut}
         onNavigate={onNavigate}
         currentSection="tasks"
+        hideRegionSelector={tasksTab === 'golden-configuration'}
         region={region}
         regions={regions}
         onRegionChange={onRegionChange}
@@ -95,6 +102,12 @@ export default function TasksPage({
                   Templates
                   <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs tabular-nums">
                     {TASK_TEMPLATES_DATA.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="golden-configuration" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 gap-2">
+                  Golden configuration
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs tabular-nums">
+                    {GOLDEN_CONFIG_TASKS_DATA.length}
                   </Badge>
                 </TabsTrigger>
               </TabsList>
@@ -233,6 +246,52 @@ export default function TasksPage({
                 </div>
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <TaskTemplatesDataTable />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="golden-configuration" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
+                <div className="flex flex-wrap items-center gap-3 mb-4 shrink-0">
+                  <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
+                    <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search configurations..."
+                      value={goldenConfigSearch}
+                      onChange={(e) => setGoldenConfigSearch(e.target.value)}
+                      className="pl-9 w-full"
+                    />
+                  </div>
+                  <Select value={goldenConfigNodeTypeFilter} onValueChange={setGoldenConfigNodeTypeFilter}>
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Node type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GOLDEN_NODE_TYPE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={goldenConfigStatusFilter} onValueChange={setGoldenConfigStatusFilter}>
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Last run" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GOLDEN_STATUS_OPTIONS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" className="ml-auto shrink-0 gap-1">
+                        <Icon name="add" size={18} />
+                        Add configuration
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Add golden configuration</TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  <GoldenConfigTasksDataTable />
                 </div>
               </TabsContent>
             </Tabs>

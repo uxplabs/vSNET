@@ -31,7 +31,7 @@ export interface PerformancePageProps {
 }
 
 export default function PerformancePage({
-  appName = 'vSNET',
+  appName = 'AMS',
   onSignOut,
   onNavigate,
   region,

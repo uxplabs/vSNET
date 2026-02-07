@@ -36,6 +36,7 @@ import { DeviceDrawer } from '@/components/device-drawer';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { Icon } from '@/components/Icon';
 import { Badge } from '@/components/ui/badge';
+import { NodeTypeBadge } from '@/components/ui/node-type-badge';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ConfigMismatchSheet } from './config-mismatch-sheet';
 
@@ -253,9 +254,7 @@ function getColumns(
     accessorKey: 'type',
     header: ({ column }) => <SortableHeader column={column}>Type</SortableHeader>,
     cell: ({ row }) => (
-      <Badge variant="secondary" className="font-medium">
-        {row.getValue('type') as string}
-      </Badge>
+      <NodeTypeBadge type={row.getValue('type') as string} />
     ),
   },
   {

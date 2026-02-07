@@ -35,7 +35,7 @@ export default function DeviceMigrationPage({ onBack }: DeviceMigrationPageProps
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground mb-1">System name</p>
-            <p className="text-sm font-semibold truncate" title="vSNET-PROD-01">vSNET-PROD-01</p>
+            <p className="text-sm font-semibold truncate" title="AMS-PROD-01">AMS-PROD-01</p>
           </CardContent>
         </Card>
         <Card>

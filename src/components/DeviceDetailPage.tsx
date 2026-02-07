@@ -185,7 +185,7 @@ const formatBytes = (value: number) => `${(value / 1_000_000).toFixed(1)} MB`;
 
 function DeviceDetailPage({
   device,
-  appName = 'vSNET',
+  appName = 'AMS',
   onSignOut,
   onBack,
   onNavigate,

@@ -32,7 +32,6 @@ import { ActivityLogDataTable } from './activity-log-data-table';
 import { ReportsDataTable, getFilteredReportCount } from './reports-data-table';
 import { PerformanceDataTable, getFilteredPerformanceCount } from './performance-data-table';
 import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount } from './threshold-crossing-alerts-data-table';
-import { GoldenConfigDataTable } from './golden-config-data-table';
 import { ChevronDown } from 'lucide-react';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ErrorBoundary } from './error-boundary';
@@ -104,7 +103,7 @@ type RegionOption = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' |
 type DeviceGroupOption = 'Core network' | 'Radio access' | 'Edge devices' | 'Test environment';
 
 
-function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTabProp, onMainTabChange, region, regions, onRegionChange, onRegionsChange, fixedRegion, onNavigateToDeviceDetail }: DevicesPageProps) {
+function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabProp, onMainTabChange, region, regions, onRegionChange, onRegionsChange, fixedRegion, onNavigateToDeviceDetail }: DevicesPageProps) {
   const [internalTab, setInternalTab] = useState('device');
   const mainTab = (mainTabProp ?? internalTab) || 'device';
   const handleMainTabChange = onMainTabChange ?? setInternalTab;
@@ -324,28 +323,40 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                         const counts = deviceCountsByRegion[reg];
                         if (!counts) return null;
                         return (
-                          <SidebarGroup key={reg} className="pt-1">
-                            <SidebarGroupLabel className="px-2">{reg}</SidebarGroupLabel>
-                            <SidebarGroupContent>
-                              <SidebarMenu>
-                                {(['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
-                                  <SidebarMenuItem key={`${reg}-${groupName}`}>
-                                    <SidebarMenuButton asChild isActive={selectedGroup === groupName}>
-                                      <button
-                                        type="button"
-                                        className="flex w-full items-center gap-2"
-                                        onClick={() => setSelectedGroup(groupName)}
-                                      >
-                                        <Icon name="folder" size={18} />
-                                        <span>{groupName}</span>
-                                        <SidebarMenuBadge>{counts.groups[groupName] ?? 0}</SidebarMenuBadge>
-                                      </button>
-                                    </SidebarMenuButton>
-                                  </SidebarMenuItem>
-                                ))}
-                              </SidebarMenu>
-                            </SidebarGroupContent>
-                          </SidebarGroup>
+                          <Collapsible key={reg} className="group/region-collapsible">
+                            <SidebarGroup className="pt-1">
+                              <CollapsibleTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="flex h-8 w-full shrink-0 items-center gap-2 rounded-md px-2 text-left text-xs font-medium text-sidebar-foreground/70 outline-none ring-sidebar-ring transition-[margin,opacity] duration-200 ease-linear hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0"
+                                >
+                                  <span className="flex flex-1">{reg}</span>
+                                  <ChevronDown className="size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/region-collapsible:rotate-180" />
+                                </button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <SidebarGroupContent>
+                                  <SidebarMenu>
+                                    {(['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
+                                      <SidebarMenuItem key={`${reg}-${groupName}`}>
+                                        <SidebarMenuButton asChild isActive={selectedGroup === groupName}>
+                                          <button
+                                            type="button"
+                                            className="flex w-full items-center gap-2"
+                                            onClick={() => setSelectedGroup(groupName)}
+                                          >
+                                            <Icon name="folder" size={18} />
+                                            <span>{groupName}</span>
+                                            <SidebarMenuBadge>{counts.groups[groupName] ?? 0}</SidebarMenuBadge>
+                                          </button>
+                                        </SidebarMenuButton>
+                                      </SidebarMenuItem>
+                                    ))}
+                                  </SidebarMenu>
+                                </SidebarGroupContent>
+                              </CollapsibleContent>
+                            </SidebarGroup>
+                          </Collapsible>
                         );
                       })}
                     </>
@@ -403,9 +414,6 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                   </TabsTrigger>
                   <TabsTrigger value="software-management" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
                     Software management
-                  </TabsTrigger>
-                  <TabsTrigger value="golden-configuration" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
-                    Golden configuration
                   </TabsTrigger>
                   <TabsTrigger value="reports" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
                     Reports
@@ -1245,11 +1253,6 @@ function DevicesPage({ appName = 'vSNET', onSignOut, onNavigate, mainTab: mainTa
                     </div>
                   </TabsContent>
                 </Tabs>
-              </TabsContent>
-              <TabsContent value="golden-configuration" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <GoldenConfigDataTable />
-                </div>
               </TabsContent>
               <TabsContent value="reports" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters */}

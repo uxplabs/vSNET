@@ -66,10 +66,12 @@ export interface Navbar01Props {
   onRegionsChange?: (regions: string[]) => void;
   /** When set, region is fixed (single-region account); show label only, no dropdown */
   fixedRegion?: string;
+  /** When true, the region selector is hidden regardless of section */
+  hideRegionSelector?: boolean;
 }
 
 const Navbar01 = ({
-  appName = 'vSNET',
+  appName = 'AMS',
   onSignOut,
   onNavigate,
   className,
@@ -80,6 +82,7 @@ const Navbar01 = ({
   onRegionChange,
   onRegionsChange,
   fixedRegion,
+  hideRegionSelector,
 }: Navbar01Props) => {
   const [internalRegions, setInternalRegions] = useState<string[]>(['All']);
   const regions = regionsProp ?? (regionProp != null ? [regionProp] : internalRegions);
@@ -210,7 +213,7 @@ const Navbar01 = ({
 
         {/* Right: region (fixed label for single-region account, or multiselect dropdown) - hidden on administration */}
         <div className="hidden shrink-0 items-center gap-1 md:flex md:ml-auto">
-          {currentSection !== 'administration' && (
+          {currentSection !== 'administration' && !hideRegionSelector && (
             fixedRegion != null ? (
               <div
                 className={cn(
@@ -401,7 +404,7 @@ const Navbar01 = ({
                 );
               })}
               <div className="border-t border-border pt-4 mt-4">
-                {currentSection !== 'administration' && (
+                {currentSection !== 'administration' && !hideRegionSelector && (
                   <>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Region</p>
                     {fixedRegion != null ? (

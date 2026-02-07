@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { NodeTypeBadge } from '@/components/ui/node-type-badge';
 import { SelectConfigurationModal } from './select-configuration-modal';
 import { toast } from 'sonner';
 
@@ -94,7 +95,7 @@ function SectionRow({
             size={18}
             className="text-muted-foreground shrink-0"
           />
-          {section.deviceType}
+          <NodeTypeBadge type={section.deviceType} />
         </button>
       </TableCell>
       <TableCell className="px-4 py-3 tabular-nums">{section.versions.length}</TableCell>

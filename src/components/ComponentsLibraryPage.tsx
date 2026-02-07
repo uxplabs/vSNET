@@ -71,6 +71,8 @@ import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Kbd, KbdGroup } from './ui/kbd';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from './ui/empty';
+import { Icon } from './Icon';
+import { StatCard } from './ui/stat-card';
 import {
   HoverCard,
   HoverCardContent,
@@ -93,7 +95,6 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Spinner } from './ui/spinner';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
-import { Icon } from './Icon';
 import { DeviceStatus } from './ui/device-status';
 import { cn } from '@/lib/utils';
 
@@ -147,6 +148,7 @@ const NAV_SECTIONS = [
     title: 'Layout',
     items: [
       { id: 'card', label: 'Card' },
+      { id: 'metric-card', label: 'Stat Card' },
       { id: 'accordion', label: 'Accordion' },
       { id: 'collapsible', label: 'Collapsible' },
       { id: 'separator', label: 'Separator' },
@@ -826,6 +828,28 @@ function ComponentsLibraryPage() {
                     <p className="text-sm text-muted-foreground">Card content area.</p>
                   </CardContent>
                 </Card>
+              </ComponentCard>
+
+              {/* Stat Card (Tailwind UI pattern) */}
+              <ComponentCard id="metric-card" title="Stat Card" description="Tailwind UI stats pattern with semantic dl/dt/dd">
+                <div className="space-y-4">
+                  <StatCard
+                    name="Total Revenue"
+                    value="$45,231"
+                    icon={<Icon name="attach_money" size={16} />}
+                    change="20.1%"
+                    changeDirection="up"
+                    changeLabel="from last month"
+                  />
+                  <StatCard
+                    name="Active Users"
+                    value="2,350"
+                    icon={<Icon name="group" size={16} />}
+                    change="5%"
+                    changeDirection="down"
+                    changeLabel="from last week"
+                  />
+                </div>
               </ComponentCard>
 
               {/* Accordion */}

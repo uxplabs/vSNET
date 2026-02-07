@@ -26,7 +26,7 @@ const FigmaMCP: React.FC = () => {
       setAccessToken(savedToken);
       figmaService.setAccessToken(savedToken);
     }
-    // Pre-fill default Figma file (e.g. vSNET Design System)
+    // Pre-fill default Figma file (e.g. AMS Design System)
     const defaultFileKey = import.meta.env.VITE_FIGMA_FILE_KEY;
     if (defaultFileKey) {
       setFileKey(defaultFileKey);

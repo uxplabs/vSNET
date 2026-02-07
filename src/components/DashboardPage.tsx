@@ -1,13 +1,12 @@
 import React, { useState, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
 import { Navbar01 } from './navbar-01';
 import { Icon } from './Icon';
-import { ChartCard } from './ChartCard';
+import { StatCard } from './ui/stat-card';
 import { RegionsDataTable, getRegionRow, getAggregatedRegionData } from './regions-table';
 
 const RegionsMap = lazy(() => import('./regions-map').then((m) => ({ default: m.RegionsMap })));
 const DashboardAlarmsTab = lazy(() => import('./DashboardAlarmsTab').then((m) => ({ default: m.DashboardAlarmsTab })));
 const DashboardCapacityTab = lazy(() => import('./DashboardCapacityTab').then((m) => ({ default: m.DashboardCapacityTab })));
-import { TrendBadge } from './TrendBadge';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
 
@@ -34,7 +33,7 @@ const ALL_DEVICES = { total: 500, connected: 342, disconnected: 12, kpiSyncError
 const ALL_RADIO = { total: 248, connected: 228, disconnected: 20, connectedFree: 140, connectedUsed: 88, disconnectedFree: 12, disconnectedUsed: 8 };
 const ALL_ALARMS = { critical: 11, major: 14, minor: 10 };
 
-function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regions, onRegionChange, onRegionsChange, fixedRegion }: DashboardPageProps) {
+function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions, onRegionChange, onRegionsChange, fixedRegion }: DashboardPageProps) {
   const alarmsTableRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<string>(DASHBOARD_TABS[0].value);
   const [alarmsSeverityFilter, setAlarmsSeverityFilter] = useState<string>('All');
@@ -145,58 +144,10 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
                       </div>
                     )}
                     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                      <ChartCard
-                        title="Total"
-                        kpiValue={overviewData.devices.total}
-                        kpiIcon={<Icon name="devices" size={36} className="text-muted-foreground" />}
-                        trendBadge={<TrendBadge direction="up">↑ 12%</TrendBadge>}
-                        sparkLineData={[
-                          { name: '1', value: Math.round(overviewData.devices.total * 0.93) },
-                          { name: '2', value: Math.round(overviewData.devices.total * 0.9) },
-                          { name: '3', value: Math.round(overviewData.devices.total * 0.96) },
-                          { name: '4', value: Math.round(overviewData.devices.total * 0.92) },
-                          { name: '5', value: overviewData.devices.total },
-                        ]}
-                      />
-                      <ChartCard
-                        title="Connected"
-                        kpiValue={overviewData.devices.connected}
-                        kpiIcon={<Icon name="link" size={36} className="text-emerald-600 dark:text-emerald-500" />}
-                        trendBadge={<TrendBadge direction="up">↑ 8%</TrendBadge>}
-                        sparkLineData={[
-                          { name: '1', value: Math.round(overviewData.devices.connected * 0.96) },
-                          { name: '2', value: Math.round(overviewData.devices.connected * 0.98) },
-                          { name: '3', value: Math.round(overviewData.devices.connected * 0.93) },
-                          { name: '4', value: Math.round(overviewData.devices.connected * 0.99) },
-                          { name: '5', value: overviewData.devices.connected },
-                        ]}
-                      />
-                      <ChartCard
-                        title="Disconnected"
-                        kpiValue={overviewData.devices.disconnected}
-                        kpiIcon={<Icon name="link_off" size={36} className="text-destructive" />}
-                        trendBadge={<TrendBadge direction="down">↓ 3%</TrendBadge>}
-                        sparkLineData={[
-                          { name: '1', value: overviewData.devices.disconnected + 3 },
-                          { name: '2', value: overviewData.devices.disconnected + 6 },
-                          { name: '3', value: overviewData.devices.disconnected + 2 },
-                          { name: '4', value: overviewData.devices.disconnected + 4 },
-                          { name: '5', value: overviewData.devices.disconnected },
-                        ]}
-                      />
-                      <ChartCard
-                        title="KPI sync error"
-                        kpiValue={overviewData.devices.kpiSyncErrors}
-                        kpiIcon={<Icon name="sync_problem" size={36} className="text-warning" />}
-                        trendBadge={<TrendBadge direction="down">↓ 2</TrendBadge>}
-                        sparkLineData={[
-                          { name: '1', value: overviewData.devices.kpiSyncErrors + 4 },
-                          { name: '2', value: overviewData.devices.kpiSyncErrors + 2 },
-                          { name: '3', value: overviewData.devices.kpiSyncErrors + 6 },
-                          { name: '4', value: overviewData.devices.kpiSyncErrors + 1 },
-                          { name: '5', value: overviewData.devices.kpiSyncErrors },
-                        ]}
-                      />
+                      <StatCard name="Total" value={overviewData.devices.total} icon={<Icon name="devices" size={16} />} change="12%" changeDirection="up" changeLabel="past 24h" sparkline={[{ value: Math.round(overviewData.devices.total * 0.93) }, { value: Math.round(overviewData.devices.total * 0.9) }, { value: Math.round(overviewData.devices.total * 0.96) }, { value: Math.round(overviewData.devices.total * 0.92) }, { value: overviewData.devices.total }]} />
+                      <StatCard name="Connected" value={overviewData.devices.connected} icon={<Icon name="link" size={16} />} change="8%" changeDirection="up" changeLabel="past 24h" sparkline={[{ value: Math.round(overviewData.devices.connected * 0.96) }, { value: Math.round(overviewData.devices.connected * 0.98) }, { value: Math.round(overviewData.devices.connected * 0.93) }, { value: Math.round(overviewData.devices.connected * 0.99) }, { value: overviewData.devices.connected }]} sparklineColor="var(--success)" />
+                      <StatCard name="Disconnected" value={overviewData.devices.disconnected} icon={<Icon name="link_off" size={16} />} change="3%" changeDirection="down" changeLabel="past 24h" sparkline={[{ value: overviewData.devices.disconnected + 3 }, { value: overviewData.devices.disconnected + 6 }, { value: overviewData.devices.disconnected + 2 }, { value: overviewData.devices.disconnected + 4 }, { value: overviewData.devices.disconnected }]} sparklineColor="var(--destructive)" />
+                      <StatCard name="KPI sync error" value={overviewData.devices.kpiSyncErrors} icon={<Icon name="sync_problem" size={16} />} change="2" changeDirection="down" changeLabel="past 24h" sparkline={[{ value: overviewData.devices.kpiSyncErrors + 4 }, { value: overviewData.devices.kpiSyncErrors + 2 }, { value: overviewData.devices.kpiSyncErrors + 6 }, { value: overviewData.devices.kpiSyncErrors + 1 }, { value: overviewData.devices.kpiSyncErrors }]} sparklineColor="var(--warning)" />
                     </div>
                   </section>
                   <section>
@@ -205,42 +156,9 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
                       Radio nodes
                     </h2>
                     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                      <ChartCard
-                        title="Total"
-                        kpiValue={overviewData.radio.total}
-                        kpiIcon={<Icon name="device_hub" size={36} className="text-muted-foreground" />}
-                        sparkLineData={[
-                          { name: '1', value: Math.round(overviewData.radio.total * 0.92) },
-                          { name: '2', value: Math.round(overviewData.radio.total * 0.94) },
-                          { name: '3', value: Math.round(overviewData.radio.total * 0.9) },
-                          { name: '4', value: Math.round(overviewData.radio.total * 0.96) },
-                          { name: '5', value: overviewData.radio.total },
-                        ]}
-                      />
-                      <ChartCard
-                        title="Connected"
-                        kpiValue={overviewData.radio.connected}
-                        kpiIcon={<Icon name="link" size={36} className="text-emerald-600 dark:text-emerald-500" />}
-                        sparkLineData={[
-                          { name: '1', value: Math.round(overviewData.radio.connected * 0.96) },
-                          { name: '2', value: Math.round(overviewData.radio.connected * 0.98) },
-                          { name: '3', value: Math.round(overviewData.radio.connected * 0.94) },
-                          { name: '4', value: Math.round(overviewData.radio.connected * 0.99) },
-                          { name: '5', value: overviewData.radio.connected },
-                        ]}
-                      />
-                      <ChartCard
-                        title="Disconnected"
-                        kpiValue={overviewData.radio.disconnected}
-                        kpiIcon={<Icon name="link_off" size={36} className="text-destructive" />}
-                        sparkLineData={[
-                          { name: '1', value: overviewData.radio.disconnected + 3 },
-                          { name: '2', value: overviewData.radio.disconnected + 1 },
-                          { name: '3', value: overviewData.radio.disconnected + 4 },
-                          { name: '4', value: overviewData.radio.disconnected + 2 },
-                          { name: '5', value: overviewData.radio.disconnected },
-                        ]}
-                      />
+                      <StatCard name="Total" value={overviewData.radio.total} icon={<Icon name="device_hub" size={16} />} change="5%" changeDirection="up" changeLabel="past 24h" sparkline={[{ value: Math.round(overviewData.radio.total * 0.92) }, { value: Math.round(overviewData.radio.total * 0.94) }, { value: Math.round(overviewData.radio.total * 0.9) }, { value: Math.round(overviewData.radio.total * 0.96) }, { value: overviewData.radio.total }]} />
+                      <StatCard name="Connected" value={overviewData.radio.connected} icon={<Icon name="link" size={16} />} change="4%" changeDirection="up" changeLabel="past 24h" sparkline={[{ value: Math.round(overviewData.radio.connected * 0.96) }, { value: Math.round(overviewData.radio.connected * 0.98) }, { value: Math.round(overviewData.radio.connected * 0.94) }, { value: Math.round(overviewData.radio.connected * 0.99) }, { value: overviewData.radio.connected }]} sparklineColor="var(--success)" />
+                      <StatCard name="Disconnected" value={overviewData.radio.disconnected} icon={<Icon name="link_off" size={16} />} change="1" changeDirection="down" changeLabel="past 24h" sparkline={[{ value: overviewData.radio.disconnected + 3 }, { value: overviewData.radio.disconnected + 1 }, { value: overviewData.radio.disconnected + 4 }, { value: overviewData.radio.disconnected + 2 }, { value: overviewData.radio.disconnected }]} sparklineColor="var(--destructive)" />
                     </div>
                   </section>
                   <section>
@@ -249,45 +167,9 @@ function DashboardPage({ appName = 'vSNET', onSignOut, onNavigate, region, regio
                       Alarms
                     </h2>
                     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                      <ChartCard
-                        title="Critical"
-                        kpiValue={overviewData.alarms.critical}
-                        kpiIcon={<Icon name="error" size={48} className="text-destructive" />}
-                        trendBadge={<TrendBadge direction="up">↑ 1</TrendBadge>}
-                        sparkLineData={[
-                          { name: '1', value: overviewData.alarms.critical + 1 },
-                          { name: '2', value: Math.max(0, overviewData.alarms.critical - 1) },
-                          { name: '3', value: overviewData.alarms.critical + 2 },
-                          { name: '4', value: Math.max(0, overviewData.alarms.critical - 2) },
-                          { name: '5', value: overviewData.alarms.critical },
-                        ]}
-                      />
-                      <ChartCard
-                        title="Major"
-                        kpiValue={overviewData.alarms.major}
-                        kpiIcon={<Icon name="error_outline" size={48} className="text-warning" />}
-                        trendBadge={<TrendBadge direction="down">↓ 2</TrendBadge>}
-                        sparkLineData={[
-                          { name: '1', value: overviewData.alarms.major + 2 },
-                          { name: '2', value: overviewData.alarms.major + 4 },
-                          { name: '3', value: overviewData.alarms.major - 1 },
-                          { name: '4', value: overviewData.alarms.major + 3 },
-                          { name: '5', value: overviewData.alarms.major },
-                        ]}
-                      />
-                      <ChartCard
-                        title="Minor"
-                        kpiValue={overviewData.alarms.minor}
-                        kpiIcon={<Icon name="warning" size={48} className="text-warning" />}
-                        trendBadge={<TrendBadge direction="up">↑ 5</TrendBadge>}
-                        sparkLineData={[
-                          { name: '1', value: overviewData.alarms.minor - 3 },
-                          { name: '2', value: overviewData.alarms.minor + 2 },
-                          { name: '3', value: overviewData.alarms.minor - 6 },
-                          { name: '4', value: overviewData.alarms.minor - 2 },
-                          { name: '5', value: overviewData.alarms.minor },
-                        ]}
-                      />
+                      <StatCard name="Critical" value={overviewData.alarms.critical} icon={<Icon name="error" size={16} className="text-destructive" />} change="1" changeDirection="up" changeLabel="past 24h" sparkline={[{ value: overviewData.alarms.critical + 1 }, { value: Math.max(0, overviewData.alarms.critical - 1) }, { value: overviewData.alarms.critical + 2 }, { value: Math.max(0, overviewData.alarms.critical - 2) }, { value: overviewData.alarms.critical }]} sparklineColor="var(--destructive)" />
+                      <StatCard name="Major" value={overviewData.alarms.major} icon={<Icon name="error_outline" size={16} className="text-warning" />} change="2" changeDirection="down" changeLabel="past 24h" sparkline={[{ value: overviewData.alarms.major + 2 }, { value: overviewData.alarms.major + 4 }, { value: overviewData.alarms.major - 1 }, { value: overviewData.alarms.major + 3 }, { value: overviewData.alarms.major }]} sparklineColor="var(--warning)" />
+                      <StatCard name="Minor" value={overviewData.alarms.minor} icon={<Icon name="warning" size={16} className="text-warning" />} change="5" changeDirection="up" changeLabel="past 24h" sparkline={[{ value: overviewData.alarms.minor - 3 }, { value: overviewData.alarms.minor + 2 }, { value: overviewData.alarms.minor - 6 }, { value: overviewData.alarms.minor - 2 }, { value: overviewData.alarms.minor }]} sparklineColor="var(--warning)" />
                     </div>
                   </section>
                   <section>

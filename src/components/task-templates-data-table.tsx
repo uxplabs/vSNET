@@ -7,6 +7,7 @@ import { SortableHeader } from '@/components/ui/sortable-header';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/Icon';
+import { NodeTypeBadge } from '@/components/ui/node-type-badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,7 +82,7 @@ const columns: ColumnDef<TaskTemplateRow>[] = [
   {
     accessorKey: 'nodeType',
     header: ({ column }) => <SortableHeader column={column}>Node type</SortableHeader>,
-    cell: ({ row }) => row.getValue('nodeType') as string,
+    cell: ({ row }) => <NodeTypeBadge type={row.getValue('nodeType') as string} />,
   },
   {
     id: 'actions',

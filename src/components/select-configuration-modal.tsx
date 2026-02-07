@@ -20,6 +20,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { NodeTypeBadge } from '@/components/ui/node-type-badge';
 
 interface ConfigParameter {
   id: string;
@@ -128,9 +129,7 @@ export function SelectConfigurationModal({
         <SheetHeader className="px-6 py-4 border-b shrink-0">
           <SheetTitle>Select configuration</SheetTitle>
           <div className="flex items-center gap-2 pt-1">
-            <Badge variant="secondary" className="font-normal">
-              {deviceType}
-            </Badge>
+            <NodeTypeBadge type={deviceType} />
             <span className="text-sm text-muted-foreground">{version}</span>
           </div>
         </SheetHeader>

@@ -56,7 +56,7 @@ export interface AdministrationPageProps {
 }
 
 export default function AdministrationPage({
-  appName = 'vSNET',
+  appName = 'AMS',
   onSignOut,
   onNavigate,
   region,

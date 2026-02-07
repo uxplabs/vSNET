@@ -2,12 +2,11 @@
 
 import * as React from 'react';
 import { Icon } from './Icon';
-import { ChartCard } from './ChartCard';
+import { StatCard } from './ui/stat-card';
 import { DisconnectedDevicesCard } from './disconnected-devices-card';
 import { DisconnectedRadioNodesCard } from './disconnected-radio-nodes-card';
 import { TopOffendersCard } from './top-offenders-card';
 import { AlarmsTableCard } from './alarms-table-card';
-import { TrendBadge } from './TrendBadge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 const EventsDataTable = React.lazy(() =>
@@ -39,72 +38,39 @@ export function DashboardAlarmsTab({
     <div className="space-y-8">
       <section>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          <div
-            role="button"
-            tabIndex={0}
+          <StatCard
+            name="Critical"
+            value={overviewData.alarms.critical}
+            icon={<Icon name="error" size={16} className="text-destructive" />}
+            change="1"
+            changeDirection="up"
+            changeLabel="past 24h"
             onClick={() => scrollToAlarmsAndFilter('Critical')}
-            onKeyDown={(e) => e.key === 'Enter' && scrollToAlarmsAndFilter('Critical')}
-            className="cursor-pointer rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <ChartCard
-              title="Critical"
-              className="hover:bg-muted/40"
-              kpiValue={overviewData.alarms.critical}
-              kpiIcon={<Icon name="error" size={48} className="text-destructive" />}
-              trendBadge={<TrendBadge direction="up">↑ 1</TrendBadge>}
-              sparkLineData={[
-                { name: '1', value: overviewData.alarms.critical + 1 },
-                { name: '2', value: Math.max(0, overviewData.alarms.critical - 1) },
-                { name: '3', value: overviewData.alarms.critical + 2 },
-                { name: '4', value: Math.max(0, overviewData.alarms.critical - 2) },
-                { name: '5', value: overviewData.alarms.critical },
-              ]}
-            />
-          </div>
-          <div
-            role="button"
-            tabIndex={0}
+            sparkline={[{ value: overviewData.alarms.critical + 1 }, { value: Math.max(0, overviewData.alarms.critical - 1) }, { value: overviewData.alarms.critical + 2 }, { value: Math.max(0, overviewData.alarms.critical - 2) }, { value: overviewData.alarms.critical }]}
+            sparklineColor="var(--destructive)"
+          />
+          <StatCard
+            name="Major"
+            value={overviewData.alarms.major}
+            icon={<Icon name="error_outline" size={16} className="text-warning" />}
+            change="2"
+            changeDirection="down"
+            changeLabel="past 24h"
             onClick={() => scrollToAlarmsAndFilter('Major')}
-            onKeyDown={(e) => e.key === 'Enter' && scrollToAlarmsAndFilter('Major')}
-            className="cursor-pointer rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <ChartCard
-              title="Major"
-              className="hover:bg-muted/40"
-              kpiValue={overviewData.alarms.major}
-              kpiIcon={<Icon name="error_outline" size={48} className="text-warning" />}
-              trendBadge={<TrendBadge direction="down">↓ 2</TrendBadge>}
-              sparkLineData={[
-                { name: '1', value: overviewData.alarms.major + 2 },
-                { name: '2', value: overviewData.alarms.major + 4 },
-                { name: '3', value: overviewData.alarms.major - 1 },
-                { name: '4', value: overviewData.alarms.major + 3 },
-                { name: '5', value: overviewData.alarms.major },
-              ]}
-            />
-          </div>
-          <div
-            role="button"
-            tabIndex={0}
+            sparkline={[{ value: overviewData.alarms.major + 2 }, { value: overviewData.alarms.major + 4 }, { value: overviewData.alarms.major - 1 }, { value: overviewData.alarms.major + 3 }, { value: overviewData.alarms.major }]}
+            sparklineColor="var(--warning)"
+          />
+          <StatCard
+            name="Minor"
+            value={overviewData.alarms.minor}
+            icon={<Icon name="warning" size={16} className="text-warning" />}
+            change="5"
+            changeDirection="up"
+            changeLabel="past 24h"
             onClick={() => scrollToAlarmsAndFilter('Minor')}
-            onKeyDown={(e) => e.key === 'Enter' && scrollToAlarmsAndFilter('Minor')}
-            className="cursor-pointer rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <ChartCard
-              title="Minor"
-              className="hover:bg-muted/40"
-              kpiValue={overviewData.alarms.minor}
-              kpiIcon={<Icon name="warning" size={48} className="text-warning" />}
-              trendBadge={<TrendBadge direction="up">↑ 5</TrendBadge>}
-              sparkLineData={[
-                { name: '1', value: overviewData.alarms.minor - 3 },
-                { name: '2', value: overviewData.alarms.minor + 2 },
-                { name: '3', value: overviewData.alarms.minor - 6 },
-                { name: '4', value: overviewData.alarms.minor - 2 },
-                { name: '5', value: overviewData.alarms.minor },
-              ]}
-            />
-          </div>
+            sparkline={[{ value: overviewData.alarms.minor - 3 }, { value: overviewData.alarms.minor + 2 }, { value: overviewData.alarms.minor - 6 }, { value: overviewData.alarms.minor - 2 }, { value: overviewData.alarms.minor }]}
+            sparklineColor="var(--warning)"
+          />
         </div>
       </section>
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -19,7 +19,7 @@ interface DesignSystemPageProps {
 }
 
 export default function DesignSystemPage({
-  appName = 'vSNET',
+  appName = 'AMS',
   onSignOut,
   onNavigate,
   region,
@@ -44,7 +44,7 @@ export default function DesignSystemPage({
       <main className="flex-1 overflow-auto px-4 py-6 md:px-6 lg:px-8 space-y-6">
         <div>
           <p className="text-sm text-muted-foreground uppercase tracking-[0.3em] mb-2">Design system</p>
-          <h1 className="text-3xl font-semibold tracking-tight">vSNET Components & Tokens</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">AMS Components & Tokens</h1>
           <p className="text-muted-foreground mt-2 max-w-3xl">
             Comprehensive reference for UI components, design tokens, and typography. Use this documentation to maintain consistency across the application.
           </p>
