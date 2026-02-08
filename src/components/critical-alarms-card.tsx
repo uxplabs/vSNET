@@ -38,6 +38,7 @@ import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { DeviceLink } from '@/components/ui/device-link';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
+import { ALARMS_DATA } from '@/components/alarms-data-table';
 
 export interface CriticalAlarmRow {
   id: string;
@@ -48,32 +49,16 @@ export interface CriticalAlarmRow {
 
 const REGIONS = ['All regions', ...NORTH_AMERICAN_REGIONS] as const;
 
-const CRITICAL_ALARMS_DATA: CriticalAlarmRow[] = [
-  { id: '1', device: 'eNB-ATL-002', region: 'Americas', timeOccurred: '2 min ago' },
-  { id: '2', device: 'RN-LON-001', region: 'EMEA', timeOccurred: '4 min ago' },
-  { id: '3', device: 'eNB-SIN-003', region: 'APAC', timeOccurred: '5 min ago' },
-  { id: '4', device: 'eNB-NYC-001', region: 'Americas', timeOccurred: '7 min ago' },
-  { id: '5', device: 'RN-FRA-003', region: 'EMEA', timeOccurred: '9 min ago' },
-  { id: '6', device: 'RN-TOK-001', region: 'APAC', timeOccurred: '11 min ago' },
-  { id: '7', device: 'eNB-CHI-002', region: 'Americas', timeOccurred: '14 min ago' },
-  { id: '8', device: 'eNB-MUC-002', region: 'EMEA', timeOccurred: '16 min ago' },
-  { id: '9', device: 'RN-HKG-002', region: 'APAC', timeOccurred: '18 min ago' },
-  { id: '10', device: 'RN-ATL-005', region: 'Americas', timeOccurred: '21 min ago' },
-  { id: '11', device: 'eNB-AMS-001', region: 'EMEA', timeOccurred: '23 min ago' },
-  { id: '12', device: 'eNB-SYD-001', region: 'APAC', timeOccurred: '26 min ago' },
-  { id: '13', device: 'eNB-SFO-003', region: 'Americas', timeOccurred: '28 min ago' },
-  { id: '14', device: 'RN-MAD-001', region: 'EMEA', timeOccurred: '32 min ago' },
-  { id: '15', device: 'RN-SIN-005', region: 'APAC', timeOccurred: '35 min ago' },
-  { id: '16', device: 'eNB-DAL-001', region: 'Americas', timeOccurred: '42 min ago' },
-  { id: '17', device: 'eNB-BER-002', region: 'EMEA', timeOccurred: '48 min ago' },
-  { id: '18', device: 'RN-SEL-001', region: 'APAC', timeOccurred: '55 min ago' },
-  { id: '19', device: 'RN-NYC-004', region: 'Americas', timeOccurred: '1 hour ago' },
-  { id: '20', device: 'eNB-PAR-002', region: 'EMEA', timeOccurred: '1 hour ago' },
-  { id: '21', device: 'eNB-MEL-001', region: 'APAC', timeOccurred: '1 hour ago' },
-  { id: '22', device: 'eNB-HOU-002', region: 'Americas', timeOccurred: '1 hour ago' },
-  { id: '23', device: 'RN-LON-004', region: 'EMEA', timeOccurred: '2 hours ago' },
-  { id: '24', device: 'RN-TOK-003', region: 'APAC', timeOccurred: '2 hours ago' },
-];
+const TIME_AGO_CRITICAL = ['2 min ago', '4 min ago', '7 min ago', '9 min ago', '12 min ago', '15 min ago', '18 min ago', '22 min ago', '26 min ago', '30 min ago', '35 min ago', '42 min ago', '48 min ago', '55 min ago', '1 hour ago', '1 hour ago', '2 hours ago', '2 hours ago', '3 hours ago', '3 hours ago'];
+
+const CRITICAL_ALARMS_DATA: CriticalAlarmRow[] = ALARMS_DATA
+  .filter((a) => a.severity === 'Critical')
+  .map((a, i) => ({
+    id: a.id,
+    device: a.source,
+    region: a.region,
+    timeOccurred: TIME_AGO_CRITICAL[i % TIME_AGO_CRITICAL.length],
+  }));
 
 const columns: ColumnDef<CriticalAlarmRow>[] = [
   {

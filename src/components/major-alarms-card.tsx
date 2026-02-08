@@ -38,6 +38,7 @@ import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { DeviceLink } from '@/components/ui/device-link';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
+import { ALARMS_DATA } from '@/components/alarms-data-table';
 
 export interface MajorAlarmRow {
   id: string;
@@ -48,44 +49,16 @@ export interface MajorAlarmRow {
 
 const REGIONS = ['All regions', ...NORTH_AMERICAN_REGIONS] as const;
 
-const MAJOR_ALARMS_DATA: MajorAlarmRow[] = [
-  { id: '1', device: 'eNB-NYC-003', region: 'Americas', timeOccurred: '6 min ago' },
-  { id: '2', device: 'RN-FRA-002', region: 'EMEA', timeOccurred: '10 min ago' },
-  { id: '3', device: 'eNB-TOK-002', region: 'APAC', timeOccurred: '13 min ago' },
-  { id: '4', device: 'RN-ATL-004', region: 'Americas', timeOccurred: '15 min ago' },
-  { id: '5', device: 'eNB-MUC-001', region: 'EMEA', timeOccurred: '19 min ago' },
-  { id: '6', device: 'RN-SIN-003', region: 'APAC', timeOccurred: '22 min ago' },
-  { id: '7', device: 'eNB-LAX-001', region: 'Americas', timeOccurred: '24 min ago' },
-  { id: '8', device: 'RN-BER-003', region: 'EMEA', timeOccurred: '27 min ago' },
-  { id: '9', device: 'RN-HKG-004', region: 'APAC', timeOccurred: '30 min ago' },
-  { id: '10', device: 'eNB-PHO-002', region: 'Americas', timeOccurred: '33 min ago' },
-  { id: '11', device: 'eNB-AMS-003', region: 'EMEA', timeOccurred: '36 min ago' },
-  { id: '12', device: 'eNB-SYD-003', region: 'APAC', timeOccurred: '40 min ago' },
-  { id: '13', device: 'RN-CHI-002', region: 'Americas', timeOccurred: '44 min ago' },
-  { id: '14', device: 'RN-MUC-004', region: 'EMEA', timeOccurred: '50 min ago' },
-  { id: '15', device: 'eNB-SEL-002', region: 'APAC', timeOccurred: '52 min ago' },
-  { id: '16', device: 'eNB-SEA-001', region: 'Americas', timeOccurred: '58 min ago' },
-  { id: '17', device: 'eNB-PAR-004', region: 'EMEA', timeOccurred: '1 hour ago' },
-  { id: '18', device: 'RN-MEL-002', region: 'APAC', timeOccurred: '1 hour ago' },
-  { id: '19', device: 'RN-DEN-001', region: 'Americas', timeOccurred: '1 hour ago' },
-  { id: '20', device: 'eNB-MAD-002', region: 'EMEA', timeOccurred: '1 hour ago' },
-  { id: '21', device: 'eNB-BKK-001', region: 'APAC', timeOccurred: '1 hour ago' },
-  { id: '22', device: 'eNB-MIA-002', region: 'Americas', timeOccurred: '1 hour ago' },
-  { id: '23', device: 'RN-AMS-002', region: 'EMEA', timeOccurred: '2 hours ago' },
-  { id: '24', device: 'RN-SYD-002', region: 'APAC', timeOccurred: '2 hours ago' },
-  { id: '25', device: 'RN-BOS-001', region: 'Americas', timeOccurred: '2 hours ago' },
-  { id: '26', device: 'eNB-VIE-001', region: 'EMEA', timeOccurred: '2 hours ago' },
-  { id: '27', device: 'eNB-TPE-001', region: 'APAC', timeOccurred: '2 hours ago' },
-  { id: '28', device: 'eNB-WAS-001', region: 'Americas', timeOccurred: '2 hours ago' },
-  { id: '29', device: 'RN-ZUR-001', region: 'EMEA', timeOccurred: '3 hours ago' },
-  { id: '30', device: 'RN-KUL-002', region: 'APAC', timeOccurred: '3 hours ago' },
-  { id: '31', device: 'eNB-MIN-001', region: 'Americas', timeOccurred: '3 hours ago' },
-  { id: '32', device: 'eNB-COP-001', region: 'EMEA', timeOccurred: '3 hours ago' },
-  { id: '33', device: 'RN-JAK-001', region: 'APAC', timeOccurred: '3 hours ago' },
-  { id: '34', device: 'RN-SAN-002', region: 'Americas', timeOccurred: '4 hours ago' },
-  { id: '35', device: 'eNB-OSL-001', region: 'EMEA', timeOccurred: '4 hours ago' },
-  { id: '36', device: 'eNB-MNL-001', region: 'APAC', timeOccurred: '4 hours ago' },
-];
+const TIME_AGO_MAJOR = ['6 min ago', '10 min ago', '13 min ago', '17 min ago', '20 min ago', '24 min ago', '28 min ago', '33 min ago', '38 min ago', '42 min ago', '47 min ago', '52 min ago', '58 min ago', '1 hour ago', '1 hour ago', '1.5 hours ago', '2 hours ago', '2 hours ago', '3 hours ago', '3 hours ago', '4 hours ago'];
+
+const MAJOR_ALARMS_DATA: MajorAlarmRow[] = ALARMS_DATA
+  .filter((a) => a.severity === 'Major')
+  .map((a, i) => ({
+    id: a.id,
+    device: a.source,
+    region: a.region,
+    timeOccurred: TIME_AGO_MAJOR[i % TIME_AGO_MAJOR.length],
+  }));
 
 const columns: ColumnDef<MajorAlarmRow>[] = [
   {

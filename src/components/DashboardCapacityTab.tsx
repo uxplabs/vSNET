@@ -39,7 +39,7 @@ const STORAGE_DATA = [
   { title: 'KPI database', used: 268, total: 384 },
 ] as const;
 
-const REGISTERED_DEVICE_CAPACITY = 650;
+const REGISTERED_DEVICE_CAPACITY = 750;
 
 export function DashboardCapacityTab({ overviewData }: DashboardCapacityTabProps) {
   const registeredDevices = overviewData.devices.total;

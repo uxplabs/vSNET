@@ -69,9 +69,34 @@ export const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string
   None: { name: 'check_circle', className: 'text-muted-foreground' },
 };
 
-const DEVICE_PREFIXES = ['eNB-SEA', 'eNB-PDX', 'RN-PHX', 'eNB-SFO', 'RN-LAS', 'eNB-NYC', 'RN-DEN', 'eNB-CHI', 'RN-ATL', 'eNB-MIA', 'RN-SEA', 'eNB-PHX', 'RN-SFO', 'eNB-LAS', 'RN-NYC', 'eNB-DEN', 'RN-CHI', 'eNB-BOS', 'RN-MIA', 'eNB-AUS'];
-const TYPES = ['SN-LTE', 'SN-LTE', 'DAS', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'SN-LTE'];
-const STATUSES = ['Connected', 'Connected', 'Disconnected', 'Connected', 'In maintenance', 'Connected', 'Offline', 'Connected', 'Connected', 'Disconnected'];
+const DEVICE_PREFIXES = [
+  // Pacific Northwest
+  'eNB-SEA', 'eNB-PDX', 'RN-SEA',
+  // Northern California / Southern California
+  'eNB-SFO', 'RN-SFO', 'eNB-LAX',
+  // Desert Southwest
+  'RN-PHX', 'eNB-PHX', 'RN-LAS', 'eNB-LAS',
+  // Mountain West / Great Plains
+  'RN-DEN', 'eNB-DEN', 'eNB-SLC',
+  // Texas / Gulf Coast
+  'eNB-AUS', 'eNB-DAL', 'RN-HOU',
+  // Great Lakes / Midwest
+  'eNB-CHI', 'RN-CHI', 'eNB-DET',
+  // Northeast / Mid-Atlantic
+  'eNB-NYC', 'RN-NYC', 'eNB-PHL',
+  // New England / Eastern Canada
+  'eNB-BOS', 'RN-BOS',
+  // Southeast / Florida
+  'RN-ATL', 'eNB-ATL', 'eNB-MIA', 'RN-MIA',
+];
+const TYPES = ['SN-LTE', 'SN-LTE', 'DAS', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'CU', 'SN-LTE', 'RCP', 'SN-LTE'];
+// Deterministic pseudo-random status: ~72% Connected, ~10% Disconnected, ~18% In maintenance
+function getDeviceStatus(i: number): string {
+  const hash = ((i * 2654435761) >>> 0) % 100;
+  if (hash < 72) return 'Connected';
+  if (hash < 82) return 'Disconnected';
+  return 'In maintenance';
+}
 const ALARM_TYPES: Array<'Critical' | 'Major' | 'Minor' | 'None'> = ['None', 'Minor', 'Critical', 'Major', 'None', 'Minor', 'Critical', 'None', 'Major', 'Critical'];
 const CONFIG_STATUSES = ['Synchronized', 'Synchronized', 'Out of sync', 'Synchronized', 'Pending', 'Synchronized', 'Out of sync', 'Synchronized', 'Synchronized', 'Out of sync'];
 const VERSIONS = ['v3.0', 'v2.2', 'v2.1', 'v3.1', 'v2.2', 'v2.1', 'v2.2', 'v3.0', 'v3.1', 'v2.1'];
@@ -85,7 +110,7 @@ function generateDevices(count: number): DeviceRow[] {
     { count: 1, type: 'Major' }, { count: 6, type: 'Critical' },
   ];
   for (let i = 1; i <= count; i++) {
-    const pi = (i - 1) % 10;
+    const pi = (i - 1) % TYPES.length;
     const prefix = DEVICE_PREFIXES[(i - 1) % DEVICE_PREFIXES.length];
     const num = String(i).padStart(3, '0');
     const octet4 = ((i % 250) + 1).toString();
@@ -113,8 +138,8 @@ function generateDevices(count: number): DeviceRow[] {
     }
     const region = NORTH_AMERICAN_REGIONS[i % NORTH_AMERICAN_REGIONS.length];
     const deviceName = `${prefix}-${num}`;
-    const configMismatch = deviceName === 'RN-LAS-005' ? 24 : deviceName === 'eNB-SFO-004' ? 2 : undefined;
-    const status = deviceName === 'RN-LAS-005' ? 'Connected' : STATUSES[pi];
+    const configMismatch = deviceName === 'RN-LAS-005' ? 24 : deviceName === 'eNB-SFO-004' ? 2 : i % 11 === 0 ? Math.ceil(i / 7) : undefined;
+    const status = deviceName === 'RN-LAS-005' ? 'Connected' : getDeviceStatus(i);
     const configStatus = deviceName === 'RN-LAS-005' ? 'Synchronized' : CONFIG_STATUSES[pi];
     devices.push({
       id: String(i),
@@ -137,7 +162,7 @@ function generateDevices(count: number): DeviceRow[] {
   return devices;
 }
 
-export const DEVICES_DATA: DeviceRow[] = generateDevices(48);
+export const DEVICES_DATA: DeviceRow[] = generateDevices(587);
 
 export function getDeviceSidebarCounts(devices: DeviceRow[]) {
   const region = {

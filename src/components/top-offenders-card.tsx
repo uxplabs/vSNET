@@ -38,7 +38,7 @@ import { Button } from '@/components/ui/button';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { DeviceLink } from '@/components/ui/device-link';
 import { DeviceDrawer } from '@/components/device-drawer';
-import type { DeviceRow } from '@/components/devices-data-table';
+import { DEVICES_DATA, type DeviceRow } from '@/components/devices-data-table';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 function topOffenderToDeviceRow(row: TopOffenderRow): DeviceRow {
@@ -54,7 +54,7 @@ function topOffenderToDeviceRow(row: TopOffenderRow): DeviceRow {
     ipAddress: row.ipAddress,
     version: 'v2.2',
     deviceGroup: 'Radio access',
-    region: 'Pacific Northwest',
+    region: row.region,
     labels: [],
   };
 }
@@ -79,18 +79,21 @@ const ALARM_TYPE_ICON: Record<AlarmType, { name: string; className: string }> = 
   Minor: { name: 'warning', className: 'text-warning' },
 };
 
-const TOP_OFFENDERS_DATA: TopOffenderRow[] = [
-  { id: '1', device: 'eNB-ATL-002', region: 'Southeast', type: 'SN-LTE', status: 'Connected', alarms: 12, alarmType: 'Critical', configStatus: 'Synchronized', ipAddress: '10.12.1.42' },
-  { id: '2', device: 'RN-BOS-001', region: 'Northeast', type: 'SN-LTE', status: 'Connected', alarms: 9, alarmType: 'Major', configStatus: 'Synchronized', ipAddress: '10.24.2.101' },
-  { id: '3', device: 'eNB-SEA-003', region: 'Pacific Northwest', type: 'SN-LTE', status: 'Disconnected', alarms: 8, alarmType: 'Critical', configStatus: 'Synchronized', ipAddress: '10.36.1.88' },
-  { id: '4', device: 'eNB-NYC-001', region: 'Northeast', type: 'SN-LTE', status: 'Connected', alarms: 7, alarmType: 'Major', configStatus: 'Synchronized', ipAddress: '10.12.2.15' },
-  { id: '5', device: 'RN-PHX-003', region: 'Desert Southwest', type: 'SN-LTE', status: 'Disconnected', alarms: 6, alarmType: 'Minor', configStatus: 'Synchronized', ipAddress: '10.24.3.22' },
-  { id: '6', device: 'RN-CHI-001', region: 'Midwest', type: 'SN-LTE', status: 'Connected', alarms: 6, alarmType: 'Major', configStatus: 'Synchronized', ipAddress: '10.36.2.55' },
-  { id: '7', device: 'eNB-CHI-002', region: 'Midwest', type: 'SN-LTE', status: 'Connected', alarms: 5, alarmType: 'Minor', configStatus: 'Synchronized', ipAddress: '10.12.3.77' },
-  { id: '8', device: 'eNB-MIA-002', region: 'Southeast', type: 'SN-LTE', status: 'Disconnected', alarms: 5, alarmType: 'Critical', configStatus: 'Synchronized', ipAddress: '10.24.1.33' },
-  { id: '9', device: 'RN-DEN-002', region: 'Mountain West', type: 'SN-LTE', status: 'Disconnected', alarms: 4, alarmType: 'Minor', configStatus: 'Synchronized', ipAddress: '10.36.3.11' },
-  { id: '10', device: 'RN-ATL-005', region: 'Southeast', type: 'SN-LTE', status: 'Connected', alarms: 4, alarmType: 'Major', configStatus: 'Synchronized', ipAddress: '10.12.4.99' },
-];
+const TOP_OFFENDERS_DATA: TopOffenderRow[] = DEVICES_DATA
+  .filter((d) => d.alarms > 0)
+  .sort((a, b) => b.alarms - a.alarms)
+  .slice(0, 20)
+  .map((d) => ({
+    id: d.id,
+    device: d.device,
+    region: d.region,
+    type: d.type,
+    status: d.status,
+    alarms: d.alarms,
+    alarmType: d.alarmType as AlarmType,
+    configStatus: d.configStatus,
+    ipAddress: d.ipAddress,
+  }));
 
 function getColumns(onDeviceClick: (row: TopOffenderRow) => void): ColumnDef<TopOffenderRow>[] {
   return [

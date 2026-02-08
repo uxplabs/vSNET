@@ -28,6 +28,8 @@ import { SortableHeader } from '@/components/ui/sortable-header';
 import { TrendBadge } from '@/components/TrendBadge';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
+import { DEVICES_DATA } from '@/components/devices-data-table';
+
 export interface DisconnectedRadioNodeRow {
   id: string;
   radioNode: string;
@@ -35,16 +37,16 @@ export interface DisconnectedRadioNodeRow {
   timeOccurred: string;
 }
 
+const TIME_AGO_RN = ['3 min ago', '7 min ago', '12 min ago', '18 min ago', '25 min ago', '35 min ago', '50 min ago', '1 hour ago', '1.5 hours ago', '2 hours ago', '3 hours ago', '4.5 hours ago'];
 
-const DISCONNECTED_RADIO_NODES_DATA: DisconnectedRadioNodeRow[] = [
-  { id: '1', radioNode: 'RN-SEA-001', region: 'Pacific Northwest', timeOccurred: '5 min ago' },
-  { id: '2', radioNode: 'RN-PDX-003', region: 'Pacific Northwest', timeOccurred: '22 min ago' },
-  { id: '3', radioNode: 'RN-PHX-002', region: 'Desert Southwest', timeOccurred: '1 hour ago' },
-  { id: '4', radioNode: 'RN-LAS-001', region: 'Desert Southwest', timeOccurred: '2 hours ago' },
-  { id: '5', radioNode: 'RN-BOS-002', region: 'New England', timeOccurred: '18 min ago' },
-  { id: '6', radioNode: 'RN-NYC-002', region: 'Northeast', timeOccurred: '8 min ago' },
-  { id: '7', radioNode: 'RN-MIA-001', region: 'Southeast', timeOccurred: '55 min ago' },
-];
+const DISCONNECTED_RADIO_NODES_DATA: DisconnectedRadioNodeRow[] = DEVICES_DATA
+  .filter((d) => d.status === 'Disconnected')
+  .map((d, i) => ({
+    id: `rn-${d.id}`,
+    radioNode: d.device.startsWith('RN-') ? d.device : `RN-${d.device.split('-').slice(1).join('-')}`,
+    region: d.region,
+    timeOccurred: TIME_AGO_RN[i % TIME_AGO_RN.length],
+  }));
 
 const columns: ColumnDef<DisconnectedRadioNodeRow>[] = [
   {

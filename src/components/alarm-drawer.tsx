@@ -60,7 +60,7 @@ export interface AlarmDrawerProps {
   onNavigateToDevice?: (source: string) => void;
 }
 
-export function AlarmDrawer({ alarm, open, onOpenChange, allAlarms = [], tableAlarms = [], onSelectAlarm, onNavigateToDevice }: AlarmDrawerProps) {
+export function AlarmDrawer({ alarm, open, onOpenChange, allAlarms = [], tableAlarms = [], onSelectAlarm }: AlarmDrawerProps) {
   const [summaryValues, setSummaryValues] = React.useState(() => ({
     ticket: alarm?.ticket ?? '',
     owner: alarm?.owner ?? '',
@@ -117,13 +117,7 @@ export function AlarmDrawer({ alarm, open, onOpenChange, allAlarms = [], tableAl
                 <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                   <div className="flex flex-col gap-1">
                     <span className="text-muted-foreground">Device</span>
-                    <DeviceLink
-                      value={alarm.source}
-                      onClick={() => {
-                        onOpenChange(false);
-                        onNavigateToDevice?.(alarm.source);
-                      }}
-                    />
+                    <DeviceLink value={alarm.source} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-muted-foreground">Severity</span>

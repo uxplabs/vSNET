@@ -63,7 +63,7 @@ import {
 export interface DevicesPageProps {
   appName?: string;
   onSignOut?: () => void;
-  onNavigate?: (page: string, tab?: string) => void;
+  onNavigate?: (page: string, tab?: string, filters?: { statusFilter?: string; configStatusFilter?: string }) => void;
   mainTab?: string;
   onMainTabChange?: (tab: string) => void;
   region?: string;
@@ -72,6 +72,8 @@ export interface DevicesPageProps {
   onRegionsChange?: (regions: string[]) => void;
   fixedRegion?: string;
   onNavigateToDeviceDetail?: (device: any) => void;
+  initialStatusFilter?: string;
+  initialConfigStatusFilter?: string;
 }
 
 const STATUS_OPTIONS = ['Status', 'Connected', 'Disconnected', 'In maintenance', 'Offline'] as const;
@@ -104,16 +106,20 @@ type RegionOption = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' |
 type DeviceGroupOption = 'Core network' | 'Radio access' | 'Edge devices' | 'Test environment';
 
 
-function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabProp, onMainTabChange, region, regions, onRegionChange, onRegionsChange, fixedRegion, onNavigateToDeviceDetail }: DevicesPageProps) {
+function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabProp, onMainTabChange, region, regions, onRegionChange, onRegionsChange, fixedRegion, onNavigateToDeviceDetail, initialStatusFilter, initialConfigStatusFilter }: DevicesPageProps) {
   const [internalTab, setInternalTab] = useState('device');
   const mainTab = (mainTabProp ?? internalTab) || 'device';
   const handleMainTabChange = onMainTabChange ?? setInternalTab;
   const [selectedRegion, setSelectedRegion] = useState<RegionOption>('all');
   const [selectedGroup, setSelectedGroup] = useState<DeviceGroupOption | null>(null);
+
+  // Determine whether we're showing all regions (global "All" or no selection) and build the sidebar region list
+  const isAllRegions = !regions || regions.length === 0 || (regions.length === 1 && regions[0] === 'All');
+  const sidebarRegionList = isAllRegions ? [...NORTH_AMERICAN_REGIONS] : regions!;
   const [search, setSearch] = useState('');
   const [regionFilter, setRegionFilter] = useState<string>('Region');
-  const [statusFilter, setStatusFilter] = useState<string>('Status');
-  const [configStatusFilter, setConfigStatusFilter] = useState<string>('Config status');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter ?? 'Status');
+  const [configStatusFilter, setConfigStatusFilter] = useState<string>(initialConfigStatusFilter ?? 'Config status');
   const [typeFilter, setTypeFilter] = useState<string>('Type');
   const [versionFilter, setVersionFilter] = useState<string>('Version');
   const [alarmsFilter, setAlarmsFilter] = useState<string>('Alarms');
@@ -191,6 +197,22 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
     else if (selectedRegion === 'all' || selectedRegion === 'kpiSyncErrors') setStatusFilter('Status');
   }, [selectedRegion]);
 
+  // Sync external filter props (e.g. navigating from dashboard with a filter)
+  useEffect(() => {
+    if (initialStatusFilter && initialStatusFilter !== 'Status') {
+      setStatusFilter(initialStatusFilter);
+      if (initialStatusFilter === 'Disconnected') setSelectedRegion('disconnected');
+      else if (initialStatusFilter === 'In maintenance') setSelectedRegion('inMaintenance');
+      else setSelectedRegion('all');
+    }
+  }, [initialStatusFilter]);
+
+  useEffect(() => {
+    if (initialConfigStatusFilter && initialConfigStatusFilter !== 'Config status') {
+      setConfigStatusFilter(initialConfigStatusFilter);
+    }
+  }, [initialConfigStatusFilter]);
+
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
     if (value === 'Disconnected') setSelectedRegion('disconnected');
@@ -243,7 +265,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
           {/* Region – flat list (dashboard-01 style) */}
           <SidebarGroup>
             <SidebarGroupLabel>
-              {regions && regions.length > 1 ? (
+              {isAllRegions ? (
+                'All regions'
+              ) : regions && regions.length > 1 ? (
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -327,9 +351,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarGroupContent>
-                  {regions && regions.length > 1 ? (
+                  {isAllRegions || (regions && regions.length > 1) ? (
                     <>
-                      {regions.map((reg) => {
+                      {sidebarRegionList.map((reg) => {
                         const counts = deviceCountsByRegion[reg];
                         if (!counts) return null;
                         return (

@@ -31,7 +31,8 @@ import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { DeviceLink } from '@/components/ui/device-link';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { DeviceDrawer } from '@/components/device-drawer';
-import type { DeviceRow } from '@/components/devices-data-table';
+import { DEVICES_DATA, type DeviceRow } from '@/components/devices-data-table';
+
 export interface DisconnectedDeviceRow {
   id: string;
   device: string;
@@ -39,17 +40,16 @@ export interface DisconnectedDeviceRow {
   timeOccurred: string;
 }
 
+const TIME_AGO = ['2 min ago', '5 min ago', '8 min ago', '15 min ago', '22 min ago', '30 min ago', '45 min ago', '1 hour ago', '1.5 hours ago', '2 hours ago', '3 hours ago', '4 hours ago', '5 hours ago', '6 hours ago'];
 
-const DISCONNECTED_DEVICES_DATA: DisconnectedDeviceRow[] = [
-  { id: '1', device: 'eNB-SEA-001', region: 'Pacific Northwest', timeOccurred: '2 min ago' },
-  { id: '2', device: 'eNB-PDX-002', region: 'Pacific Northwest', timeOccurred: '15 min ago' },
-  { id: '3', device: 'eNB-PHX-001', region: 'Desert Southwest', timeOccurred: '1 hour ago' },
-  { id: '4', device: 'eNB-LAS-003', region: 'Desert Southwest', timeOccurred: '2 hours ago' },
-  { id: '5', device: 'eNB-BOS-001', region: 'New England', timeOccurred: '30 min ago' },
-  { id: '6', device: 'eNB-NYC-001', region: 'Northeast', timeOccurred: '5 min ago' },
-  { id: '7', device: 'eNB-MIA-002', region: 'Florida', timeOccurred: '45 min ago' },
-  { id: '8', device: 'eNB-ATL-001', region: 'Southeast', timeOccurred: '3 hours ago' },
-];
+const DISCONNECTED_DEVICES_DATA: DisconnectedDeviceRow[] = DEVICES_DATA
+  .filter((d) => d.status === 'Disconnected')
+  .map((d, i) => ({
+    id: d.id,
+    device: d.device,
+    region: d.region,
+    timeOccurred: TIME_AGO[i % TIME_AGO.length],
+  }));
 
 const columns: ColumnDef<DisconnectedDeviceRow>[] = [
   {

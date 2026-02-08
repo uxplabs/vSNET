@@ -46,6 +46,8 @@ export interface EventRow {
   source: string;
   region: string;
   managedObject: string;
+  ticketId: string;
+  owner: string;
 }
 
 const SEVERITY_ICON: Record<EventSeverity, { name: string; className: string }> = {
@@ -60,15 +62,21 @@ const CITY_TO_REGION: Record<string, string> = {
   SEA: 'Pacific Northwest',
   PDX: 'Pacific Northwest',
   SFO: 'Northern California',
+  LAX: 'Southern California',
   PHX: 'Desert Southwest',
   LAS: 'Desert Southwest',
   DEN: 'Mountain West',
+  SLC: 'Mountain West',
   CHI: 'Great Lakes',
+  DET: 'Great Lakes',
   NYC: 'Northeast',
+  PHL: 'Mid-Atlantic',
   ATL: 'Southeast',
   MIA: 'Florida',
   BOS: 'New England',
   AUS: 'Texas',
+  DAL: 'Texas',
+  HOU: 'Gulf Coast',
 };
 
 function getRegionFromSource(source: string): string {
@@ -80,20 +88,78 @@ function getRegionFromSource(source: string): string {
   return 'Pacific Northwest';
 }
 
-export const EVENTS_DATA: EventRow[] = [
-  { id: 'EVT-1001', timestamp: '2025-01-27 09:12', updated: '2025-01-27 09:15', type: 'Configuration change', severity: 'Info', source: 'eNB-SEA-001', region: 'Pacific Northwest', managedObject: 'Cell-1' },
-  { id: 'EVT-1002', timestamp: '2025-01-27 08:45', updated: '2025-01-27 09:00', type: 'Connection', severity: 'Major', source: 'eNB-PDX-002', region: 'Pacific Northwest', managedObject: 'Radio-2' },
-  { id: 'EVT-1003', timestamp: '2025-01-27 08:30', updated: '2025-01-27 08:35', type: 'Performance', severity: 'Minor', source: 'RN-PHX-003', region: 'Desert Southwest', managedObject: 'Cell-3' },
-  { id: 'EVT-1004', timestamp: '2025-01-27 08:15', updated: '2025-01-27 08:20', type: 'Configuration change', severity: 'Critical', source: 'eNB-NYC-006', region: 'Northeast', managedObject: 'Cell-4' },
-  { id: 'EVT-1005', timestamp: '2025-01-27 07:58', updated: '2025-01-27 08:10', type: 'Connection', severity: 'Info', source: 'RN-SFO-013', region: 'Northern California', managedObject: 'Radio-5' },
-  { id: 'EVT-1006', timestamp: '2025-01-27 07:42', updated: '2025-01-27 07:45', type: 'Security', severity: 'Minor', source: 'RN-LAS-005', region: 'Desert Southwest', managedObject: 'Radio-6' },
-  { id: 'EVT-1007', timestamp: '2025-01-27 07:20', updated: '2025-01-27 07:30', type: 'System', severity: 'Info', source: 'eNB-CHI-008', region: 'Great Lakes', managedObject: 'Cell-7' },
-  { id: 'EVT-1008', timestamp: '2025-01-27 06:55', updated: '2025-01-27 07:05', type: 'Connection', severity: 'Critical', source: 'eNB-MIA-010', region: 'Florida', managedObject: 'Cell-8' },
-  { id: 'EVT-1009', timestamp: '2025-01-27 06:30', updated: '2025-01-27 06:32', type: 'Performance', severity: 'Major', source: 'RN-DEN-007', region: 'Mountain West', managedObject: 'Radio-9' },
-  { id: 'EVT-1010', timestamp: '2025-01-27 06:10', updated: '2025-01-27 06:25', type: 'Configuration change', severity: 'Info', source: 'RN-ATL-009', region: 'Southeast', managedObject: 'Radio-10' },
-  { id: 'EVT-1011', timestamp: '2025-01-27 05:45', updated: '2025-01-27 05:50', type: 'System', severity: 'Minor', source: 'eNB-BOS-018', region: 'New England', managedObject: 'Cell-11' },
-  { id: 'EVT-1012', timestamp: '2025-01-27 05:20', updated: '2025-01-27 05:25', type: 'Security', severity: 'Info', source: 'RN-NYC-015', region: 'Northeast', managedObject: 'Radio-12' },
+const EVENT_TYPES = ['Configuration change', 'Connection', 'Performance', 'Security', 'System'];
+const EVENT_SEVERITIES: EventSeverity[] = ['Critical', 'Major', 'Minor', 'Info'];
+const EVENT_OWNERS = ['J. Smith', 'A. Jones', 'M. Lee', 'K. Brown', 'R. Davis', 'P. Wilson'];
+const EVENT_SOURCES: { source: string; region: string }[] = [
+  // Pacific Northwest
+  { source: 'eNB-SEA-001', region: 'Pacific Northwest' },
+  { source: 'eNB-PDX-002', region: 'Pacific Northwest' },
+  { source: 'RN-SEA-003', region: 'Pacific Northwest' },
+  // Northern California / Southern California
+  { source: 'eNB-SFO-004', region: 'Northern California' },
+  { source: 'RN-SFO-005', region: 'Northern California' },
+  { source: 'eNB-LAX-006', region: 'Southern California' },
+  // Desert Southwest
+  { source: 'RN-PHX-007', region: 'Desert Southwest' },
+  { source: 'eNB-PHX-008', region: 'Desert Southwest' },
+  { source: 'RN-LAS-009', region: 'Desert Southwest' },
+  { source: 'eNB-LAS-010', region: 'Desert Southwest' },
+  // Mountain West
+  { source: 'RN-DEN-011', region: 'Mountain West' },
+  { source: 'eNB-DEN-012', region: 'Mountain West' },
+  { source: 'eNB-SLC-013', region: 'Mountain West' },
+  // Texas / Gulf Coast
+  { source: 'eNB-AUS-014', region: 'Texas' },
+  { source: 'eNB-DAL-015', region: 'Texas' },
+  { source: 'RN-HOU-016', region: 'Gulf Coast' },
+  // Great Lakes / Midwest
+  { source: 'eNB-CHI-017', region: 'Great Lakes' },
+  { source: 'RN-CHI-018', region: 'Great Lakes' },
+  { source: 'eNB-DET-019', region: 'Great Lakes' },
+  // Northeast / Mid-Atlantic
+  { source: 'eNB-NYC-020', region: 'Northeast' },
+  { source: 'RN-NYC-021', region: 'Northeast' },
+  { source: 'eNB-PHL-022', region: 'Mid-Atlantic' },
+  // New England / Eastern Canada
+  { source: 'eNB-BOS-023', region: 'New England' },
+  { source: 'RN-BOS-024', region: 'New England' },
+  // Southeast / Florida
+  { source: 'RN-ATL-025', region: 'Southeast' },
+  { source: 'eNB-ATL-026', region: 'Southeast' },
+  { source: 'eNB-MIA-027', region: 'Florida' },
+  { source: 'RN-MIA-028', region: 'Florida' },
 ];
+
+function generateEvents(count: number): EventRow[] {
+  const events: EventRow[] = [];
+  for (let i = 1; i <= count; i++) {
+    const si = (i - 1) % EVENT_SOURCES.length;
+    const { source, region } = EVENT_SOURCES[si];
+    const severity = EVENT_SEVERITIES[i % EVENT_SEVERITIES.length];
+    const type = EVENT_TYPES[i % EVENT_TYPES.length];
+    const h = 6 + Math.floor(((i * 17) % 960) / 60);
+    const m = ((i * 17) % 960) % 60;
+    const ts = `2025-01-27 ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const up = `2025-01-27 ${String(h).padStart(2, '0')}:${String(Math.min(59, m + 2 + (i % 5))).padStart(2, '0')}`;
+    const hasTicket = severity !== 'Info' && i % 3 !== 0;
+    events.push({
+      id: `EVT-${1000 + i}`,
+      timestamp: ts,
+      updated: up,
+      type,
+      severity,
+      source,
+      region,
+      managedObject: (i % 2 === 0 ? 'Cell-' : 'Radio-') + ((i % 12) + 1),
+      ticketId: hasTicket ? `TKT-${2000 + i}` : '—',
+      owner: hasTicket ? EVENT_OWNERS[i % EVENT_OWNERS.length] : '—',
+    });
+  }
+  return events;
+}
+
+export const EVENTS_DATA: EventRow[] = generateEvents(72);
 
 function getColumns(showRegionColumn: boolean, onSeverityClick?: (event: EventRow) => void): ColumnDef<EventRow>[] {
   return [
@@ -215,6 +281,20 @@ function getColumns(showRegionColumn: boolean, onSeverityClick?: (event: EventRo
       cell: ({ row }) => row.getValue('managedObject') as string,
     },
     {
+      accessorKey: 'ticketId',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Ticket ID</SortableHeader>
+      ),
+      cell: ({ row }) => row.getValue('ticketId') as string,
+    },
+    {
+      accessorKey: 'owner',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Owner</SortableHeader>
+      ),
+      cell: ({ row }) => row.getValue('owner') as string,
+    },
+    {
       id: 'actions',
       header: '',
       cell: () => (
@@ -314,7 +394,8 @@ export function EventsDataTable({
       region: event.region,
       managedObject: event.managedObject,
       type: event.type,
-      owner: '—',
+      ticketId: event.ticketId,
+      owner: event.owner,
     };
     setSelectedAlarm(alarm);
     setAlarmDrawerOpen(true);

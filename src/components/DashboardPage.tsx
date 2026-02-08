@@ -3,6 +3,8 @@ import { Navbar01 } from './navbar-01';
 import { Icon } from './Icon';
 import { StatCard } from './ui/stat-card';
 import { RegionsDataTable, getRegionRow, getAggregatedRegionData } from './regions-table';
+import { DEVICES_DATA } from './devices-data-table';
+import { ALARMS_DATA } from './alarms-data-table';
 
 const RegionsMap = lazy(() => import('./regions-map').then((m) => ({ default: m.RegionsMap })));
 const DashboardAlarmsTab = lazy(() => import('./DashboardAlarmsTab').then((m) => ({ default: m.DashboardAlarmsTab })));
@@ -21,7 +23,7 @@ const DASHBOARD_TABS = [
 export interface DashboardPageProps {
   appName?: string;
   onSignOut?: () => void;
-  onNavigate?: (page: string) => void;
+  onNavigate?: (page: string, tab?: string, filters?: { statusFilter?: string; configStatusFilter?: string }) => void;
   region?: string;
   regions?: string[];
   onRegionChange?: (region: string) => void;
@@ -29,9 +31,26 @@ export interface DashboardPageProps {
   fixedRegion?: string;
 }
 
-const ALL_DEVICES = { total: 500, connected: 342, disconnected: 12, kpiSyncErrors: 8 };
-const ALL_RADIO = { total: 248, connected: 228, disconnected: 20, connectedFree: 140, connectedUsed: 88, disconnectedFree: 12, disconnectedUsed: 8 };
-const ALL_ALARMS = { critical: 11, major: 14, minor: 10 };
+const ALL_DEVICES = {
+  total: DEVICES_DATA.length,
+  connected: DEVICES_DATA.filter((d) => d.status === 'Connected').length,
+  disconnected: DEVICES_DATA.filter((d) => d.status === 'Disconnected').length,
+  kpiSyncErrors: DEVICES_DATA.filter((d) => d.configStatus === 'Out of sync').length,
+};
+const ALL_RADIO = {
+  total: Math.round(DEVICES_DATA.length * 2.1),
+  connected: Math.round(DEVICES_DATA.filter((d) => d.status === 'Connected').length * 2.1),
+  disconnected: Math.round(DEVICES_DATA.filter((d) => d.status !== 'Connected').length * 1.4),
+  connectedFree: Math.round(DEVICES_DATA.filter((d) => d.status === 'Connected').length * 1.3),
+  connectedUsed: Math.round(DEVICES_DATA.filter((d) => d.status === 'Connected').length * 0.8),
+  disconnectedFree: Math.round(DEVICES_DATA.filter((d) => d.status !== 'Connected').length * 0.6),
+  disconnectedUsed: Math.round(DEVICES_DATA.filter((d) => d.status !== 'Connected').length * 0.8),
+};
+const ALL_ALARMS = {
+  critical: ALARMS_DATA.filter((a) => a.severity === 'Critical').length,
+  major: ALARMS_DATA.filter((a) => a.severity === 'Major').length,
+  minor: ALARMS_DATA.filter((a) => a.severity === 'Minor').length,
+};
 
 function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions, onRegionChange, onRegionsChange, fixedRegion }: DashboardPageProps) {
   const alarmsTableRef = useRef<HTMLDivElement>(null);
@@ -144,10 +163,10 @@ function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions
                       </div>
                     )}
                     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                      <StatCard name="Total" value={overviewData.devices.total} icon={<Icon name="devices" size={16} />} change="12%" changeDirection="up" changeLabel="past 24h" sparkline={[{ value: Math.round(overviewData.devices.total * 0.93) }, { value: Math.round(overviewData.devices.total * 0.9) }, { value: Math.round(overviewData.devices.total * 0.96) }, { value: Math.round(overviewData.devices.total * 0.92) }, { value: overviewData.devices.total }]} />
-                      <StatCard name="Connected" value={overviewData.devices.connected} icon={<Icon name="link" size={16} />} change="8%" changeDirection="up" changeLabel="past 24h" sparkline={[{ value: Math.round(overviewData.devices.connected * 0.96) }, { value: Math.round(overviewData.devices.connected * 0.98) }, { value: Math.round(overviewData.devices.connected * 0.93) }, { value: Math.round(overviewData.devices.connected * 0.99) }, { value: overviewData.devices.connected }]} sparklineColor="var(--success)" />
-                      <StatCard name="Disconnected" value={overviewData.devices.disconnected} icon={<Icon name="link_off" size={16} />} change="3%" changeDirection="down" changeLabel="past 24h" sparkline={[{ value: overviewData.devices.disconnected + 3 }, { value: overviewData.devices.disconnected + 6 }, { value: overviewData.devices.disconnected + 2 }, { value: overviewData.devices.disconnected + 4 }, { value: overviewData.devices.disconnected }]} sparklineColor="var(--destructive)" />
-                      <StatCard name="KPI sync error" value={overviewData.devices.kpiSyncErrors} icon={<Icon name="sync_problem" size={16} />} change="2" changeDirection="down" changeLabel="past 24h" sparkline={[{ value: overviewData.devices.kpiSyncErrors + 4 }, { value: overviewData.devices.kpiSyncErrors + 2 }, { value: overviewData.devices.kpiSyncErrors + 6 }, { value: overviewData.devices.kpiSyncErrors + 1 }, { value: overviewData.devices.kpiSyncErrors }]} sparklineColor="var(--warning)" />
+                      <StatCard name="Total" value={overviewData.devices.total} icon={<Icon name="devices" size={16} />} change="12%" changeDirection="up" changeLabel="past 24h" onClick={() => onNavigate?.('devices', 'device')} sparkline={[{ value: Math.round(overviewData.devices.total * 0.93) }, { value: Math.round(overviewData.devices.total * 0.9) }, { value: Math.round(overviewData.devices.total * 0.96) }, { value: Math.round(overviewData.devices.total * 0.92) }, { value: overviewData.devices.total }]} />
+                      <StatCard name="Connected" value={overviewData.devices.connected} icon={<Icon name="link" size={16} />} change="8%" changeDirection="up" changeLabel="past 24h" onClick={() => onNavigate?.('devices', 'device', { statusFilter: 'Connected' })} sparkline={[{ value: Math.round(overviewData.devices.connected * 0.96) }, { value: Math.round(overviewData.devices.connected * 0.98) }, { value: Math.round(overviewData.devices.connected * 0.93) }, { value: Math.round(overviewData.devices.connected * 0.99) }, { value: overviewData.devices.connected }]} sparklineColor="var(--success)" />
+                      <StatCard name="Disconnected" value={overviewData.devices.disconnected} icon={<Icon name="link_off" size={16} />} change="3%" changeDirection="down" changeLabel="past 24h" onClick={() => onNavigate?.('devices', 'device', { statusFilter: 'Disconnected' })} sparkline={[{ value: overviewData.devices.disconnected + 3 }, { value: overviewData.devices.disconnected + 6 }, { value: overviewData.devices.disconnected + 2 }, { value: overviewData.devices.disconnected + 4 }, { value: overviewData.devices.disconnected }]} sparklineColor="var(--destructive)" />
+                      <StatCard name="KPI sync error" value={overviewData.devices.kpiSyncErrors} icon={<Icon name="sync_problem" size={16} />} change="2" changeDirection="down" changeLabel="past 24h" onClick={() => onNavigate?.('devices', 'device', { configStatusFilter: 'Out of sync' })} sparkline={[{ value: overviewData.devices.kpiSyncErrors + 4 }, { value: overviewData.devices.kpiSyncErrors + 2 }, { value: overviewData.devices.kpiSyncErrors + 6 }, { value: overviewData.devices.kpiSyncErrors + 1 }, { value: overviewData.devices.kpiSyncErrors }]} sparklineColor="var(--warning)" />
                     </div>
                   </section>
                   <section>

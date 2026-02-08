@@ -63,24 +63,40 @@ const SEVERITY_ICON: Record<AlarmSeverity, { name: string; className: string }> 
   Minor: { name: 'warning', className: 'text-warning' },
 };
 
-const SOURCE_PREFIXES = ['eNB-SEA', 'eNB-PDX', 'RN-PHX', 'eNB-SFO', 'RN-LAS', 'eNB-NYC', 'RN-DEN', 'eNB-CHI', 'RN-ATL', 'eNB-MIA', 'RN-SEA', 'eNB-PHX', 'RN-SFO', 'eNB-LAS', 'RN-NYC'];
+const SOURCE_PREFIXES = [
+  'eNB-SEA', 'eNB-PDX', 'RN-SEA',
+  'eNB-SFO', 'RN-SFO', 'eNB-LAX',
+  'RN-PHX', 'eNB-PHX', 'RN-LAS', 'eNB-LAS',
+  'RN-DEN', 'eNB-DEN', 'eNB-SLC',
+  'eNB-AUS', 'eNB-DAL', 'RN-HOU',
+  'eNB-CHI', 'RN-CHI', 'eNB-DET',
+  'eNB-NYC', 'RN-NYC', 'eNB-PHL',
+  'eNB-BOS', 'RN-BOS',
+  'RN-ATL', 'eNB-ATL', 'eNB-MIA', 'RN-MIA',
+];
 const TYPES = ['Device disconnected', 'Link down', 'Radio link failure', 'Config mismatch'];
-const OWNERS = ['J. Smith', 'A. Jones', 'M. Lee', 'K. Brown', '—'];
+const OWNERS = ['J. Smith', 'A. Jones', 'M. Lee', 'K. Brown', 'R. Davis', 'P. Wilson', '—'];
 
 // Map city codes to regions
 const CITY_TO_REGION: Record<string, string> = {
   SEA: 'Pacific Northwest',
   PDX: 'Pacific Northwest',
   SFO: 'Northern California',
+  LAX: 'Southern California',
   PHX: 'Desert Southwest',
   LAS: 'Desert Southwest',
   DEN: 'Mountain West',
+  SLC: 'Mountain West',
   CHI: 'Great Lakes',
+  DET: 'Great Lakes',
   NYC: 'Northeast',
+  PHL: 'Mid-Atlantic',
   ATL: 'Southeast',
   MIA: 'Florida',
   BOS: 'New England',
   AUS: 'Texas',
+  DAL: 'Texas',
+  HOU: 'Gulf Coast',
 };
 
 function getRegionFromSource(source: string): string {
