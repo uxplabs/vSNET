@@ -41,9 +41,8 @@ export default function FileManagementPage({ onBack }: FileManagementPageProps) 
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">File management</h1>
       <Tabs value={fileTab} onValueChange={setFileTab}>
-        <div className="sticky top-0 z-10 -mt-6 -mb-6 bg-background/80 backdrop-blur-sm pt-6 pb-6">
+        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm pb-2">
           <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
           <TabsTrigger value="users" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 gap-2">
             Users

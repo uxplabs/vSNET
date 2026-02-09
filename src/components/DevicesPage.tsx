@@ -239,7 +239,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
       <Navbar01
         appName={appName}
         onSignOut={onSignOut}
@@ -453,7 +453,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
         </SidebarContent>
         <SidebarRail />
       </Sidebar>
-        <SidebarInset className="min-w-0 overflow-hidden light-content-zone">
+        <SidebarInset className="min-w-0 overflow-hidden">
           <Tabs value={mainTab} defaultValue="device" onValueChange={handleMainTabChange} className="flex flex-1 flex-col min-h-0">
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
               <div className="flex items-center gap-2 min-w-0 flex-1">

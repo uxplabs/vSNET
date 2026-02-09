@@ -59,9 +59,8 @@ export default function FaultManagementPage({ onBack }: FaultManagementPageProps
   return (
     <TooltipProvider delayDuration={300}>
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Fault management</h1>
       <Tabs value={faultTab} onValueChange={setFaultTab}>
-        <div className="sticky top-0 z-10 -mt-6 -mb-6 bg-background/80 backdrop-blur-sm pt-6 pb-6">
+        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm pb-2">
           <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
           <TabsTrigger value="events-configuration" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
             Events configuration
@@ -188,6 +187,12 @@ export default function FaultManagementPage({ onBack }: FaultManagementPageProps
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="ml-auto">
+                  <Button variant="outline" size="sm" className="gap-1">
+                    <Icon name="add" size={18} />
+                    Add device
+                  </Button>
+                </div>
               </div>
 
               {/* Table */}

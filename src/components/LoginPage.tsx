@@ -73,7 +73,7 @@ function LoginPage({ onLogin, onLoginWithSSO, appName = 'AMS' }: LoginPageProps)
               />
             </div>
             <div className="space-y-1">
-              <DialogTitle className="text-4xl font-black tracking-tight text-primary">
+              <DialogTitle className="text-4xl font-black tracking-tight text-primary dark:text-primary-foreground">
                 {appName}
               </DialogTitle>
               <p className="text-sm text-muted-foreground">Airspan Management System</p>

@@ -83,7 +83,6 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
   return (
     <TooltipProvider delayDuration={300}>
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Label management</h1>
       <div className="flex gap-6">
             {/* Labels sidebar */}
             <aside className="w-52 shrink-0 rounded-lg border bg-muted/30 border-border/80 overflow-hidden">
@@ -169,12 +168,17 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="ml-auto">
+                  <Button variant="outline" size="sm" className="gap-1" onClick={() => setAddDeviceSheetOpen(true)}>
+                    <Icon name="add" size={18} />
+                    Add device
+                  </Button>
+                </div>
               </div>
 
               <LabelManagementDataTable
                 data={labelData}
                 labelGroupFilter={selectedGroup}
-                onAddDevice={() => setAddDeviceSheetOpen(true)}
               />
 
               <Suspense fallback={null}>

@@ -20,7 +20,6 @@ export default function DeviceMigrationPage({ onBack }: DeviceMigrationPageProps
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Device migration</h1>
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card>

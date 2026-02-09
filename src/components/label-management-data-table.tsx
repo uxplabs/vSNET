@@ -121,36 +121,20 @@ const columns: ColumnDef<LabelManagementRow>[] = [
 export interface LabelManagementDataTableProps {
   data?: LabelManagementRow[];
   labelGroupFilter?: string;
-  onAddDevice?: () => void;
 }
 
 export function LabelManagementDataTable({
   data = LABEL_MANAGEMENT_DATA,
   labelGroupFilter,
-  onAddDevice,
 }: LabelManagementDataTableProps) {
   const filteredData = useMemo(() => {
     if (!labelGroupFilter) return data;
     return data.filter((row) => row.labelGroup === labelGroupFilter);
   }, [data, labelGroupFilter]);
 
-  const header = onAddDevice ? (
-    <div className="flex items-center justify-end px-4 py-3 border-b bg-muted/30">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={onAddDevice}>
-            <Icon name="add" size={18} />
-            Add device
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Add device</TooltipContent>
-      </Tooltip>
-    </div>
-  ) : undefined;
-
   return (
     <TooltipProvider delayDuration={300}>
-      <DataTable columns={columns} data={filteredData} header={header} />
+      <DataTable columns={columns} data={filteredData} />
     </TooltipProvider>
   );
 }

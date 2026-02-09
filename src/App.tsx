@@ -104,6 +104,12 @@ function App() {
     else setScrollToNotesForDeviceId(null)
   }
 
+  const handleSignOut = () => {
+    setIsAuthenticated(false)
+    // Reset to light mode for login page
+    document.documentElement.classList.remove('dark')
+  }
+
   const handleBackToDevices = () => {
     setCurrentPage('devices')
     setSelectedDevice(null)
@@ -115,8 +121,8 @@ function App() {
       <>
         <LoginPage
           appName="AMS"
-          onLogin={async () => setIsAuthenticated(true)}
-          onLoginWithSSO={async () => setIsAuthenticated(true)}
+          onLogin={async (username) => { try { localStorage.setItem('ams-current-user', username); } catch {} setIsAuthenticated(true); }}
+          onLoginWithSSO={async () => { try { localStorage.setItem('ams-current-user', 'sso-user'); } catch {} setIsAuthenticated(true); }}
         />
         <Toaster />
       </>
@@ -129,7 +135,7 @@ function App() {
       {currentPage === 'dashboard' ? (
         <DashboardPage
           appName="AMS"
-          onSignOut={() => setIsAuthenticated(false)}
+          onSignOut={handleSignOut}
           onNavigate={handleNavigate}
           region={region}
           regions={regions}
@@ -140,7 +146,7 @@ function App() {
         <DeviceDetailPage
           device={selectedDevice}
           appName="AMS"
-          onSignOut={() => setIsAuthenticated(false)}
+          onSignOut={handleSignOut}
           onBack={handleBackToDevices}
           onNavigate={handleNavigate}
           region={region}
@@ -154,7 +160,7 @@ function App() {
         <div className="h-screen overflow-hidden">
           <TasksPage
             appName="AMS"
-            onSignOut={() => setIsAuthenticated(false)}
+            onSignOut={handleSignOut}
             onNavigate={handleNavigate}
             region={region}
             regions={regions}
@@ -166,7 +172,7 @@ function App() {
         <div className="h-screen overflow-hidden">
           <PerformancePage
             appName="AMS"
-            onSignOut={() => setIsAuthenticated(false)}
+            onSignOut={handleSignOut}
             onNavigate={handleNavigate}
             region={region}
             regions={regions}
@@ -177,7 +183,7 @@ function App() {
       ) : currentPage === 'design-system' ? (
         <DesignSystemPage
           appName="AMS"
-          onSignOut={() => setIsAuthenticated(false)}
+          onSignOut={handleSignOut}
           onNavigate={handleNavigate}
           region={region}
           regions={regions}
@@ -188,7 +194,7 @@ function App() {
         <div className="h-screen overflow-hidden">
           <AdministrationPage
             appName="AMS"
-            onSignOut={() => setIsAuthenticated(false)}
+            onSignOut={handleSignOut}
             onNavigate={handleNavigate}
             region={region}
             regions={regions}
@@ -200,7 +206,7 @@ function App() {
         <div className="h-screen overflow-hidden">
           <DevicesPage
             appName="AMS"
-            onSignOut={() => setIsAuthenticated(false)}
+            onSignOut={handleSignOut}
             onNavigate={handleNavigate}
             mainTab={devicesTab}
             onMainTabChange={setDevicesTab}

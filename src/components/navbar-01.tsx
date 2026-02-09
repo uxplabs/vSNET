@@ -131,21 +131,37 @@ const Navbar01 = ({
         : regionDisplayList.join(', ');
   const region = regions[0] ?? 'All';
   const [activeSection, setActiveSection] = useState<string>(currentSection ?? '');
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const getThemeKey = () => {
+    try {
+      const user = localStorage.getItem('ams-current-user');
+      return user ? `ams-theme-${user}` : 'ams-theme';
+    } catch { return 'ams-theme'; }
+  };
+
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => {
+    try {
+      const saved = localStorage.getItem(getThemeKey());
+      if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+    } catch { /* ignore */ }
+    return 'light';
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Apply theme class on mount and when theme changes
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   useEffect(() => {
     if (currentSection) setActiveSection(currentSection);
   }, [currentSection]);
 
-  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
-    setTheme(newTheme);
-    if (newTheme === 'dark') {
+  function applyTheme(t: 'light' | 'dark' | 'system') {
+    if (t === 'dark') {
       document.documentElement.classList.add('dark');
-    } else if (newTheme === 'light') {
+    } else if (t === 'light') {
       document.documentElement.classList.remove('dark');
     } else {
-      // System preference
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       if (isDark) {
         document.documentElement.classList.add('dark');
@@ -153,6 +169,13 @@ const Navbar01 = ({
         document.documentElement.classList.remove('dark');
       }
     }
+  }
+
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme);
+    try {
+      localStorage.setItem(getThemeKey(), newTheme);
+    } catch { /* ignore */ }
   };
 
   const handleNavClick = (item: NavItem) => {
