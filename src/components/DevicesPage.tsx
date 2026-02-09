@@ -146,7 +146,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [performanceStatusFilter, setPerformanceStatusFilter] = useState<'all' | 'good' | 'bad'>('all');
   const [thresholdActSessFilter, setThresholdActSessFilter] = useState<string>('ACT_SESS');
   const [inventorySearch, setInventorySearch] = useState('');
-  const [inventoryViewFilter, setInventoryViewFilter] = useState('all');
+  const [inventoryViewFilter, setInventoryViewFilter] = useState('radio-nodes');
   const [inventoryStatusFilter, setInventoryStatusFilter] = useState<string>('Status');
   const [inventoryTypeFilter, setInventoryTypeFilter] = useState<string>('Type');
   const [inventoryVersionFilter, setInventoryVersionFilter] = useState<string>('Version');
@@ -174,9 +174,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const clearSoftwareFilters = () => {
     setSoftwareSearch(''); setSoftwareTypeFilter('Type'); setSoftwareStatusFilter('Status'); setSoftwareVersionFilter('Version');
   };
-  const inventoryFiltersActive = inventorySearch !== '' || inventoryViewFilter !== 'all' || inventoryStatusFilter !== 'Status' || inventoryTypeFilter !== 'Type' || inventoryVersionFilter !== 'Version' || inventoryAlarmFilter !== 'Alarms';
+  const inventoryFiltersActive = inventorySearch !== '' || inventoryViewFilter !== 'radio-nodes' || inventoryStatusFilter !== 'Status' || inventoryTypeFilter !== 'Type' || inventoryVersionFilter !== 'Version' || inventoryAlarmFilter !== 'Alarms';
   const clearInventoryFilters = () => {
-    setInventorySearch(''); setInventoryViewFilter('all'); setInventoryStatusFilter('Status'); setInventoryTypeFilter('Type'); setInventoryVersionFilter('Version'); setInventoryAlarmFilter('Alarms');
+    setInventorySearch(''); setInventoryViewFilter('radio-nodes'); setInventoryStatusFilter('Status'); setInventoryTypeFilter('Type'); setInventoryVersionFilter('Version'); setInventoryAlarmFilter('Alarms');
   };
   const reportsFiltersActive = reportsSearch !== '' || reportsTypeFilter !== 'Type' || reportsTaskFilter !== 'Task' || reportsCreatedFilter !== 'Created';
   const clearReportsFilters = () => {
@@ -985,7 +985,6 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                   {/* Button group: view filter */}
                   <div className="inline-flex items-center rounded-md border border-input shadow-sm">
                     {([
-                      { value: 'all', label: 'All' },
                       { value: 'radio-nodes', label: 'Radio nodes' },
                       { value: 'nr-cells', label: 'NR cells' },
                     ] as const).map((opt, i, arr) => (
@@ -1062,7 +1061,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     alarmFilter: inventoryAlarmFilter,
                   });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                  if (inventoryViewFilter !== 'all') activeFilters.push({ key: 'view', label: `View: ${inventoryViewFilter === 'radio-nodes' ? 'Radio nodes' : 'NR cells'}`, onClear: () => setInventoryViewFilter('all') });
+                  if (inventoryViewFilter !== 'radio-nodes') activeFilters.push({ key: 'view', label: `View: NR cells`, onClear: () => setInventoryViewFilter('radio-nodes') });
                   if (inventoryStatusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${inventoryStatusFilter}`, onClear: () => setInventoryStatusFilter('Status') });
                   if (inventoryTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${inventoryTypeFilter}`, onClear: () => setInventoryTypeFilter('Type') });
                   if (inventoryVersionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${inventoryVersionFilter}`, onClear: () => setInventoryVersionFilter('Version') });

@@ -47,7 +47,7 @@ export interface InventoryRow {
   enabled: boolean;
   alarms: number;
   alarmType: 'Critical' | 'Major' | 'Minor' | 'None';
-  nrCells: number;
+  nrCells: string[];
   ethernetId: string;
   model: string;
   type: 'Radio node' | 'NR cell';
@@ -103,7 +103,7 @@ function generateInventoryData(): InventoryRow[] {
       enabled: i % 9 !== 0,
       alarms,
       alarmType,
-      nrCells: Math.floor(Math.random() * 6) + 1,
+      nrCells: [`NR-${String(i * 2 - 1).padStart(3, '0')}`, `NR-${String(i * 2).padStart(3, '0')}`],
       ethernetId: `00:1a:2b:${String((i * 3) % 256).padStart(2, '0')}:${String((i * 7) % 256).padStart(2, '0')}:${String((i * 11) % 256).padStart(2, '0')}`,
       model: MODELS[i % MODELS.length],
       type: i % 5 === 0 ? 'NR cell' : 'Radio node',
@@ -285,7 +285,16 @@ function getColumns(): ColumnDef<InventoryRow>[] {
     {
       accessorKey: 'nrCells',
       header: ({ column }) => <SortableHeader column={column}>NR cells</SortableHeader>,
-      cell: ({ row }) => <span className="tabular-nums">{row.getValue('nrCells') as number}</span>,
+      cell: ({ row }) => {
+        const cells = row.getValue('nrCells') as string[];
+        return (
+          <div className="flex flex-col gap-0.5">
+            {cells.map((c) => (
+              <DeviceLink key={c} value={c} />
+            ))}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'ethernetId',

@@ -44,19 +44,19 @@ export function DeviceLink({ value, maxLength, className = '', onClick }: Device
   const link = (
     <a
       href="#"
-      className={`group inline-flex items-center gap-2 min-w-0 text-link no-underline ${className}`}
+      className={`group/devlink inline-flex items-center gap-1 min-w-0 text-link no-underline ${className}`}
       onClick={handleClick}
     >
       <span
-        className="font-medium truncate group-hover:underline"
+        className="font-medium truncate group-hover/devlink:underline"
         style={maxLength ? { maxWidth: `${maxLength}ch` } : undefined}
       >
         {display}
       </span>
       <Icon
         name="open_in_new"
-        size={16}
-        className="shrink-0 opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground"
+        size={14}
+        className="shrink-0 w-3.5 opacity-0 group-hover/devlink:opacity-70 transition-opacity text-muted-foreground"
         aria-hidden
       />
     </a>

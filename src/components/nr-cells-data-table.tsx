@@ -26,12 +26,12 @@ export interface NrCellRow {
 }
 
 export const NR_CELLS_DATA: NrCellRow[] = [
-  { cellId: 'NR-001', name: 'NR Cell 1', description: 'Primary sector', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', zone1: 'Zone A', zone2: 'Zone B', radioNode: 'RN-001', dlBandwidth: '100 MHz' },
-  { cellId: 'NR-002', name: 'NR Cell 2', description: 'Secondary sector', status: 'Up', enabled: true, alarms: 1, alarmType: 'Minor', zone1: 'Zone A', zone2: 'Zone C', radioNode: 'RN-001', dlBandwidth: '100 MHz' },
-  { cellId: 'NR-003', name: 'NR Cell 3', description: 'Backup sector', status: 'Down', enabled: false, alarms: 2, alarmType: 'Major', zone1: 'Zone B', zone2: 'Zone C', radioNode: 'RN-002', dlBandwidth: '80 MHz' },
-  { cellId: 'NR-004', name: 'NR Cell 4', description: 'Overlay sector', status: 'Down', enabled: true, alarms: 0, alarmType: 'None', zone1: 'Zone A', zone2: 'Zone D', radioNode: 'RN-002', dlBandwidth: '100 MHz' },
-  { cellId: 'NR-005', name: 'NR Cell 5', description: 'Test sector', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', zone1: 'Zone C', zone2: 'Zone D', radioNode: 'RN-003', dlBandwidth: '80 MHz' },
-  { cellId: 'NR-006', name: 'NR Cell 6', description: 'Edge sector', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', zone1: 'Zone B', zone2: 'Zone D', radioNode: 'RN-003', dlBandwidth: '100 MHz' },
+  { cellId: 'NR-001', name: 'NR Cell 1', description: 'Primary sector', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', zone1: 'North sector primary', zone2: 'North sector secondary', radioNode: 'RN-001', dlBandwidth: '100 MHz' },
+  { cellId: 'NR-002', name: 'NR Cell 2', description: 'Secondary sector', status: 'Up', enabled: true, alarms: 1, alarmType: 'Minor', zone1: 'South sector primary', zone2: 'South sector secondary', radioNode: 'RN-001', dlBandwidth: '100 MHz' },
+  { cellId: 'NR-003', name: 'NR Cell 3', description: 'Backup sector', status: 'Down', enabled: false, alarms: 2, alarmType: 'Major', zone1: 'East sector overlay', zone2: 'East sector backup', radioNode: 'RN-002', dlBandwidth: '80 MHz' },
+  { cellId: 'NR-004', name: 'NR Cell 4', description: 'Overlay sector', status: 'Down', enabled: true, alarms: 0, alarmType: 'None', zone1: 'West sector primary', zone2: 'West sector secondary', radioNode: 'RN-002', dlBandwidth: '100 MHz' },
+  { cellId: 'NR-005', name: 'NR Cell 5', description: 'Test sector', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', zone1: 'Central sector primary', zone2: 'Central sector overlay', radioNode: 'RN-003', dlBandwidth: '80 MHz' },
+  { cellId: 'NR-006', name: 'NR Cell 6', description: 'Edge sector', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', zone1: 'Edge sector primary', zone2: 'Edge sector secondary', radioNode: 'RN-003', dlBandwidth: '100 MHz' },
 ];
 
 function getColumns(hideRadioNode = false): ColumnDef<NrCellRow>[] {
@@ -105,10 +105,10 @@ function getColumns(hideRadioNode = false): ColumnDef<NrCellRow>[] {
     id: 'zones',
     header: ({ column }) => <SortableHeader column={column}>Zones</SortableHeader>,
     cell: ({ row }) => (
-      <span className="inline-flex items-center gap-2 flex-wrap">
+      <div className="flex flex-col gap-0.5">
         <DeviceLink value={row.original.zone1} />
         <DeviceLink value={row.original.zone2} />
-      </span>
+      </div>
     ),
   },
   ...(!hideRadioNode ? [{

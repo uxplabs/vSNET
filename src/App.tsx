@@ -4,8 +4,10 @@ import { TooltipProvider } from './components/ui/tooltip'
 import { DeviceLinkProvider } from './components/ui/device-link'
 import { DeviceDrawer } from './components/device-drawer'
 import { RadioNodeDrawer, findRadioNode } from './components/radio-node-drawer'
+import { NrCellDrawer, findNrCell } from './components/nr-cell-drawer'
 import { DEVICES_DATA } from './components/devices-data-table'
 import type { RadioNodeRow } from './components/radio-nodes-data-table'
+import type { NrCellRow } from './components/nr-cells-data-table'
 import LoginPage from './components/LoginPage'
 import DashboardPage from './components/DashboardPage'
 import DevicesPage from './components/DevicesPage'
@@ -32,6 +34,8 @@ function App() {
   const [globalDrawerDevice, setGlobalDrawerDevice] = useState<DeviceRow | null>(null)
   const [radioNodeDrawerOpen, setRadioNodeDrawerOpen] = useState(false)
   const [globalRadioNode, setGlobalRadioNode] = useState<RadioNodeRow | null>(null)
+  const [nrCellDrawerOpen, setNrCellDrawerOpen] = useState(false)
+  const [globalNrCell, setGlobalNrCell] = useState<NrCellRow | null>(null)
 
   const handleDeviceLinkClick = useCallback((deviceName: string) => {
     // Check if this is a radio node (e.g. "Radio Node 1", "RN-001")
@@ -40,6 +44,16 @@ function App() {
       if (rn) {
         setGlobalRadioNode(rn)
         setRadioNodeDrawerOpen(true)
+        return
+      }
+    }
+
+    // Check if this is an NR cell (e.g. "NR-001", "NR Cell 1")
+    if (/^NR-\d+$/i.test(deviceName) || /^NR Cell \d+$/i.test(deviceName)) {
+      const cell = findNrCell(deviceName)
+      if (cell) {
+        setGlobalNrCell(cell)
+        setNrCellDrawerOpen(true)
         return
       }
     }
@@ -217,6 +231,11 @@ function App() {
           const device = DEVICES_DATA[Math.min(idx - 1, DEVICES_DATA.length - 1)]
           if (device) handleNavigateToDeviceDetail(device)
         }}
+      />
+      <NrCellDrawer
+        nrCell={globalNrCell}
+        open={nrCellDrawerOpen}
+        onOpenChange={setNrCellDrawerOpen}
       />
     </TooltipProvider>
     </DeviceLinkProvider>

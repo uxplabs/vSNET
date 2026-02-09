@@ -294,61 +294,58 @@ export function EditableLabelsField({
   return (
     <div className={cn('flex flex-col gap-1 col-span-2', className)}>
       <span className="text-muted-foreground text-sm">{label}</span>
-      <div className="group/labels flex items-start gap-1.5 min-w-0">
-        <button
-          type="button"
-          onClick={() => setIsEditing(true)}
-          className="flex-1 min-w-0 text-left rounded px-1.5 -mx-1.5 py-0.5 -my-0.5 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:rounded"
-        >
-          {hasLabels ? (
-            <div className={`flex gap-1.5 min-w-0 ${shouldTruncate && !labelsExpanded ? 'flex-nowrap' : 'flex-wrap'}`}>
-              {labelsToShow.map((l) => (
-                <span key={l} className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-normal shrink-0">
-                  {l}
-                </span>
-              ))}
-              {remainingCount > 0 && (
-                <button
-                  type="button"
-                  className="text-xs text-link hover:underline shrink-0 font-normal"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setLabelsExpanded(true);
-                  }}
-                >
-                  {remainingCount} more
-                </button>
-              )}
-              {shouldTruncate && labelsExpanded && (
-                <button
-                  type="button"
-                  className="text-xs text-link hover:underline shrink-0 font-normal"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setLabelsExpanded(false);
-                  }}
-                >
-                  Show less
-                </button>
-              )}
-            </div>
-          ) : (
+      <div className="group/labels min-w-0">
+        {hasLabels ? (
+          <div className={`flex gap-1.5 items-center min-w-0 ${shouldTruncate && !labelsExpanded ? 'flex-nowrap' : 'flex-wrap'}`}>
+            {labelsToShow.map((l) => (
+              <span key={l} className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-normal shrink-0">
+                {l}
+              </span>
+            ))}
+            {remainingCount > 0 && (
+              <button
+                type="button"
+                className="text-xs text-link hover:underline shrink-0 font-normal"
+                onClick={() => setLabelsExpanded(true)}
+              >
+                {remainingCount} more
+              </button>
+            )}
+            {shouldTruncate && labelsExpanded && (
+              <button
+                type="button"
+                className="text-xs text-link hover:underline shrink-0 font-normal"
+                onClick={() => setLabelsExpanded(false)}
+              >
+                Show less
+              </button>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0 opacity-0 group-hover/labels:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+              aria-label="Edit labels"
+              onClick={() => setIsEditing(true)}
+            >
+              <Icon name="edit" size={14} />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
             <span className="text-sm text-muted-foreground">{placeholder}</span>
-          )}
-        </button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 shrink-0 opacity-0 group-hover/labels:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
-          aria-label="Edit labels"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsEditing(true);
-          }}
-        >
-          <Icon name="edit" size={14} />
-        </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0 opacity-0 group-hover/labels:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+              aria-label="Edit labels"
+              onClick={() => setIsEditing(true)}
+            >
+              <Icon name="edit" size={14} />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

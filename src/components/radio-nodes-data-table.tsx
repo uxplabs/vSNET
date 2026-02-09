@@ -105,10 +105,10 @@ const columns: ColumnDef<RadioNodeRow>[] = [
     id: 'nrCells',
     header: ({ column }) => <SortableHeader column={column}>NR cells</SortableHeader>,
     cell: ({ row }) => (
-      <span className="inline-flex items-center gap-2 flex-wrap">
+      <div className="flex flex-col gap-0.5">
         <DeviceLink value={row.original.nrCell1} />
         <DeviceLink value={row.original.nrCell2} />
-      </span>
+      </div>
     ),
   },
   {

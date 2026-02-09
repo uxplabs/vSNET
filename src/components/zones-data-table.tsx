@@ -22,9 +22,17 @@ export interface ZoneRow {
 
 export const ZONES_DATA: ZoneRow[] = [
   { cellId: 'NR-001', description: 'North sector primary', cells: 2, e911Enabled: true, priority: 1, erfcnUl: 123456, ulBandwidth: '50 MHz', erfcnDl: 654321, dlBandwidth: '100 MHz' },
-  { cellId: 'NR-002', description: 'South sector primary', cells: 2, e911Enabled: true, priority: 2, erfcnUl: 123457, ulBandwidth: '50 MHz', erfcnDl: 654322, dlBandwidth: '100 MHz' },
-  { cellId: 'NR-003', description: 'East sector overlay', cells: 2, e911Enabled: false, priority: 3, erfcnUl: 123458, ulBandwidth: '40 MHz', erfcnDl: 654323, dlBandwidth: '80 MHz' },
-  { cellId: 'NR-004', description: 'West sector primary', cells: 2, e911Enabled: true, priority: 4, erfcnUl: 123459, ulBandwidth: '50 MHz', erfcnDl: 654324, dlBandwidth: '100 MHz' },
+  { cellId: 'NR-001', description: 'North sector secondary', cells: 2, e911Enabled: false, priority: 2, erfcnUl: 123460, ulBandwidth: '50 MHz', erfcnDl: 654325, dlBandwidth: '100 MHz' },
+  { cellId: 'NR-002', description: 'South sector primary', cells: 2, e911Enabled: true, priority: 1, erfcnUl: 123457, ulBandwidth: '50 MHz', erfcnDl: 654322, dlBandwidth: '100 MHz' },
+  { cellId: 'NR-002', description: 'South sector secondary', cells: 2, e911Enabled: true, priority: 2, erfcnUl: 123461, ulBandwidth: '50 MHz', erfcnDl: 654326, dlBandwidth: '100 MHz' },
+  { cellId: 'NR-003', description: 'East sector overlay', cells: 2, e911Enabled: false, priority: 1, erfcnUl: 123458, ulBandwidth: '40 MHz', erfcnDl: 654323, dlBandwidth: '80 MHz' },
+  { cellId: 'NR-003', description: 'East sector backup', cells: 2, e911Enabled: false, priority: 2, erfcnUl: 123462, ulBandwidth: '40 MHz', erfcnDl: 654327, dlBandwidth: '80 MHz' },
+  { cellId: 'NR-004', description: 'West sector primary', cells: 2, e911Enabled: true, priority: 1, erfcnUl: 123459, ulBandwidth: '50 MHz', erfcnDl: 654324, dlBandwidth: '100 MHz' },
+  { cellId: 'NR-004', description: 'West sector secondary', cells: 2, e911Enabled: true, priority: 2, erfcnUl: 123463, ulBandwidth: '50 MHz', erfcnDl: 654328, dlBandwidth: '100 MHz' },
+  { cellId: 'NR-005', description: 'Central sector primary', cells: 2, e911Enabled: true, priority: 1, erfcnUl: 123464, ulBandwidth: '40 MHz', erfcnDl: 654329, dlBandwidth: '80 MHz' },
+  { cellId: 'NR-005', description: 'Central sector overlay', cells: 2, e911Enabled: false, priority: 2, erfcnUl: 123465, ulBandwidth: '40 MHz', erfcnDl: 654330, dlBandwidth: '80 MHz' },
+  { cellId: 'NR-006', description: 'Edge sector primary', cells: 2, e911Enabled: true, priority: 1, erfcnUl: 123466, ulBandwidth: '50 MHz', erfcnDl: 654331, dlBandwidth: '100 MHz' },
+  { cellId: 'NR-006', description: 'Edge sector secondary', cells: 2, e911Enabled: false, priority: 2, erfcnUl: 123467, ulBandwidth: '50 MHz', erfcnDl: 654332, dlBandwidth: '100 MHz' },
 ];
 
 const columns: ColumnDef<ZoneRow>[] = [

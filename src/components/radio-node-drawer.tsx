@@ -156,7 +156,7 @@ export function RadioNodeDrawer({ radioNode, open, onOpenChange, onNavigateToHos
                 <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                   <div className="flex flex-col gap-1">
                     <span className="text-muted-foreground">NR cells</span>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex flex-col gap-0.5">
                       <DeviceLink value={radioNode.nrCell1} />
                       <DeviceLink value={radioNode.nrCell2} />
                     </div>
@@ -182,6 +182,78 @@ export function RadioNodeDrawer({ radioNode, open, onOpenChange, onNavigateToHos
                 </div>
               </CardContent>
             </Card>
+
+            {/* NR Cells */}
+            {(() => {
+              const rnId = `RN-${String(radioNode.index).padStart(3, '0')}`;
+              const nrCells = NR_CELLS_DATA.filter((c) => c.radioNode === rnId);
+              if (nrCells.length === 0) return null;
+              return (
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      NR cells
+                      <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs font-medium">
+                        {nrCells.length}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 space-y-0 divide-y">
+                    {nrCells.map((cell) => {
+                      const cellAlarmCfg = ALARM_TYPE_CONFIG[cell.alarmType] ?? ALARM_TYPE_CONFIG.None;
+                      return (
+                        <div key={cell.cellId} className="py-4 first:pt-0 last:pb-0 space-y-3">
+                          <div>
+                            <DeviceLink value={cell.cellId} className="font-mono text-sm font-semibold" />
+                            <p className="text-sm text-muted-foreground mt-0.5">{cell.description}</p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-x-3 gap-y-3 text-sm">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-muted-foreground text-xs">Status</span>
+                              <DeviceStatus status={cell.status === 'Up' ? 'Connected' : 'Disconnected'} iconSize={14} className="text-sm" />
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-muted-foreground text-xs">Enabled</span>
+                              <span className="inline-flex items-center gap-1.5 font-medium">
+                                <Icon
+                                  name={cell.enabled ? 'check_circle' : 'cancel'}
+                                  size={14}
+                                  className={cell.enabled ? 'text-success' : 'text-muted-foreground'}
+                                />
+                                {cell.enabled ? 'Yes' : 'No'}
+                              </span>
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-muted-foreground text-xs">Alarms</span>
+                              {cell.alarms === 0 ? (
+                                <span className="font-medium text-muted-foreground tabular-nums">0</span>
+                              ) : (
+                                <span className="font-medium inline-flex items-center gap-1.5">
+                                  <span className="tabular-nums">{cell.alarms}</span>
+                                  <Icon name={cellAlarmCfg.name} size={14} className={cellAlarmCfg.className} />
+                                  <span>{cell.alarmType}</span>
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-muted-foreground text-xs">DL bandwidth</span>
+                              <span className="font-medium tabular-nums">{cell.dlBandwidth}</span>
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-muted-foreground text-xs">Zones</span>
+                              <div className="flex flex-col gap-0.5">
+                                <DeviceLink value={cell.zone1} />
+                                <DeviceLink value={cell.zone2} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Alarms Card */}
             <Card>
@@ -253,81 +325,6 @@ export function RadioNodeDrawer({ radioNode, open, onOpenChange, onNavigateToHos
                 )}
               </CardContent>
             </Card>
-
-            {/* NR Cells Table */}
-            {(() => {
-              const rnId = `RN-${String(radioNode.index).padStart(3, '0')}`;
-              const nrCells = NR_CELLS_DATA.filter((c) => c.radioNode === rnId);
-              if (nrCells.length === 0) return null;
-              return (
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                      NR cells
-                      <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs font-medium">
-                        {nrCells.length}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-4 space-y-2">
-                    <div className="overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="h-8 px-2">Cell ID</TableHead>
-                            <TableHead className="h-8 px-2">Name</TableHead>
-                            <TableHead className="h-8 px-2">Description</TableHead>
-                            <TableHead className="h-8 px-2">Status</TableHead>
-                            <TableHead className="h-8 px-2">Enabled</TableHead>
-                            <TableHead className="h-8 px-2">Alarms</TableHead>
-                            <TableHead className="h-8 px-2">Zones</TableHead>
-                            <TableHead className="h-8 px-2">DL bandwidth</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {nrCells.map((cell) => (
-                            <TableRow key={cell.cellId}>
-                              <TableCell className="py-1.5 px-2 text-xs font-mono font-medium">{cell.cellId}</TableCell>
-                              <TableCell className="py-1.5 px-2 text-xs">{cell.name}</TableCell>
-                              <TableCell className="py-1.5 px-2 text-xs truncate max-w-[10rem]">{cell.description}</TableCell>
-                              <TableCell className="py-1.5 px-2">
-                                <DeviceStatus status={cell.status === 'Up' ? 'Connected' : 'Disconnected'} iconSize={14} className="text-xs" />
-                              </TableCell>
-                              <TableCell className="py-1.5 px-2">
-                                <Icon
-                                  name={cell.enabled ? 'check_circle' : 'cancel'}
-                                  size={16}
-                                  className={cell.enabled ? 'text-success' : 'text-muted-foreground'}
-                                />
-                              </TableCell>
-                              <TableCell className="py-1.5 px-2 text-xs">
-                                {cell.alarms === 0
-                                  ? <span className="text-muted-foreground tabular-nums">0</span>
-                                  : (
-                                    <span className="inline-flex items-center gap-1.5">
-                                      <span className="tabular-nums">{cell.alarms}</span>
-                                      <Icon name={(ALARM_TYPE_CONFIG[cell.alarmType] ?? ALARM_TYPE_CONFIG.None).name} size={14} className={(ALARM_TYPE_CONFIG[cell.alarmType] ?? ALARM_TYPE_CONFIG.None).className} />
-                                      <span>{cell.alarmType}</span>
-                                    </span>
-                                  )
-                                }
-                              </TableCell>
-                              <TableCell className="py-1.5 px-2 text-xs">
-                                <span className="inline-flex items-center gap-1.5 flex-wrap">
-                                  <DeviceLink value={cell.zone1} />
-                                  <DeviceLink value={cell.zone2} />
-                                </span>
-                              </TableCell>
-                              <TableCell className="py-1.5 px-2 text-xs tabular-nums">{cell.dlBandwidth}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
 
           </div>
         </div>
