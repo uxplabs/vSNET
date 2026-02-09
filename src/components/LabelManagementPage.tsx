@@ -121,12 +121,12 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
                         onClick={() => setSelectedGroup(group.name)}
                         className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-md text-left text-sm transition-colors ${
                           isSelected
-                            ? 'bg-primary/10 text-primary font-medium ring-1 ring-primary/20'
+                            ? 'bg-accent text-accent-foreground font-medium'
                             : 'hover:bg-muted/60 text-foreground'
                         }`}
                       >
                         <span className="truncate min-w-0">{group.name}</span>
-                        <span className={`tabular-nums shrink-0 text-xs px-1.5 py-0.5 rounded ${isSelected ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                        <span className={`tabular-nums shrink-0 text-xs px-1.5 py-0.5 rounded ${isSelected ? 'bg-accent-foreground/10 text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
                           {group.count}
                         </span>
                       </button>
