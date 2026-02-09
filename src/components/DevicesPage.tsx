@@ -258,8 +258,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
           style={{ top: '3.5rem', height: 'calc(100vh - 3.5rem)', width: 'var(--sidebar-width)' }}
         >
         <SidebarHeader className="border-b border-sidebar-border h-16 justify-center">
-          <div className="px-1">
-            <span className="text-sm font-semibold text-sidebar-foreground">Network topology</span>
+          <div className="px-1 flex items-center gap-2">
+            <Icon name="account_tree" size={18} className="text-sidebar-foreground" />
+            <span className="text-sm font-bold text-sidebar-foreground">Network topology</span>
           </div>
         </SidebarHeader>
         <SidebarContent>
