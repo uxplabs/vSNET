@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar01 } from './navbar-01';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
@@ -98,9 +98,8 @@ const PERFORMANCE_LTE_OPTIONS = ['LTE', 'All', 'SN-LTE'] as const;
 const PERFORMANCE_TIME_OPTIONS = ['Last hour', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
 const THRESHOLD_ACT_SESS_OPTIONS = ['ACT_SESS', 'All', 'ACT_SESS_1', 'ACT_SESS_2', 'ACT_SESS_3'] as const;
 
-const deviceCounts = getDeviceSidebarCounts(DEVICES_DATA);
-const deviceCountsByRegion = getDeviceSidebarCountsByRegion(DEVICES_DATA);
-const ungroupedCount = Math.max(0, deviceCounts.region.all - Object.values(deviceCounts.groups).reduce((a, b) => a + b, 0));
+const allDeviceCounts = getDeviceSidebarCounts(DEVICES_DATA);
+const allDeviceCountsByRegion = getDeviceSidebarCountsByRegion(DEVICES_DATA);
 
 type RegionOption = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' | 'offline';
 type DeviceGroupOption = 'Core network' | 'Radio access' | 'Edge devices' | 'Test environment';
@@ -116,6 +115,24 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   // Determine whether we're showing all regions (global "All" or no selection) and build the sidebar region list
   const isAllRegions = !regions || regions.length === 0 || (regions.length === 1 && regions[0] === 'All');
   const sidebarRegionList = isAllRegions ? [...NORTH_AMERICAN_REGIONS] : regions!;
+
+  // Compute sidebar counts filtered by selected regions
+  const deviceCounts = useMemo(() => {
+    if (isAllRegions) return allDeviceCounts;
+    const filtered = DEVICES_DATA.filter((d) => regions!.includes(d.region));
+    return getDeviceSidebarCounts(filtered);
+  }, [isAllRegions, regions]);
+
+  const deviceCountsByRegion = useMemo(() => {
+    if (isAllRegions) return allDeviceCountsByRegion;
+    const result: typeof allDeviceCountsByRegion = {};
+    for (const r of regions!) {
+      if (allDeviceCountsByRegion[r]) result[r] = allDeviceCountsByRegion[r];
+    }
+    return result;
+  }, [isAllRegions, regions]);
+
+  const ungroupedCount = Math.max(0, deviceCounts.region.all - Object.values(deviceCounts.groups).reduce((a, b) => a + b, 0));
   const [search, setSearch] = useState('');
   const [regionFilter, setRegionFilter] = useState<string>('Region');
   const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter ?? 'Status');
@@ -222,7 +239,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   };
 
   return (
-    <SidebarProvider className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden">
       <Navbar01
         appName={appName}
         onSignOut={onSignOut}
@@ -234,15 +251,14 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
         onRegionsChange={onRegionsChange}
         fixedRegion={fixedRegion}
       />
-      <div className="flex flex-1 min-h-0 min-w-0 bg-primary">
-        <div data-sidebar-page-bg className="h-full">
-          <Sidebar
-            variant="inset"
-            collapsible="offcanvas"
-            className="!top-14 !h-[calc(100vh-3.5rem)] !left-0"
-          >
-        <SidebarHeader className="border-b border-sidebar-border">
-          <div className="flex flex-col gap-2 p-3">
+      <SidebarProvider className="flex-1 min-h-0 overflow-hidden">
+        <Sidebar
+          variant="inset"
+          collapsible="offcanvas"
+          style={{ top: '3.5rem', height: 'calc(100vh - 3.5rem)', width: 'var(--sidebar-width)' }}
+        >
+        <SidebarHeader className="border-b border-sidebar-border h-16 justify-center">
+          <div className="px-1">
             <span className="text-sm font-semibold text-sidebar-foreground">Network topology</span>
           </div>
         </SidebarHeader>
@@ -388,7 +404,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                                     ))}
                                     <SidebarMenuItem>
                                       <SidebarMenuButton asChild>
-                                        <button type="button" className="flex w-full items-center gap-2 text-muted-foreground hover:text-foreground">
+                                        <button type="button" className="flex w-full items-center gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground">
                                           <Icon name="add" size={18} />
                                           <span>Add group</span>
                                         </button>
@@ -421,7 +437,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       ))}
                       <SidebarMenuItem>
                         <SidebarMenuButton asChild>
-                          <button type="button" className="flex w-full items-center gap-2 text-muted-foreground hover:text-foreground">
+                          <button type="button" className="flex w-full items-center gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground">
                             <Icon name="add" size={18} />
                             <span>Add group</span>
                           </button>
@@ -436,8 +452,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
         </SidebarContent>
         <SidebarRail />
       </Sidebar>
-        </div>
-        <SidebarInset className="min-w-0 flex-1 overflow-hidden bg-background rounded-xl shadow-lg m-2">
+        <SidebarInset className="min-w-0 overflow-hidden light-content-zone">
           <Tabs value={mainTab} defaultValue="device" onValueChange={handleMainTabChange} className="flex flex-1 flex-col min-h-0">
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
               <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -476,7 +491,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
             </header>
             <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
               <div className="@container/main flex flex-1 flex-col gap-2 min-h-0 min-w-0">
-                <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6 min-h-0 overflow-hidden px-4 lg:px-6">
+                <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 min-h-0 overflow-hidden">
               <TabsContent value="device" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 <ErrorBoundary>
                 {/* Default area above table: selection + actions OR search + filters */}
@@ -1708,8 +1723,8 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
             </div>
           </Tabs>
       </SidebarInset>
-      </div>
     </SidebarProvider>
+    </div>
   );
 }
 

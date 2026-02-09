@@ -233,6 +233,7 @@ function getColumns(
   return [
   {
     id: 'select',
+    size: 40,
     header: ({ table }) => (
       <div onClick={(e) => e.stopPropagation()} className="flex items-center">
         <Checkbox
@@ -255,10 +256,14 @@ function getColumns(
       </div>
     ),
     enableSorting: false,
-    meta: { className: 'w-10' },
+    meta: {
+      headerClassName: 'sticky left-0 z-10 bg-card',
+      cellClassName: 'sticky left-0 z-10 bg-card group-hover:!bg-muted transition-colors',
+    },
   },
   {
     accessorKey: 'device',
+    size: 200,
     header: ({ column }) => <SortableHeader column={column}>Device</SortableHeader>,
     cell: ({ row }) => (
       <DeviceLink
@@ -267,9 +272,14 @@ function getColumns(
         onClick={() => onDeviceClick(row.original)}
       />
     ),
+    meta: {
+      headerClassName: 'sticky left-10 z-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+      cellClassName: 'sticky left-10 z-10 bg-card group-hover:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+    },
   },
   ...(showRegionColumn ? [{
     accessorKey: 'region',
+    size: 140,
     header: ({ column }: { column: any }) => <SortableHeader column={column}>Region</SortableHeader>,
     cell: ({ row }: { row: any }) => (
       <span className="text-muted-foreground">{row.getValue('region') as string}</span>
@@ -277,6 +287,7 @@ function getColumns(
   } as ColumnDef<DeviceRow>] : []),
   {
     accessorKey: 'type',
+    size: 120,
     header: ({ column }) => <SortableHeader column={column}>Type</SortableHeader>,
     cell: ({ row }) => (
       <NodeTypeBadge type={row.getValue('type') as string} />
@@ -284,6 +295,7 @@ function getColumns(
   },
   {
     accessorKey: 'notes',
+    size: 56,
     header: '',
     cell: ({ row }) => {
       const notes = row.getValue('notes') as string;
@@ -319,12 +331,13 @@ function getColumns(
   },
   {
     accessorKey: 'status',
+    size: 160,
     header: ({ column }) => <SortableHeader column={column}>Status</SortableHeader>,
     cell: ({ row }) => <StatusCell status={row.getValue('status') as string} />,
-    meta: { className: 'w-[10rem] pr-8' },
   },
   {
     accessorKey: 'alarms',
+    size: 140,
     header: ({ column }) => <SortableHeader column={column}>Alarms</SortableHeader>,
     sortingFn: (rowA, rowB) => {
       const order: Record<string, number> = { Critical: 0, Major: 1, Minor: 2, None: 3 };
@@ -349,6 +362,7 @@ function getColumns(
   },
   {
     accessorKey: 'configStatus',
+    size: 160,
     header: ({ column }) => <SortableHeader column={column}>Config status</SortableHeader>,
     cell: ({ row }) => (
       <span className="inline-flex items-center gap-2">
@@ -356,10 +370,10 @@ function getColumns(
         {row.getValue('configStatus') as string}
       </span>
     ),
-    meta: { className: 'w-[10rem] pr-8' },
   },
   {
     accessorKey: 'configMismatch',
+    size: 160,
     header: ({ column }) => <SortableHeader column={column}>Config mismatch</SortableHeader>,
     cell: ({ row }) => {
       const count = row.getValue('configMismatch') as number | undefined;
@@ -386,11 +400,13 @@ function getColumns(
   },
   {
     accessorKey: 'version',
+    size: 120,
     header: ({ column }) => <SortableHeader column={column}>Version</SortableHeader>,
     cell: ({ row }) => <span className="tabular-nums">{row.getValue('version')}</span>,
   },
   {
     accessorKey: 'ipAddress',
+    size: 160,
     header: ({ column }) => <SortableHeader column={column}>IP address</SortableHeader>,
     cell: ({ row }) => (
       <span className="inline-flex items-center gap-2 font-mono text-sm">
@@ -401,6 +417,7 @@ function getColumns(
   },
   {
     id: 'actions',
+    size: 56,
     header: '',
     cell: ({ row }) => (
       <DropdownMenu>
@@ -653,14 +670,15 @@ export function DevicesDataTable({
   return (
     <TooltipProvider delayDuration={300}>
     <div className="flex flex-col flex-1 min-h-0 gap-4 h-full">
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto rounded-lg border bg-card">
-        <Table>
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden rounded-lg border bg-card">
+        <Table className="table-fixed" style={{ minWidth: 1200 }}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
+                    style={{ width: header.getSize() }}
                     className={`px-4 py-3 h-12 ${((header.column.columnDef.meta as { headerClassName?: string; className?: string })?.headerClassName ?? (header.column.columnDef.meta as { className?: string })?.className) ?? ''}`}
                   >
                     {header.isPlaceholder

@@ -183,15 +183,15 @@ body {
     --border: #E2E8F0;
     --link: #0369A1;
     --link-hover: #3730A3;
-    /* Sidebar (light – aligned with background/muted) */
-    --sidebar: 214 32% 95%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 196 100% 21%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 214 32% 91%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 196 100% 21%;
+    /* Sidebar (light – dark sidebar matching primary #004F69) */
+    --sidebar: #004F69;
+    --sidebar-foreground: #F8FAFC;
+    --sidebar-primary: #004F69;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #005D7A;
+    --sidebar-accent-foreground: #F8FAFC;
+    --sidebar-border: #005D7A;
+    --sidebar-ring: #004F69;
     /* Popover */
     --popover: #FFFFFF;
     --popover-foreground: #0F172A;
@@ -262,15 +262,15 @@ body {
     --border: #3F4A5C;
     --link: #38BDF8;
     --link-hover: #7DD3FC;
-    /* Sidebar (dark – close to navbar #004F69 = hsl(196 100% 21%) but slightly darker at 16%) */
-    --sidebar: 196 100% 16%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 196 100% 21%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 196 100% 21%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 196 100% 24%;
-    --sidebar-ring: 196 100% 21%;
+    /* Sidebar (dark – matches primary #004F69) */
+    --sidebar: #004F69;
+    --sidebar-foreground: #F8FAFC;
+    --sidebar-primary: #004F69;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #005D7A;
+    --sidebar-accent-foreground: #F8FAFC;
+    --sidebar-border: #005D7A;
+    --sidebar-ring: #004F69;
     /* Popover */
     --popover: #1E2433;
     --popover-foreground: #F8FAFC;
@@ -278,6 +278,43 @@ body {
     --success: #006C28;
     --warning: #FACC15;
     --destructive: #8A0821;
+    --destructive-foreground: #FAFAFA;
+  }
+
+  /* Light-mode content zone — resets dark tokens to light values
+     so the main content block can be white with dark text */
+  .dark .light-content-zone {
+    --background: #FFFFFF;
+    --foreground: #1E293B;
+    --primary: #004F69;
+    --primary-foreground: #FFFFFF;
+    --secondary: #CBD5E1;
+    --secondary-foreground: #1E293B;
+    --muted: #F1F5F9;
+    --muted-foreground: #64748B;
+    --subtle-foreground: #475569;
+    --card: #FFFFFF;
+    --card-foreground: #0F172A;
+    --card-border: #E2E8F0;
+    --card-subtle: #F1F5F9;
+    --card-subtle-foreground: #475569;
+    --card-filled: #CBD5E1;
+    --card-filled-foreground: #334155;
+    --card-outlined-foreground: #1E293B;
+    --card-filled-border: #E2E8F0;
+    --accent: #D6D3D1;
+    --accent-foreground: #0F172A;
+    --input: #D1D5DB;
+    --input-highlight: #18181B;
+    --ring: #6366F1;
+    --border: #E2E8F0;
+    --link: #0369A1;
+    --link-hover: #3730A3;
+    --popover: #FFFFFF;
+    --popover-foreground: #0F172A;
+    --success: #009B3A;
+    --warning: #EAB308;
+    --destructive: #D13C59;
     --destructive-foreground: #FAFAFA;
   }
 }

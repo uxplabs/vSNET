@@ -5,6 +5,7 @@ import {
   type ColumnDef,
   type SortingState,
   type RowSelectionState,
+  type PaginationState,
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
@@ -21,6 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/table-pagination';
+import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -32,6 +34,15 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({ columns, data, header }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+  const pageSize = useResponsivePageSize();
+  const [pagination, setPagination] = React.useState<PaginationState>({
+    pageIndex: 0,
+    pageSize,
+  });
+
+  React.useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageSize }));
+  }, [pageSize]);
 
   const table = useReactTable({
     data,
@@ -41,7 +52,8 @@ export function DataTable<TData, TValue>({ columns, data, header }: DataTablePro
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onRowSelectionChange: setRowSelection,
-    state: { sorting, rowSelection },
+    onPaginationChange: setPagination,
+    state: { sorting, rowSelection, pagination },
   });
 
   return (

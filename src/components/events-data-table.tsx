@@ -183,7 +183,10 @@ function getColumns(showRegionColumn: boolean, onSeverityClick?: (event: EventRo
         />
       ),
       enableSorting: false,
-      meta: { className: 'w-10' },
+      meta: {
+        headerClassName: 'sticky left-0 z-10 w-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+        cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+      },
     },
     {
       accessorKey: 'severity',
@@ -437,8 +440,8 @@ export function EventsDataTable({
 
   return (
     <TooltipProvider delayDuration={300}>
-    <div className="flex flex-col gap-4">
-      <div className="overflow-x-auto rounded-lg border bg-card">
+    <div className="flex flex-col flex-1 min-h-0 gap-4 h-full">
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden rounded-lg border bg-card">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
