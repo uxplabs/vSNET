@@ -223,7 +223,7 @@ function getColumns(showRegionColumn: boolean, onAlarmClick?: (alarm: AlarmRow) 
       enableSorting: false,
       meta: {
         headerClassName: 'sticky left-0 z-10 w-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-        cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+        cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
       },
     },
     {
@@ -365,7 +365,7 @@ function getColumns(showRegionColumn: boolean, onAlarmClick?: (alarm: AlarmRow) 
       enableSorting: false,
       meta: {
         headerClassName: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-        cellClassName: 'sticky right-0 w-14 text-right pr-4 bg-card group-hover:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+        cellClassName: 'sticky right-0 w-14 text-right pr-4 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
       },
     },
   ];
@@ -378,6 +378,10 @@ export interface AlarmsDataTableProps {
   selectedRegions?: string[];
   /** Filter by specific region from table filter dropdown */
   regionFilter?: string;
+  /** Called when row selection changes; receives the number of selected rows. */
+  onSelectionChange?: (selectedCount: number) => void;
+  /** When this value changes, row selection is cleared. */
+  clearSelectionTrigger?: number;
 }
 
 export function AlarmsDataTable({ 
@@ -385,6 +389,8 @@ export function AlarmsDataTable({
   severityFilter = 'Alarms',
   selectedRegions = [],
   regionFilter = 'Region',
+  onSelectionChange,
+  clearSelectionTrigger,
 }: AlarmsDataTableProps = {}) {
   const showRegionColumn = selectedRegions.length > 1;
   const pageSize = useResponsivePageSize();
@@ -423,6 +429,21 @@ export function AlarmsDataTable({
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
+
+  const selectedCount = React.useMemo(
+    () => Object.keys(rowSelection).filter((key) => rowSelection[key]).length,
+    [rowSelection]
+  );
+
+  React.useEffect(() => {
+    onSelectionChange?.(selectedCount);
+  }, [selectedCount, onSelectionChange]);
+
+  React.useEffect(() => {
+    if (clearSelectionTrigger != null && clearSelectionTrigger > 0) {
+      setRowSelection({});
+    }
+  }, [clearSelectionTrigger]);
 
   const table = useReactTable({
     data,

@@ -112,25 +112,28 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [selectedRegion, setSelectedRegion] = useState<RegionOption>('all');
   const [selectedGroup, setSelectedGroup] = useState<DeviceGroupOption | null>(null);
 
+  // When a fixed region is set (single-region account), lock sidebar to that region
+  const effectiveRegions = fixedRegion ? [fixedRegion] : regions;
+
   // Determine whether we're showing all regions (global "All" or no selection) and build the sidebar region list
-  const isAllRegions = !regions || regions.length === 0 || (regions.length === 1 && regions[0] === 'All');
-  const sidebarRegionList = isAllRegions ? [...NORTH_AMERICAN_REGIONS] : regions!;
+  const isAllRegions = !fixedRegion && (!effectiveRegions || effectiveRegions.length === 0 || (effectiveRegions.length === 1 && effectiveRegions[0] === 'All'));
+  const sidebarRegionList = isAllRegions ? [...NORTH_AMERICAN_REGIONS] : effectiveRegions!;
 
   // Compute sidebar counts filtered by selected regions
   const deviceCounts = useMemo(() => {
     if (isAllRegions) return allDeviceCounts;
-    const filtered = DEVICES_DATA.filter((d) => regions!.includes(d.region));
+    const filtered = DEVICES_DATA.filter((d) => effectiveRegions!.includes(d.region));
     return getDeviceSidebarCounts(filtered);
-  }, [isAllRegions, regions]);
+  }, [isAllRegions, effectiveRegions]);
 
   const deviceCountsByRegion = useMemo(() => {
     if (isAllRegions) return allDeviceCountsByRegion;
     const result: typeof allDeviceCountsByRegion = {};
-    for (const r of regions!) {
+    for (const r of effectiveRegions!) {
       if (allDeviceCountsByRegion[r]) result[r] = allDeviceCountsByRegion[r];
     }
     return result;
-  }, [isAllRegions, regions]);
+  }, [isAllRegions, effectiveRegions]);
 
   const ungroupedCount = Math.max(0, deviceCounts.region.all - Object.values(deviceCounts.groups).reduce((a, b) => a + b, 0));
   const [search, setSearch] = useState('');
@@ -175,6 +178,8 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
   const [deviceSelectedCount, setDeviceSelectedCount] = useState(0);
   const [clearSelectionTrigger, setClearSelectionTrigger] = useState(0);
+  const [alarmSelectedCount, setAlarmSelectedCount] = useState(0);
+  const [alarmClearSelectionTrigger, setAlarmClearSelectionTrigger] = useState(0);
   const deviceFiltersActive = search !== '' || regionFilter !== 'Region' || statusFilter !== 'Status' || configStatusFilter !== 'Config status' || typeFilter !== 'Type' || versionFilter !== 'Version' || alarmsFilter !== 'Alarms' || labelsFilter !== 'Labels';
   const clearDeviceFilters = () => {
     setSearch(''); setRegionFilter('Region'); setStatusFilter('Status'); setSelectedRegion('all'); setConfigStatusFilter('Config status'); setTypeFilter('Type'); setVersionFilter('Version'); setAlarmsFilter('Alarms'); setLabelsFilter('Labels');
@@ -282,17 +287,19 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
           {/* Region – flat list (dashboard-01 style) */}
           <SidebarGroup>
             <SidebarGroupLabel>
-              {isAllRegions ? (
+              {fixedRegion ? (
+                fixedRegion
+              ) : isAllRegions ? (
                 'All regions'
-              ) : regions && regions.length > 1 ? (
+              ) : effectiveRegions && effectiveRegions.length > 1 ? (
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="cursor-default">Multiregion ({regions.length})</span>
+                      <span className="cursor-default">Multiregion ({effectiveRegions.length})</span>
                     </TooltipTrigger>
                     <TooltipContent side="right" className="max-w-xs">
                       <ul className="list-disc list-inside space-y-0.5 text-left">
-                        {regions.map((r) => (
+                        {effectiveRegions.map((r) => (
                           <li key={r}>{r}</li>
                         ))}
                       </ul>
@@ -368,7 +375,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarGroupContent>
-                  {isAllRegions || (regions && regions.length > 1) ? (
+                  {isAllRegions || (effectiveRegions && effectiveRegions.length > 1) ? (
                     <>
                       {sidebarRegionList.map((reg) => {
                         const counts = deviceCountsByRegion[reg];
@@ -499,22 +506,22 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   {deviceSelectedCount >= 1 ? (
                     <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0 ml-auto sm:ml-0">
-                      <Button variant="outline" size="sm">
+                      <Button variant="secondary" size="sm">
                         Configure
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button variant="secondary" size="sm">
                         Add to site
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button variant="secondary" size="sm">
                         Group
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-1.5">
+                      <Button variant="secondary" size="sm" className="gap-1.5">
                         <Icon name="delete" size={18} />
                         Delete
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-1">
+                          <Button variant="secondary" size="sm" className="gap-1">
                             More actions
                             <ChevronDown className="h-4 w-4 opacity-50" />
                           </Button>
@@ -644,7 +651,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-xs text-primary hover:text-primary"
+                      className="h-7 text-xs text-link hover:text-link-hover"
                       onClick={() => setClearSelectionTrigger((t) => t + 1)}
                     >
                       Clear
@@ -718,112 +725,143 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 </ErrorBoundary>
               </TabsContent>
               <TabsContent value="alarms" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
-                {/* Search and filters */}
+                {/* Action bar or search + filters */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
-                  <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
-                    <Icon
-                      name="search"
-                      size={18}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-                    />
-                    <Input
-                      placeholder="Search devices..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 w-full min-w-0"
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                    {regions && regions.length > 1 && (
-                      <Select value={regionFilter} onValueChange={setRegionFilter}>
-                        <SelectTrigger className="w-[140px] shrink-0">
-                          <SelectValue placeholder="Region" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Region">Region</SelectItem>
-                          {regions.map((r) => (
-                            <SelectItem key={r} value={r}>
-                              {r}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-[120px] shrink-0">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={configStatusFilter} onValueChange={setConfigStatusFilter}>
-                      <SelectTrigger className="w-[130px] shrink-0">
-                        <SelectValue placeholder="Config status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CONFIG_STATUS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger className="w-[110px] shrink-0">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TYPE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={versionFilter} onValueChange={setVersionFilter}>
-                      <SelectTrigger className="w-[100px] shrink-0">
-                        <SelectValue placeholder="Version" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {VERSION_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={alarmsFilter} onValueChange={setAlarmsFilter}>
-                      <SelectTrigger className="w-[110px] shrink-0">
-                        <SelectValue placeholder="Alarms" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ALARMS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={labelsFilter} onValueChange={setLabelsFilter}>
-                      <SelectTrigger className="w-[110px] shrink-0">
-                        <SelectValue placeholder="Labels" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LABELS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {alarmSelectedCount >= 1 ? (
+                    <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+                      <Button variant="secondary" size="sm">
+                        Acknowledge
+                      </Button>
+                      <Button variant="secondary" size="sm">
+                        Assign ticket
+                      </Button>
+                      <Button variant="secondary" size="sm" className="gap-1.5">
+                        <Icon name="cancel" size={18} />
+                        Clear alarms
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
+                        <Icon
+                          name="search"
+                          size={18}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                        />
+                        <Input
+                          placeholder="Search devices..."
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          className="pl-9 w-full min-w-0"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+                        {regions && regions.length > 1 && (
+                          <Select value={regionFilter} onValueChange={setRegionFilter}>
+                            <SelectTrigger className="w-[140px] shrink-0">
+                              <SelectValue placeholder="Region" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Region">Region</SelectItem>
+                              {regions.map((r) => (
+                                <SelectItem key={r} value={r}>
+                                  {r}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="w-[120px] shrink-0">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={configStatusFilter} onValueChange={setConfigStatusFilter}>
+                          <SelectTrigger className="w-[130px] shrink-0">
+                            <SelectValue placeholder="Config status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CONFIG_STATUS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={typeFilter} onValueChange={setTypeFilter}>
+                          <SelectTrigger className="w-[110px] shrink-0">
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TYPE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={versionFilter} onValueChange={setVersionFilter}>
+                          <SelectTrigger className="w-[100px] shrink-0">
+                            <SelectValue placeholder="Version" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {VERSION_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={alarmsFilter} onValueChange={setAlarmsFilter}>
+                          <SelectTrigger className="w-[110px] shrink-0">
+                            <SelectValue placeholder="Alarms" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ALARMS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={labelsFilter} onValueChange={setLabelsFilter}>
+                          <SelectTrigger className="w-[110px] shrink-0">
+                            <SelectValue placeholder="Labels" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LABELS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
                 </div>
-                {(() => {
+                {alarmSelectedCount >= 1 ? (
+                  <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                    <span className="text-sm text-muted-foreground">
+                      {alarmSelectedCount} {alarmSelectedCount === 1 ? 'alarm' : 'alarms'} selected
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-link hover:text-link-hover"
+                      onClick={() => setAlarmClearSelectionTrigger((t) => t + 1)}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                ) : (() => {
                   const count = getFilteredAlarmsCount({ search, severityFilter: alarmsFilter, regionFilter });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
                   if (regionFilter !== 'Region') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('Region') });
@@ -859,7 +897,14 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                   );
                 })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <AlarmsDataTable search={search} severityFilter={alarmsFilter} selectedRegions={regions} regionFilter={regionFilter} />
+                  <AlarmsDataTable
+                    search={search}
+                    severityFilter={alarmsFilter}
+                    selectedRegions={regions}
+                    regionFilter={regionFilter}
+                    onSelectionChange={setAlarmSelectedCount}
+                    clearSelectionTrigger={alarmClearSelectionTrigger}
+                  />
                 </div>
               </TabsContent>
               <TabsContent value="events" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
@@ -1060,7 +1105,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     </SelectContent>
                   </Select>
                   <div className="ml-auto">
-                    <Button variant="outline" size="sm" className="gap-1.5">
+                    <Button variant="outline" size="default" className="gap-1.5">
                       <Icon name="download" size={16} />
                       Export
                     </Button>
@@ -1171,11 +1216,11 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button variant="outline" size="sm" className="shrink-0 gap-1 ml-auto" onClick={() => setAddTaskDialogOpen(true)}>
-                      <Icon name="add" size={18} />
-                      Add scheduled task
-                    </Button>
                   </div>
+                  <Button variant="outline" size="default" className="shrink-0 gap-1 ml-auto" onClick={() => setAddTaskDialogOpen(true)}>
+                    <Icon name="add" size={18} />
+                    Add scheduled task
+                  </Button>
                 </div>
                 <AddScheduledTaskDialog
                   open={addTaskDialogOpen}

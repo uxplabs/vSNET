@@ -18,6 +18,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Label } from './ui/label';
 import { FaultManagementDataTable, FAULT_MANAGEMENT_DATA } from './fault-management-data-table';
 
 const CATEGORY_OPTIONS = ['Category', 'Alarm', 'Event', 'Trap', 'Syslog'] as const;
@@ -49,12 +64,36 @@ export default function FaultManagementPage({ onBack }: FaultManagementPageProps
   const [severityFilter, setSeverityFilter] = useState<string>('Severity');
   const [snmpFilter, setSnmpFilter] = useState<string>('SNMP');
   const [emailFilter, setEmailFilter] = useState<string>('Email');
+  const [addGroupDialogOpen, setAddGroupDialogOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [emptyGroups, setEmptyGroups] = useState<string[]>([]);
+
+  // Merge data-derived groups with empty groups for the sidebar
+  const allGroups = useMemo(() => {
+    const groups = getNotificationGroupsWithCounts();
+    const existing = new Set(groups.map((g) => g.name));
+    for (const name of emptyGroups) {
+      if (!existing.has(name)) {
+        groups.push({ name, count: 0 });
+      }
+    }
+    return groups.sort((a, b) => a.name.localeCompare(b.name));
+  }, [emptyGroups]);
+
+  const handleAddGroup = () => {
+    const name = newGroupName.trim();
+    if (!name) return;
+    setEmptyGroups((prev) => prev.includes(name) ? prev : [...prev, name]);
+    setSelectedGroup(name);
+    setNewGroupName('');
+    setAddGroupDialogOpen(false);
+  };
 
   const filteredGroups = useMemo(() => {
-    if (!groupSearch.trim()) return notificationGroups;
+    if (!groupSearch.trim()) return allGroups;
     const q = groupSearch.toLowerCase().trim();
-    return notificationGroups.filter((g) => g.name.toLowerCase().includes(q));
-  }, [groupSearch, notificationGroups]);
+    return allGroups.filter((g) => g.name.toLowerCase().includes(q));
+  }, [groupSearch, allGroups]);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -89,7 +128,7 @@ export default function FaultManagementPage({ onBack }: FaultManagementPageProps
                   <h3 className="text-sm font-semibold text-foreground truncate">Notification groups</h3>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 rounded-md" aria-label="Add notification group">
+                      <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 rounded-md" aria-label="Add notification group" onClick={() => setAddGroupDialogOpen(true)}>
                         <Icon name="add" size={16} />
                       </Button>
                     </TooltipTrigger>
@@ -136,67 +175,133 @@ export default function FaultManagementPage({ onBack }: FaultManagementPageProps
 
             {/* Main Content */}
             <div className="flex-1 min-w-0 space-y-4">
-              {/* Search Filter Bar */}
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
-                  <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 w-full"
-                  />
-                </div>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORY_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Severity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SEVERITY_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={snmpFilter} onValueChange={setSnmpFilter}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="SNMP" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SNMP_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={emailFilter} onValueChange={setEmailFilter}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Email" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EMAIL_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="ml-auto">
-                  <Button variant="outline" size="sm" className="gap-1">
-                    <Icon name="add" size={18} />
-                    Add device
-                  </Button>
-                </div>
-              </div>
+              {(() => {
+                const groupCount = allGroups.find((g) => g.name === selectedGroup)?.count ?? 0;
 
-              {/* Table */}
-              <FaultManagementDataTable groupFilter={selectedGroup} />
+                if (groupCount === 0) {
+                  return (
+                    <>
+                      <div className="flex justify-end pb-4 mb-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon">
+                              <Icon name="more_vert" size={18} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Icon name="edit" size={16} className="mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Icon name="delete" size={16} className="mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="flex justify-center">
+                        <div className="rounded-lg border bg-card p-8 text-center max-w-sm w-full shadow-sm">
+                          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                            <Icon name="error" size={24} className="text-muted-foreground" />
+                          </div>
+                          <h3 className="text-sm font-semibold text-foreground mb-1">No events</h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            This notification group has no events configured yet.
+                          </p>
+                          <Button variant="outline" className="gap-1">
+                            <Icon name="add" size={18} />
+                            Add notification group
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  );
+                }
+
+                return (
+                  <>
+                    {/* Search Filter Bar */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
+                        <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Search..."
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          className="pl-9 w-full"
+                        />
+                      </div>
+                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CATEGORY_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Severity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SEVERITY_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={snmpFilter} onValueChange={setSnmpFilter}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="SNMP" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SNMP_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={emailFilter} onValueChange={setEmailFilter}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Email" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EMAIL_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="ml-auto flex items-center gap-2">
+                        <Button variant="outline" size="default" className="gap-1">
+                          <Icon name="add" size={18} />
+                          Add event
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon">
+                              <Icon name="more_vert" size={18} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Icon name="edit" size={16} className="mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Icon name="delete" size={16} className="mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+
+                    {/* Table */}
+                    <FaultManagementDataTable groupFilter={selectedGroup} />
+                  </>
+                );
+              })()}
             </div>
           </div>
         </TabsContent>
@@ -218,6 +323,37 @@ export default function FaultManagementPage({ onBack }: FaultManagementPageProps
         </TabsContent>
       </Tabs>
     </div>
+
+    {/* Add notification group dialog */}
+    <Dialog open={addGroupDialogOpen} onOpenChange={setAddGroupDialogOpen}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Add notification group</DialogTitle>
+          <DialogDescription>Enter a name for the new notification group.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="new-group-name">Name</Label>
+            <Input
+              id="new-group-name"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              placeholder="e.g. Critical alerts"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddGroup();
+                }
+              }}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setAddGroupDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleAddGroup} disabled={!newGroupName.trim()}>Create</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </TooltipProvider>
   );
 }

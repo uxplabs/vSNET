@@ -1,8 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import type { ColumnDef } from '@tanstack/react-table';
-import { DataTable } from '@/components/ui/data-table';
+import type { ColumnDef, SortingState, RowSelectionState, PaginationState } from '@tanstack/react-table';
+import { flexRender, getCoreRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TablePagination } from '@/components/ui/table-pagination';
+import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { Button } from '@/components/ui/button';
 import { NodeTypeBadge } from '@/components/ui/node-type-badge';
@@ -70,7 +74,7 @@ const columns: ColumnDef<GoldenConfigTaskRow>[] = [
     enableSorting: false,
     meta: {
       headerClassName: 'sticky left-0 z-10 w-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-      cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+      cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
     },
   },
   {
@@ -177,6 +181,104 @@ const columns: ColumnDef<GoldenConfigTaskRow>[] = [
   },
 ];
 
-export function GoldenConfigTasksDataTable() {
-  return <DataTable columns={columns} data={GOLDEN_CONFIG_TASKS_DATA} />;
+interface GoldenConfigTasksDataTableProps {
+  onSelectionChange?: (selectedCount: number) => void;
+  clearSelectionTrigger?: number;
+}
+
+export function GoldenConfigTasksDataTable({ onSelectionChange, clearSelectionTrigger }: GoldenConfigTasksDataTableProps) {
+  const pageSize = useResponsivePageSize();
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+  const [pagination, setPagination] = React.useState<PaginationState>({
+    pageIndex: 0,
+    pageSize,
+  });
+
+  React.useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageSize }));
+  }, [pageSize]);
+
+  const selectedCount = React.useMemo(
+    () => Object.keys(rowSelection).filter((key) => rowSelection[key]).length,
+    [rowSelection]
+  );
+
+  React.useEffect(() => {
+    onSelectionChange?.(selectedCount);
+  }, [selectedCount, onSelectionChange]);
+
+  React.useEffect(() => {
+    if (clearSelectionTrigger != null && clearSelectionTrigger > 0) {
+      setRowSelection({});
+    }
+  }, [clearSelectionTrigger]);
+
+  const table = useReactTable({
+    data: GOLDEN_CONFIG_TASKS_DATA,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
+    state: { sorting, rowSelection, pagination },
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const meta = header.column.columnDef.meta as { headerClassName?: string; className?: string } | undefined;
+                  const headerClass = meta?.headerClassName ?? meta?.className;
+                  return (
+                    <TableHead
+                      key={header.id}
+                      className={cn('px-4 py-3 h-12 whitespace-nowrap', headerClass)}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'} className="group">
+                  {row.getVisibleCells().map((cell) => {
+                    const meta = cell.column.columnDef.meta as { cellClassName?: string; className?: string } | undefined;
+                    const cellClass = meta?.cellClassName ?? meta?.className;
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        className={cn('px-4 py-3 overflow-hidden', cellClass)}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center px-4 py-3">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <TablePagination table={table} className="justify-end" />
+    </div>
+  );
 }

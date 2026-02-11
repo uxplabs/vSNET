@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
@@ -131,6 +131,26 @@ const Navbar01 = ({
         : regionDisplayList.join(', ');
   const region = regions[0] ?? 'All';
   const [activeSection, setActiveSection] = useState<string>(currentSection ?? '');
+
+  // Current user info from localStorage
+  const USER_DISPLAY_NAMES: Record<string, string> = {
+    'acooper@acme.com': 'Alison Cooper',
+    'udoe@acme.com': 'Uday Doe',
+  };
+  const currentUserEmail = (() => {
+    try { return localStorage.getItem('ams-current-user') ?? ''; } catch { return ''; }
+  })();
+  const currentUserName = USER_DISPLAY_NAMES[currentUserEmail.toLowerCase()]
+    ?? (currentUserEmail
+      ? currentUserEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      : 'User');
+  const currentUserInitials = currentUserName
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'U';
+
   const getThemeKey = () => {
     try {
       const user = localStorage.getItem('ams-current-user');
@@ -352,24 +372,38 @@ const Navbar01 = ({
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
+              <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary-foreground/10 hover:text-inherit">
                 <Avatar className="h-8 w-8 border border-primary-foreground/30">
                   <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground text-xs">
-                    U
+                    {currentUserInitials}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={4} className="z-[9999] w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel className="p-0 font-normal">
+                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                  <Avatar className="h-8 w-8 rounded-lg">
+                    <AvatarFallback className="rounded-lg text-xs">{currentUserInitials}</AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{currentUserName}</span>
+                    <span className="truncate text-xs text-muted-foreground">{currentUserEmail}</span>
+                  </div>
+                </div>
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <Icon name="person" size={16} className="mr-2" />
-                Profile
+                Account
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Icon name="settings" size={16} className="mr-2" />
                 Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Icon name="notifications" size={16} className="mr-2" />
+                Notifications
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onNavigate?.('design-system')}>
@@ -379,7 +413,7 @@ const Navbar01 = ({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onSignOut}>
                 <Icon name="logout" size={16} className="mr-2" />
-                Sign Out
+                Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -484,20 +518,34 @@ const Navbar01 = ({
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="rounded-full">
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs">U</AvatarFallback>
+                          <AvatarFallback className="text-xs">{currentUserInitials}</AvatarFallback>
                         </Avatar>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuLabel className="p-0 font-normal">
+                        <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                          <Avatar className="h-8 w-8 rounded-lg">
+                            <AvatarFallback className="rounded-lg text-xs">{currentUserInitials}</AvatarFallback>
+                          </Avatar>
+                          <div className="grid flex-1 text-left text-sm leading-tight">
+                            <span className="truncate font-medium">{currentUserName}</span>
+                            <span className="truncate text-xs text-muted-foreground">{currentUserEmail}</span>
+                          </div>
+                        </div>
+                      </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem>
                         <Icon name="person" size={16} className="mr-2" />
-                        Profile
+                        Account
                       </DropdownMenuItem>
                       <DropdownMenuItem>
                         <Icon name="settings" size={16} className="mr-2" />
                         Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Icon name="notifications" size={16} className="mr-2" />
+                        Notifications
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => onNavigate?.('design-system')}>
@@ -507,7 +555,7 @@ const Navbar01 = ({
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={onSignOut}>
                         <Icon name="logout" size={16} className="mr-2" />
-                        Sign Out
+                        Log out
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

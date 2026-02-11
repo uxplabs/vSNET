@@ -18,6 +18,22 @@ import {
   TooltipTrigger,
 } from './ui/tooltip';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Label } from './ui/label';
+import {
   LabelManagementDataTable,
   LABEL_MANAGEMENT_DATA,
   type LabelManagementRow,
@@ -51,12 +67,40 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
   const [selectedGroup, setSelectedGroup] = useState(() => getLabelGroupsWithCounts(LABEL_MANAGEMENT_DATA)[0]?.name ?? '');
   const [regionFilter, setRegionFilter] = useState<string>('Region');
   const [groupFilter, setGroupFilter] = useState<string>('Group');
+  const [selectedCount, setSelectedCount] = useState(0);
+  const [clearSelectionTrigger, setClearSelectionTrigger] = useState(0);
+  const [addLabelDialogOpen, setAddLabelDialogOpen] = useState(false);
+  const [newLabelName, setNewLabelName] = useState('');
+
+  // Track manually created label groups that have no devices yet
+  const [emptyLabelGroups, setEmptyLabelGroups] = useState<string[]>([]);
+
+  // Merge data-derived groups with empty groups for the sidebar
+  const allLabelGroups = useMemo(() => {
+    const groups = getLabelGroupsWithCounts(labelData);
+    const existing = new Set(groups.map((g) => g.name));
+    for (const name of emptyLabelGroups) {
+      if (!existing.has(name)) {
+        groups.push({ name, count: 0 });
+      }
+    }
+    return groups.sort((a, b) => a.name.localeCompare(b.name));
+  }, [labelData, emptyLabelGroups]);
+
+  const handleAddLabel = () => {
+    const name = newLabelName.trim();
+    if (!name) return;
+    setEmptyLabelGroups((prev) => prev.includes(name) ? prev : [...prev, name]);
+    setSelectedGroup(name);
+    setNewLabelName('');
+    setAddLabelDialogOpen(false);
+  };
 
   const filteredGroups = useMemo(() => {
-    if (!groupSearch.trim()) return labelGroups;
+    if (!groupSearch.trim()) return allLabelGroups;
     const q = groupSearch.toLowerCase().trim();
-    return labelGroups.filter((g) => g.name.toLowerCase().includes(q));
-  }, [groupSearch, labelGroups]);
+    return allLabelGroups.filter((g) => g.name.toLowerCase().includes(q));
+  }, [groupSearch, allLabelGroups]);
 
   const handleAddDevicesToLabel = useCallback(
     (devices: AddableDeviceRow[]) => {
@@ -83,7 +127,7 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
   return (
     <TooltipProvider delayDuration={300}>
     <div className="space-y-6">
-      <div className="flex gap-6">
+      <div className="flex gap-6 items-start">
             {/* Labels sidebar */}
             <aside className="w-52 shrink-0 rounded-lg border bg-muted/30 border-border/80 overflow-hidden">
               <div className="p-3 border-b border-border/80 bg-muted/20">
@@ -91,7 +135,7 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
                   <h3 className="text-sm font-semibold text-foreground truncate">Labels</h3>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 rounded-md" aria-label="Add label">
+                      <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 rounded-md" aria-label="Add label" onClick={() => setAddLabelDialogOpen(true)}>
                         <Icon name="add" size={16} />
                       </Button>
                     </TooltipTrigger>
@@ -138,48 +182,147 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
 
             {/* Main Content */}
             <div className="flex-1 min-w-0 space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
-                  <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 w-full"
-                  />
-                </div>
-                <Select value={regionFilter} onValueChange={setRegionFilter}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Region" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {REGION_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={groupFilter} onValueChange={setGroupFilter}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GROUP_OPTIONS.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="ml-auto">
-                  <Button variant="outline" size="sm" className="gap-1" onClick={() => setAddDeviceSheetOpen(true)}>
-                    <Icon name="add" size={18} />
-                    Add device
-                  </Button>
-                </div>
-              </div>
+              {(() => {
+                const groupDeviceCount = allLabelGroups.find((g) => g.name === selectedGroup)?.count ?? 0;
 
-              <LabelManagementDataTable
-                data={labelData}
-                labelGroupFilter={selectedGroup}
-              />
+                if (groupDeviceCount === 0) {
+                  // Empty state
+                  return (
+                    <>
+                    <div className="flex justify-end pb-4 mb-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="icon">
+                            <Icon name="more_vert" size={18} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Icon name="edit" size={16} className="mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Icon name="delete" size={16} className="mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="flex justify-center">
+                      <div className="rounded-lg border bg-card p-8 text-center max-w-sm w-full shadow-sm">
+                        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                          <Icon name="devices" size={24} className="text-muted-foreground" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-foreground mb-1">No devices</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          This label has no devices yet. Add devices to get started.
+                        </p>
+                        <Button variant="outline" className="gap-1" onClick={() => setAddDeviceSheetOpen(true)}>
+                          <Icon name="add" size={18} />
+                          Add device
+                        </Button>
+                      </div>
+                    </div>
+                    </>
+                  );
+                }
+
+                return (
+                  <>
+                    {/* Row 1: Action buttons (when selected) OR search + filters (when not) */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
+                      {selectedCount >= 1 ? (
+                        <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0 ml-auto sm:ml-0">
+                          <Button variant="secondary" size="sm" className="gap-1.5">
+                            <Icon name="delete" size={18} />
+                            Remove
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
+                            <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                            <Input
+                              placeholder="Search..."
+                              value={search}
+                              onChange={(e) => setSearch(e.target.value)}
+                              className="pl-9 w-full min-w-0"
+                            />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+                            <Select value={regionFilter} onValueChange={setRegionFilter}>
+                              <SelectTrigger className="w-[120px] shrink-0">
+                                <SelectValue placeholder="Region" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {REGION_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Select value={groupFilter} onValueChange={setGroupFilter}>
+                              <SelectTrigger className="w-[120px] shrink-0">
+                                <SelectValue placeholder="Group" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {GROUP_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="ml-auto flex items-center gap-2">
+                            <Button variant="outline" size="default" className="gap-1" onClick={() => setAddDeviceSheetOpen(true)}>
+                              <Icon name="add" size={18} />
+                              Add device
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="icon">
+                                  <Icon name="more_vert" size={18} />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>
+                                  <Icon name="edit" size={16} className="mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Icon name="delete" size={16} className="mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {/* Row 2: "N selected + Clear" (when selected) */}
+                    {selectedCount >= 1 && (
+                      <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                        <span className="text-sm text-muted-foreground">
+                          {selectedCount} {selectedCount === 1 ? 'device' : 'devices'} selected
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-link hover:text-link-hover"
+                          onClick={() => setClearSelectionTrigger((n) => n + 1)}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    )}
+
+                    <LabelManagementDataTable
+                      data={labelData}
+                      labelGroupFilter={selectedGroup}
+                      onSelectionChange={setSelectedCount}
+                      clearSelectionTrigger={clearSelectionTrigger}
+                    />
+                  </>
+                );
+              })()}
 
               <Suspense fallback={null}>
                 <AddDeviceToLabelSheet
@@ -191,6 +334,39 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
               </Suspense>
             </div>
           </div>
+
+      {/* Add label dialog */}
+      <Dialog open={addLabelDialogOpen} onOpenChange={(open) => { setAddLabelDialogOpen(open); if (!open) setNewLabelName(''); }}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Add label</DialogTitle>
+            <DialogDescription>
+              Create a new label to organize your devices.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="label-name">Label name</Label>
+              <Input
+                id="label-name"
+                placeholder="Enter label name..."
+                value={newLabelName}
+                onChange={(e) => setNewLabelName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddLabel(); }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddLabelDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddLabel} disabled={!newLabelName.trim()}>
+              Add label
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
     </TooltipProvider>
   );

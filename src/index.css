@@ -154,7 +154,7 @@ body {
     --foreground: #1E293B;
     --primary: #004F69;
     --primary-foreground: #FFFFFF;
-    --secondary: #CBD5E1;
+    --secondary: #E2E8F0;
     --secondary-foreground: #1E293B;
     --tertiary: #456647;
     --tertiary-foreground: #FFFFFF;
@@ -173,7 +173,7 @@ body {
     --card-outlined-foreground: #1E293B;
     --card-filled-border: #E2E8F0;
     /* Accent */
-    --accent: #D6D3D1;
+    --accent: #F1F5F9;
     --accent-foreground: #0F172A;
     /* Input */
     --input: #D1D5DB;
@@ -233,8 +233,8 @@ body {
     --foreground: #F8FAFC;
     --primary: #004F69;
     --primary-foreground: #FFFFFF;
-    --secondary: #639BB2;
-    --secondary-foreground: #F8FAFC;
+    --secondary: #334155;
+    --secondary-foreground: #E2E8F0;
     --tertiary: #5A8A5D;
     --tertiary-foreground: #FFFFFF;
     /* General UI */
@@ -252,7 +252,7 @@ body {
     --card-outlined-foreground: #F8FAFC;
     --card-filled-border: #2F2F33;
     /* Accent */
-    --accent: #57534E;
+    --accent: #334155;
     --accent-foreground: #F8FAFC;
     /* Input */
     --input: #334155;
@@ -262,23 +262,23 @@ body {
     --border: #3F4A5C;
     --link: #38BDF8;
     --link-hover: #7DD3FC;
-    /* Sidebar (dark – matches primary #004F69) */
-    --sidebar: #004F69;
+    /* Sidebar (dark – uses background color) */
+    --sidebar: #0F172A;
     --sidebar-foreground: #F8FAFC;
     --sidebar-primary: #004F69;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #005D7A;
+    --sidebar-accent: #1E293B;
     --sidebar-accent-foreground: #F8FAFC;
-    --sidebar-border: #005D7A;
-    --sidebar-ring: #004F69;
+    --sidebar-border: #334155;
+    --sidebar-ring: #334155;
     /* Popover */
     --popover: #1E2433;
     --popover-foreground: #F8FAFC;
     /* Status */
     --success: #006C28;
     --warning: #FACC15;
-    --destructive: #8A0821;
-    --destructive-foreground: #FAFAFA;
+    --destructive: #F87171;
+    --destructive-foreground: #1E293B;
   }
 
   /* Light-mode content zone — resets dark tokens to light values
@@ -288,7 +288,7 @@ body {
     --foreground: #1E293B;
     --primary: #004F69;
     --primary-foreground: #FFFFFF;
-    --secondary: #CBD5E1;
+    --secondary: #E2E8F0;
     --secondary-foreground: #1E293B;
     --muted: #F1F5F9;
     --muted-foreground: #64748B;
@@ -344,6 +344,13 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Surface scoping — inside a card surface, reset --background to --card
+   so that components using bg-background (e.g. outline buttons, inputs)
+   render against the card color rather than the darker page background. */
+.bg-card {
+  --background: var(--card);
 }
 
 /* Devices page: sidebar uses page background (primary), content uses primary-foreground */

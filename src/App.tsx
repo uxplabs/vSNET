@@ -28,6 +28,10 @@ function App() {
   const [devicesConfigStatusFilter, setDevicesConfigStatusFilter] = useState<string>('Config status')
   const [regions, setRegions] = useState<string[]>(['Pacific Northwest'])
   const region = regions[0] ?? 'Pacific Northwest'
+
+  // Per-user region restrictions
+  const currentUserEmail = (() => { try { return (localStorage.getItem('ams-current-user') ?? '').toLowerCase(); } catch { return ''; } })();
+  const fixedRegion = currentUserEmail === 'acooper@acme.com' ? 'Pacific Northwest' : undefined;
   const [selectedDevice, setSelectedDevice] = useState<DeviceRow | null>(null)
   const [scrollToNotesForDeviceId, setScrollToNotesForDeviceId] = useState<string | null>(null)
   const [globalDrawerOpen, setGlobalDrawerOpen] = useState(false)
@@ -141,6 +145,7 @@ function App() {
           regions={regions}
           onRegionChange={(r) => setRegions([r])}
           onRegionsChange={setRegions}
+          fixedRegion={fixedRegion}
         />
       ) : currentPage === 'device-detail' && selectedDevice ? (
         <DeviceDetailPage
@@ -153,6 +158,7 @@ function App() {
           regions={regions}
           onRegionChange={(r) => setRegions([r])}
           onRegionsChange={setRegions}
+          fixedRegion={fixedRegion}
           scrollToNotes={scrollToNotesForDeviceId === selectedDevice.id}
           onScrollToNotesDone={() => setScrollToNotesForDeviceId(null)}
         />
@@ -166,6 +172,7 @@ function App() {
             regions={regions}
             onRegionChange={(r) => setRegions([r])}
             onRegionsChange={setRegions}
+            fixedRegion={fixedRegion}
           />
         </div>
       ) : currentPage === 'performance' ? (
@@ -178,6 +185,7 @@ function App() {
             regions={regions}
             onRegionChange={(r) => setRegions([r])}
             onRegionsChange={setRegions}
+            fixedRegion={fixedRegion}
           />
         </div>
       ) : currentPage === 'design-system' ? (
@@ -189,6 +197,7 @@ function App() {
           regions={regions}
           onRegionChange={(r) => setRegions([r])}
           onRegionsChange={setRegions}
+          fixedRegion={fixedRegion}
         />
       ) : currentPage === 'administration' ? (
         <div className="h-screen overflow-hidden">
@@ -200,6 +209,7 @@ function App() {
             regions={regions}
             onRegionChange={(r) => setRegions([r])}
             onRegionsChange={setRegions}
+            fixedRegion={fixedRegion}
           />
         </div>
       ) : (
@@ -214,6 +224,7 @@ function App() {
             regions={regions}
             onRegionChange={(r) => setRegions([r])}
             onRegionsChange={setRegions}
+            fixedRegion={fixedRegion}
             onNavigateToDeviceDetail={handleNavigateToDeviceDetail}
             initialStatusFilter={devicesStatusFilter}
             initialConfigStatusFilter={devicesConfigStatusFilter}

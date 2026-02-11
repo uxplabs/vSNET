@@ -263,7 +263,7 @@ export default function AdministrationPage({
 
                   <TabsContent value="domains" className="mt-6 space-y-4">
                     <div className="flex justify-end">
-                      <Button variant="outline" size="sm" className="gap-1" onClick={() => setAddDomainSheetOpen(true)}>
+                      <Button variant="outline" size="default" className="gap-1" onClick={() => setAddDomainSheetOpen(true)}>
                         <Icon name="add" size={18} />
                         Add domain
                       </Button>

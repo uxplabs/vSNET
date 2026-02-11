@@ -1,9 +1,25 @@
 'use client';
 
 import * as React from 'react';
-import { useMemo } from 'react';
-import type { ColumnDef } from '@tanstack/react-table';
-import { DataTable } from '@/components/ui/data-table';
+import { useMemo, useEffect } from 'react';
+import type { ColumnDef, RowSelectionState } from '@tanstack/react-table';
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type PaginationState,
+  type SortingState,
+} from '@tanstack/react-table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/Icon';
@@ -15,6 +31,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { TablePagination } from '@/components/ui/table-pagination';
+import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 
 export interface LabelManagementRow {
   id: string;
@@ -61,7 +79,7 @@ const columns: ColumnDef<LabelManagementRow>[] = [
     enableHiding: false,
     meta: {
       headerClassName: 'sticky left-0 z-10 w-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-      cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+      cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
     },
   },
   {
@@ -113,7 +131,7 @@ const columns: ColumnDef<LabelManagementRow>[] = [
     enableSorting: false,
     meta: {
       headerClassName: 'sticky right-0 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',
-      cellClassName: 'sticky right-0 bg-card group-hover:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',
+      cellClassName: 'sticky right-0 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',
     },
   },
 ];
@@ -121,20 +139,113 @@ const columns: ColumnDef<LabelManagementRow>[] = [
 export interface LabelManagementDataTableProps {
   data?: LabelManagementRow[];
   labelGroupFilter?: string;
+  onSelectionChange?: (count: number) => void;
+  clearSelectionTrigger?: number;
 }
 
 export function LabelManagementDataTable({
   data = LABEL_MANAGEMENT_DATA,
   labelGroupFilter,
+  onSelectionChange,
+  clearSelectionTrigger,
 }: LabelManagementDataTableProps) {
   const filteredData = useMemo(() => {
     if (!labelGroupFilter) return data;
     return data.filter((row) => row.labelGroup === labelGroupFilter);
   }, [data, labelGroupFilter]);
 
+  const pageSize = useResponsivePageSize();
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+  const [pagination, setPagination] = React.useState<PaginationState>({
+    pageIndex: 0,
+    pageSize,
+  });
+
+  React.useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageSize }));
+  }, [pageSize]);
+
+  const selectedCount = useMemo(
+    () => Object.keys(rowSelection).filter((key) => rowSelection[key]).length,
+    [rowSelection],
+  );
+
+  useEffect(() => {
+    onSelectionChange?.(selectedCount);
+  }, [selectedCount, onSelectionChange]);
+
+  useEffect(() => {
+    if (clearSelectionTrigger != null && clearSelectionTrigger > 0) {
+      setRowSelection({});
+    }
+  }, [clearSelectionTrigger]);
+
+  const table = useReactTable({
+    data: filteredData,
+    columns,
+    getRowId: (row) => row.id,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
+    state: { sorting, rowSelection, pagination },
+  });
+
   return (
     <TooltipProvider delayDuration={300}>
-      <DataTable columns={columns} data={filteredData} />
+      <div className="flex flex-col min-h-0 gap-4">
+        <div className="overflow-x-auto overflow-y-hidden rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className={`px-4 py-3 h-12 ${((header.column.columnDef.meta as { headerClassName?: string; className?: string })?.headerClassName ?? (header.column.columnDef.meta as { className?: string })?.className) ?? ''}`}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    className="group"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className={`px-4 py-3 ${((cell.column.columnDef.meta as { cellClassName?: string; className?: string })?.cellClassName ?? (cell.column.columnDef.meta as { className?: string })?.className) ?? ''}`}
+                        onClick={cell.column.id === 'select' || cell.column.id === 'actions' ? (e) => e.stopPropagation() : undefined}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center px-4 py-3">
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <TablePagination table={table} className="justify-end shrink-0" />
+      </div>
     </TooltipProvider>
   );
 }

@@ -10,10 +10,10 @@ const GAP = 16;
 const CORNER_RADIUS = 8;
 const LOGO_WIDTH = 100;
 const LOGO_HEIGHT = 56;
-const AUTH_CREDENTIALS = {
-  username: 'udoe@acme.com',
-  password: '2PVWyHwYA6fv-7dKZ',
-};
+const AUTH_CREDENTIALS = [
+  { username: 'udoe@acme.com', password: '2PVWyHwYA6fv-7dKZ' },
+  { username: 'acooper@acme.com', password: '*Jh@s_*CdHbFrUNoxY9s' },
+];
 
 export interface LoginPageProps {
   onLogin?: (username: string, password: string) => void | Promise<void>;
@@ -35,9 +35,9 @@ function LoginPage({ onLogin, onLoginWithSSO, appName = 'AMS' }: LoginPageProps)
     setError(null);
     try {
       const normalizedUsername = username.trim().toLowerCase();
-      const isValid =
-        normalizedUsername === AUTH_CREDENTIALS.username &&
-        password === AUTH_CREDENTIALS.password;
+      const isValid = AUTH_CREDENTIALS.some(
+        (cred) => normalizedUsername === cred.username && password === cred.password
+      );
       if (!isValid) {
         setError('Invalid username or password.');
         return;

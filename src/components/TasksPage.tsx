@@ -71,6 +71,8 @@ export default function TasksPage({
   const [goldenConfigSearch, setGoldenConfigSearch] = useState('');
   const [goldenConfigNodeTypeFilter, setGoldenConfigNodeTypeFilter] = useState<string>('Node type');
   const [goldenConfigStatusFilter, setGoldenConfigStatusFilter] = useState<string>('Last run');
+  const [goldenConfigSelectedCount, setGoldenConfigSelectedCount] = useState(0);
+  const [goldenConfigClearSelectionTrigger, setGoldenConfigClearSelectionTrigger] = useState(0);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -114,7 +116,7 @@ export default function TasksPage({
 
               <TabsContent value="scheduled-tasks" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters + Add button on same line */}
-                <div className="flex flex-wrap items-center gap-3 mb-4 shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
                     <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -158,7 +160,7 @@ export default function TasksPage({
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="default"
                         className="ml-auto shrink-0 gap-1"
                         onClick={() => setAddTaskDialogOpen(true)}
                       >
@@ -194,7 +196,7 @@ export default function TasksPage({
 
               <TabsContent value="templates" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                 {/* Search and filters + Add template button on same line */}
-                <div className="flex flex-wrap items-center gap-3 mb-4 shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
                     <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -236,7 +238,7 @@ export default function TasksPage({
                   </Select>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" className="ml-auto shrink-0 gap-1">
+                      <Button variant="outline" size="default" className="ml-auto shrink-0 gap-1">
                         <Icon name="add" size={18} />
                         Add template
                       </Button>
@@ -250,48 +252,89 @@ export default function TasksPage({
               </TabsContent>
 
               <TabsContent value="golden-configuration" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
-                <div className="flex flex-wrap items-center gap-3 mb-4 shrink-0">
-                  <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
-                    <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search configurations..."
-                      value={goldenConfigSearch}
-                      onChange={(e) => setGoldenConfigSearch(e.target.value)}
-                      className="pl-9 w-full"
-                    />
-                  </div>
-                  <Select value={goldenConfigNodeTypeFilter} onValueChange={setGoldenConfigNodeTypeFilter}>
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue placeholder="Node type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GOLDEN_NODE_TYPE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={goldenConfigStatusFilter} onValueChange={setGoldenConfigStatusFilter}>
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue placeholder="Last run" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GOLDEN_STATUS_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" className="ml-auto shrink-0 gap-1">
-                        <Icon name="add" size={18} />
-                        Add configuration
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
+                  {goldenConfigSelectedCount >= 1 ? (
+                    <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+                      <Button variant="secondary" size="sm">
+                        <Icon name="play_arrow" size={18} />
+                        Run now
                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Add golden configuration</TooltipContent>
-                  </Tooltip>
+                      <Button variant="secondary" size="sm">
+                        <Icon name="edit" size={18} />
+                        Edit
+                      </Button>
+                      <Button variant="secondary" size="sm">
+                        <Icon name="content_copy" size={18} />
+                        Duplicate
+                      </Button>
+                      <Button variant="secondary" size="sm" className="gap-1.5">
+                        <Icon name="delete" size={18} />
+                        Delete
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
+                        <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Search configurations..."
+                          value={goldenConfigSearch}
+                          onChange={(e) => setGoldenConfigSearch(e.target.value)}
+                          className="pl-9 w-full"
+                        />
+                      </div>
+                      <Select value={goldenConfigNodeTypeFilter} onValueChange={setGoldenConfigNodeTypeFilter}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Node type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GOLDEN_NODE_TYPE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={goldenConfigStatusFilter} onValueChange={setGoldenConfigStatusFilter}>
+                        <SelectTrigger className="w-[120px]">
+                          <SelectValue placeholder="Last run" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GOLDEN_STATUS_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="default" className="ml-auto shrink-0 gap-1">
+                            <Icon name="add" size={18} />
+                            Add configuration
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Add golden configuration</TooltipContent>
+                      </Tooltip>
+                    </>
+                  )}
                 </div>
+                {goldenConfigSelectedCount >= 1 && (
+                  <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                    <span className="text-sm text-muted-foreground">
+                      {goldenConfigSelectedCount} {goldenConfigSelectedCount === 1 ? 'configuration' : 'configurations'} selected
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-link hover:text-link-hover"
+                      onClick={() => setGoldenConfigClearSelectionTrigger((t) => t + 1)}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                )}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <GoldenConfigTasksDataTable />
+                  <GoldenConfigTasksDataTable
+                    onSelectionChange={setGoldenConfigSelectedCount}
+                    clearSelectionTrigger={goldenConfigClearSelectionTrigger}
+                  />
                 </div>
               </TabsContent>
             </Tabs>

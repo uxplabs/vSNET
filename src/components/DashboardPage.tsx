@@ -58,11 +58,14 @@ function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions
   const [alarmsSeverityFilter, setAlarmsSeverityFilter] = useState<string>('All');
   const [mapVisible, setMapVisible] = useState(true);
 
+  // When a fixed region is set (single-region account), lock data to that region
+  const effectiveRegions = fixedRegion ? [fixedRegion] : regions;
+
   const overviewData = useMemo(() => {
     const agg = getAggregatedRegionData();
     
     // Check if "All" is selected or no specific regions
-    const isAll = !regions || regions.length === 0 || regions.includes('All');
+    const isAll = !fixedRegion && (!effectiveRegions || effectiveRegions.length === 0 || effectiveRegions.includes('All'));
     
     if (isAll) {
       return {
@@ -75,7 +78,7 @@ function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions
     // Aggregate data from all selected regions
     const aggregatedDevices = { total: 0, connected: 0, disconnected: 0, kpiSyncErrors: 0 };
     
-    regions.forEach((r) => {
+    effectiveRegions!.forEach((r) => {
       const regionRow = getRegionRow(r);
       if (regionRow) {
         aggregatedDevices.total += regionRow.totalDevices;
@@ -113,7 +116,7 @@ function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions
         minor: Math.max(0, Math.round(ALL_ALARMS.minor * ratio)),
       },
     };
-  }, [regions]);
+  }, [effectiveRegions, fixedRegion]);
 
   const scrollToAlarmsAndFilter = useCallback((severity: string) => {
     setAlarmsSeverityFilter(severity);
@@ -158,7 +161,7 @@ function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions
                     {mapVisible && (
                       <div className="mb-6">
                         <Suspense fallback={<div className="rounded-lg border bg-card h-[400px] flex items-center justify-center bg-muted/30"><span className="text-muted-foreground text-sm">Loading map…</span></div>}>
-                          <RegionsMap region={region} regions={regions} onRegionChange={onRegionChange} />
+                          <RegionsMap region={fixedRegion ?? region} regions={effectiveRegions} onRegionChange={fixedRegion ? undefined : onRegionChange} />
                         </Suspense>
                       </div>
                     )}
@@ -196,7 +199,7 @@ function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions
                       <Icon name="public" size={20} className="text-muted-foreground" />
                       Regions
                     </h2>
-                    <RegionsDataTable regionsFilter={regions} />
+                    <RegionsDataTable regionsFilter={effectiveRegions} />
                   </section>
                 </div>
             )}
@@ -206,8 +209,8 @@ function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions
                     overviewData={overviewData}
                     alarmsSeverityFilter={alarmsSeverityFilter}
                     onSeverityFilterChange={setAlarmsSeverityFilter}
-                    region={region}
-                    regions={regions}
+                    region={fixedRegion ?? region}
+                    regions={effectiveRegions}
                     alarmsTableRef={alarmsTableRef}
                     scrollToAlarmsAndFilter={scrollToAlarmsAndFilter}
                   />

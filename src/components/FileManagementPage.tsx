@@ -80,7 +80,7 @@ export default function FileManagementPage({ onBack }: FileManagementPageProps) 
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" className="ml-auto shrink-0 gap-1">
+            <Button variant="outline" size="default" className="ml-auto shrink-0 gap-1">
               <Icon name="add" size={18} />
               Add user
             </Button>

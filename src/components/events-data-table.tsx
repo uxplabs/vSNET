@@ -185,7 +185,7 @@ function getColumns(showRegionColumn: boolean, onSeverityClick?: (event: EventRo
       enableSorting: false,
       meta: {
         headerClassName: 'sticky left-0 z-10 w-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-        cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+        cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
       },
     },
     {
@@ -316,7 +316,7 @@ function getColumns(showRegionColumn: boolean, onSeverityClick?: (event: EventRo
       enableSorting: false,
       meta: {
         headerClassName: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-        cellClassName: 'sticky right-0 w-14 text-right pr-4 bg-card group-hover:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+        cellClassName: 'sticky right-0 w-14 text-right pr-4 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
       },
     },
   ];
