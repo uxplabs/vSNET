@@ -26,17 +26,18 @@ import {
 export interface TaskTemplateRow {
   id: string;
   name: string;
+  golden: boolean;
   imageConstraints: string;
   domain: string;
   deviceType: string;
 }
 
 export const TASK_TEMPLATES_DATA: TaskTemplateRow[] = [
-  { id: '1', name: 'Config backup template', imageConstraints: 'v2.x, v3.x', domain: 'All devices', deviceType: 'SN-LTE' },
-  { id: '2', name: 'KPI sync template', imageConstraints: 'v3.0+', domain: 'Pacific Northwest', deviceType: 'CU' },
-  { id: '3', name: 'Report generation template', imageConstraints: 'v2.1+', domain: 'Core network', deviceType: 'RCP' },
-  { id: '4', name: 'Firmware check template', imageConstraints: 'v2.2, v3.x', domain: 'Radio access', deviceType: 'DAS' },
-  { id: '5', name: 'Health check template', imageConstraints: 'v3.x', domain: 'Edge devices', deviceType: 'VCU' },
+  { id: '1', name: 'Config backup template', golden: true, imageConstraints: 'v2.x, v3.x', domain: 'All devices', deviceType: 'SN-LTE' },
+  { id: '2', name: 'KPI sync template', golden: false, imageConstraints: 'v3.0+', domain: 'Pacific Northwest', deviceType: 'CU' },
+  { id: '3', name: 'Report generation template', golden: true, imageConstraints: 'v2.1+', domain: 'Core network', deviceType: 'RCP' },
+  { id: '4', name: 'Firmware check template', golden: false, imageConstraints: 'v2.2, v3.x', domain: 'Radio access', deviceType: 'DAS' },
+  { id: '5', name: 'Health check template', golden: true, imageConstraints: 'v3.x', domain: 'Edge devices', deviceType: 'VCU' },
 ];
 
 /* Editable name cell */
@@ -107,6 +108,25 @@ const columns: ColumnDef<TaskTemplateRow>[] = [
     accessorKey: 'name',
     header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
     cell: ({ row }) => <EditableNameCell value={row.getValue('name') as string} />,
+  },
+  {
+    accessorKey: 'golden',
+    header: () => null,
+    cell: ({ row }) => {
+      const isGolden = row.getValue('golden') as boolean;
+      return isGolden ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex items-center h-full">
+              <Icon name="star" size={18} className="text-amber-500" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>Golden template</TooltipContent>
+        </Tooltip>
+      ) : null;
+    },
+    enableSorting: false,
+    meta: { className: 'w-12' },
   },
   {
     accessorKey: 'imageConstraints',
