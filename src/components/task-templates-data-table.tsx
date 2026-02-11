@@ -2,9 +2,11 @@
 
 import * as React from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
 import { DataTable } from '@/components/ui/data-table';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/Icon';
 import { NodeTypeBadge } from '@/components/ui/node-type-badge';
@@ -26,16 +28,54 @@ export interface TaskTemplateRow {
   name: string;
   imageConstraints: string;
   domain: string;
-  nodeType: string;
+  deviceType: string;
 }
 
 export const TASK_TEMPLATES_DATA: TaskTemplateRow[] = [
-  { id: '1', name: 'Config backup template', imageConstraints: 'v2.x, v3.x', domain: 'All devices', nodeType: 'eNB' },
-  { id: '2', name: 'KPI sync template', imageConstraints: 'v3.0+', domain: 'Pacific Northwest', nodeType: 'eNB' },
-  { id: '3', name: 'Report generation template', imageConstraints: 'v2.1+', domain: 'Core network', nodeType: 'RN' },
-  { id: '4', name: 'Firmware check template', imageConstraints: 'v2.2, v3.x', domain: 'Radio access', nodeType: 'eNB' },
-  { id: '5', name: 'Health check template', imageConstraints: 'v3.x', domain: 'Edge devices', nodeType: 'RN' },
+  { id: '1', name: 'Config backup template', imageConstraints: 'v2.x, v3.x', domain: 'All devices', deviceType: 'SN-LTE' },
+  { id: '2', name: 'KPI sync template', imageConstraints: 'v3.0+', domain: 'Pacific Northwest', deviceType: 'CU' },
+  { id: '3', name: 'Report generation template', imageConstraints: 'v2.1+', domain: 'Core network', deviceType: 'RCP' },
+  { id: '4', name: 'Firmware check template', imageConstraints: 'v2.2, v3.x', domain: 'Radio access', deviceType: 'DAS' },
+  { id: '5', name: 'Health check template', imageConstraints: 'v3.x', domain: 'Edge devices', deviceType: 'VCU' },
 ];
+
+/* Editable name cell */
+function EditableNameCell({ value }: { value: string }) {
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(value);
+
+  if (editing) {
+    return (
+      <Input
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => setEditing(false)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === 'Escape') {
+            setEditing(false);
+          }
+        }}
+        className="h-8 text-sm font-medium -my-1"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="group/name flex items-center gap-1.5 text-left font-medium w-full"
+    >
+      <span className="truncate">{value}</span>
+      <Icon
+        name="edit"
+        size={14}
+        className="shrink-0 text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity"
+      />
+    </button>
+  );
+}
 
 const columns: ColumnDef<TaskTemplateRow>[] = [
   {
@@ -66,9 +106,7 @@ const columns: ColumnDef<TaskTemplateRow>[] = [
   {
     accessorKey: 'name',
     header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
-    cell: ({ row }) => (
-      <span className="font-medium">{row.getValue('name') as string}</span>
-    ),
+    cell: ({ row }) => <EditableNameCell value={row.getValue('name') as string} />,
   },
   {
     accessorKey: 'imageConstraints',
@@ -83,9 +121,9 @@ const columns: ColumnDef<TaskTemplateRow>[] = [
     cell: ({ row }) => row.getValue('domain') as string,
   },
   {
-    accessorKey: 'nodeType',
-    header: ({ column }) => <SortableHeader column={column}>Node type</SortableHeader>,
-    cell: ({ row }) => <NodeTypeBadge type={row.getValue('nodeType') as string} />,
+    accessorKey: 'deviceType',
+    header: ({ column }) => <SortableHeader column={column}>Device type</SortableHeader>,
+    cell: ({ row }) => <NodeTypeBadge type={row.getValue('deviceType') as string} />,
   },
   {
     id: 'actions',
