@@ -171,6 +171,7 @@ export function getDeviceSidebarCounts(devices: DeviceRow[]) {
     kpiSyncErrors: devices.filter((d) => d.configStatus === 'Out of sync').length,
     inMaintenance: devices.filter((d) => d.status === 'In maintenance').length,
     offline: devices.filter((d) => d.status === 'Offline').length,
+    configMismatch: devices.filter((d) => d.configMismatch && d.configMismatch > 0).length,
   };
   const groups = DEVICE_GROUPS.reduce((acc, g) => {
     acc[g] = devices.filter((d) => d.deviceGroup === g).length;
@@ -450,7 +451,7 @@ function getColumns(
 ];
 }
 
-export type SidebarRegionFilter = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' | 'offline';
+export type SidebarRegionFilter = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' | 'offline' | 'configMismatch';
 
 export interface DeviceTableFilters {
   sidebarRegion?: SidebarRegionFilter;
@@ -465,7 +466,7 @@ export interface DeviceTableFilters {
 }
 
 interface DevicesDataTableProps {
-  onNavigateToDeviceDetail?: (device: DeviceRow) => void;
+  onNavigateToDeviceDetail?: (device: DeviceRow, options?: { openNotes?: boolean; initialSection?: string; createdTemplate?: string }) => void;
   /** When provided, clicking the note icon in the table navigates to device detail with Notes tab active and scrolls to notes. */
   onAddNoteClick?: (device: DeviceRow) => void;
   /** Called when row selection changes; receives the number of selected rows. */
@@ -497,6 +498,8 @@ function filterBySidebarRegion(devices: DeviceRow[], region: SidebarRegionFilter
       return devices.filter((d) => d.status === 'In maintenance');
     case 'offline':
       return devices.filter((d) => d.status === 'Offline');
+    case 'configMismatch':
+      return devices.filter((d) => d.configMismatch && d.configMismatch > 0);
     default:
       return devices;
   }
@@ -727,6 +730,10 @@ export function DevicesDataTable({
       mismatchCount={configMismatchDevice?.configMismatch ?? 0}
       onOpenChange={setConfigMismatchSheetOpen}
       onMismatchCountChange={handleMismatchCountChange}
+      onNavigateToCommissioning={configMismatchDevice && onNavigateToDeviceDetail ? () => {
+        onNavigateToDeviceDetail(configMismatchDevice, { initialSection: 'commissioning', createdTemplate: `${configMismatchDevice.device}-mismatch-fix` });
+      } : undefined}
+      onTemplateCreated={() => {}}
     />
     </TooltipProvider>
   );

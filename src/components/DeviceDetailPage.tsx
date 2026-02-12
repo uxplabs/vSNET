@@ -81,6 +81,9 @@ interface DeviceDetailPageProps {
   onRegionChange?: (region: string) => void;
   onRegionsChange?: (regions: string[]) => void;
   fixedRegion?: string;
+  initialSection?: string;
+  /** Template name to pre-populate in the commissioning table (from config mismatch sheet). */
+  initialCreatedTemplate?: string | null;
   /** When true, switch to Notes tab and scroll to the notes section (e.g. after clicking add note in devices table). */
   scrollToNotes?: boolean;
   /** Called after scroll-to-notes has been applied so parent can clear the flag. */
@@ -196,6 +199,8 @@ function DeviceDetailPage({
   fixedRegion,
   scrollToNotes,
   onScrollToNotesDone,
+  initialSection,
+  initialCreatedTemplate,
 }: DeviceDetailPageProps) {
   const isDas = device.type === 'DAS';
   const SIDEBAR_ITEMS = isDas
@@ -213,7 +218,7 @@ function DeviceDetailPage({
         'SSH terminal',
       ] as const);
   const toKey = (label: string) => label.toLowerCase().replace(/\s+/g, '-');
-  const [activeSection, setActiveSection] = useState(toKey(SIDEBAR_ITEMS[0]));
+  const [activeSection, setActiveSection] = useState(initialSection ?? toKey(SIDEBAR_ITEMS[0]));
 
   React.useEffect(() => {
     const keys = SIDEBAR_ITEMS.map(toKey);
@@ -242,6 +247,11 @@ function DeviceDetailPage({
   const [radioNodesModelFilter, setRadioNodesModelFilter] = useState('Model');
   const [addRadioNodeSheetOpen, setAddRadioNodeSheetOpen] = useState(false);
   const [configMismatchSheetOpen, setConfigMismatchSheetOpen] = useState(false);
+  const [createdTemplateName, setCreatedTemplateName] = useState<string | null>(initialCreatedTemplate ?? null);
+  // Sync createdTemplateName when navigating to this page with a new template
+  React.useEffect(() => {
+    if (initialCreatedTemplate) setCreatedTemplateName(initialCreatedTemplate);
+  }, [initialCreatedTemplate]);
   const [resourcesTimeRange, setResourcesTimeRange] = useState<(typeof RESOURCES_TIME_RANGES)[number]>(RESOURCES_TIME_RANGES[0]);
   const [cellSearch, setCellSearch] = useState('');
   const [cellTimeRange, setCellTimeRange] = useState<(typeof CELL_TIME_RANGES)[number]>(CELL_TIME_RANGES[0]);
@@ -897,19 +907,29 @@ function DeviceDetailPage({
           </div>
           )}
 
-          {activeSection === 'commissioning' && (
+          {activeSection === 'commissioning' && (() => {
+            const commissioningRows = [
+              { step: 1, name: 'Upgrade', col2: [{ label: 'Current version', value: 'v2.1' }, { label: 'New version', value: 'v2.2' }], actions: ['Download', 'Upgrade'], highlight: false },
+              { step: 2, name: 'Global template', col2: [{ label: 'Current version', value: 'v1.0' }], actions: ['Choose templates', 'Start'], highlight: false },
+              {
+                step: 3,
+                name: 'Local/bulk template',
+                col2: createdTemplateName
+                  ? [{ label: 'Template', value: createdTemplateName }, { label: 'Version', value: 'v1.0' }]
+                  : [{ label: 'Template', value: 'default' }, { label: 'Version', value: 'v3.2' }],
+                actions: ['Start'],
+                highlight: !!createdTemplateName,
+              },
+              { step: 4, name: 'Start rem scan', col2: [], actions: ['Start'], highlight: false },
+            ];
+            return (
             <Card>
               <CardContent className="pt-6">
                 <Table>
                   <TableBody>
-                    {[
-                      { step: 1, name: 'Upgrade', col2: [{ label: 'Current version', value: 'v2.1' }, { label: 'New version', value: 'v2.2' }], actions: ['Download', 'Upgrade'] },
-                      { step: 2, name: 'Global template', col2: [{ label: 'Current version', value: 'v1.0' }], actions: ['Choose templates', 'Start'] },
-                      { step: 3, name: 'Loca/bulk template', col2: [{ label: 'Template', value: 'default' }, { label: 'Version', value: 'v3.2' }], actions: ['Start'] },
-                      { step: 4, name: 'Start rem scan', col2: [], actions: ['Start'] },
-                    ].map((row) => (
-                      <TableRow key={row.step}>
-                        <TableCell className="py-3 align-top">
+                    {commissioningRows.map((row) => (
+                      <TableRow key={row.step} className={row.highlight ? 'bg-success/10 dark:bg-success/5' : ''}>
+                        <TableCell className="py-3 align-middle">
                           <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-3 py-1.5 text-sm font-medium">
                             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/10 dark:bg-white/10 text-xs font-medium">
                               {row.step}
@@ -917,7 +937,7 @@ function DeviceDetailPage({
                             {row.name}
                           </span>
                         </TableCell>
-                        <TableCell className="py-3 align-top">
+                        <TableCell className="py-3 align-middle">
                           {row.col2?.length ? (
                             <span className="inline-flex flex-wrap items-center gap-x-1 gap-y-1 text-sm">
                               {row.col2.map((pair, i) => (
@@ -930,7 +950,7 @@ function DeviceDetailPage({
                             </span>
                           ) : null}
                         </TableCell>
-                        <TableCell className="py-3 text-right">
+                        <TableCell className="py-3 align-middle text-right">
                           <div className="flex justify-end gap-2">
                             {row.actions.map((action) => (
                               <Button key={action} variant="outline" size="sm" className="h-8">
@@ -945,7 +965,8 @@ function DeviceDetailPage({
                 </Table>
               </CardContent>
             </Card>
-          )}
+            );
+          })()}
 
           {activeSection === 'ip-interfaces' && (
             <Card>
@@ -1661,6 +1682,8 @@ function DeviceDetailPage({
         deviceName={device.device}
         mismatchCount={device.configMismatch ?? 0}
         onOpenChange={setConfigMismatchSheetOpen}
+        onNavigateToCommissioning={() => setActiveSection('commissioning')}
+        onTemplateCreated={() => setCreatedTemplateName(`${device.device}-mismatch-fix`)}
       />
     </div>
     </TooltipProvider>

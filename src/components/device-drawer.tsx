@@ -133,7 +133,7 @@ interface DeviceDrawerProps {
   device: DeviceRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onNavigateToDetails?: (device: DeviceRow) => void;
+  onNavigateToDetails?: (device: DeviceRow, options?: { openNotes?: boolean; initialSection?: string; createdTemplate?: string }) => void;
 }
 
 export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }: DeviceDrawerProps) {
@@ -655,6 +655,11 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
         deviceName={device?.device ?? ''}
         mismatchCount={device?.configMismatch ?? 0}
         onOpenChange={setConfigMismatchSheetOpen}
+        onNavigateToCommissioning={device && onNavigateToDetails ? () => {
+          onOpenChange(false);
+          onNavigateToDetails(device, { initialSection: 'commissioning', createdTemplate: `${device.device}-mismatch-fix` });
+        } : undefined}
+        onTemplateCreated={() => {}}
       />
     </Drawer>
   );

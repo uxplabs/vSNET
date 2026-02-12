@@ -233,7 +233,7 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                       {selectedCount >= 1 ? (
                         <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0 ml-auto sm:ml-0">
-                          <Button variant="secondary" size="sm" className="gap-1.5">
+                          <Button variant="secondary" className="gap-1.5">
                             <Icon name="delete" size={18} />
                             Remove
                           </Button>

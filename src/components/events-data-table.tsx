@@ -372,6 +372,10 @@ export interface EventsDataTableProps {
   selectedRegions?: string[];
   /** Filter by specific region from table filter dropdown */
   regionFilter?: string;
+  /** Called when row selection changes; receives the number of selected rows. */
+  onSelectionChange?: (count: number) => void;
+  /** Increment to programmatically clear selection. */
+  clearSelectionTrigger?: number;
 }
 
 export function EventsDataTable({
@@ -382,6 +386,8 @@ export function EventsDataTable({
   sourceFilter = 'Source',
   selectedRegions = [],
   regionFilter = 'Region',
+  onSelectionChange,
+  clearSelectionTrigger,
 }: EventsDataTableProps = {}) {
   const showRegionColumn = selectedRegions.length > 1;
   const [alarmDrawerOpen, setAlarmDrawerOpen] = React.useState(false);
@@ -424,6 +430,21 @@ export function EventsDataTable({
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));
   }, [pageSize]);
+
+  const selectedCount = React.useMemo(
+    () => Object.keys(rowSelection).filter((key) => rowSelection[key]).length,
+    [rowSelection]
+  );
+
+  React.useEffect(() => {
+    onSelectionChange?.(selectedCount);
+  }, [selectedCount, onSelectionChange]);
+
+  React.useEffect(() => {
+    if (clearSelectionTrigger) {
+      setRowSelection({});
+    }
+  }, [clearSelectionTrigger]);
 
   const table = useReactTable({
     data,

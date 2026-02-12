@@ -33,6 +33,8 @@ function App() {
   const currentUserEmail = (() => { try { return (localStorage.getItem('ams-current-user') ?? '').toLowerCase(); } catch { return ''; } })();
   const fixedRegion = currentUserEmail === 'acooper@acme.com' ? 'Pacific Northwest' : undefined;
   const [selectedDevice, setSelectedDevice] = useState<DeviceRow | null>(null)
+  const [deviceInitialSection, setDeviceInitialSection] = useState<string | undefined>(undefined)
+  const [deviceCreatedTemplate, setDeviceCreatedTemplate] = useState<string | null>(null)
   const [scrollToNotesForDeviceId, setScrollToNotesForDeviceId] = useState<string | null>(null)
   const [globalDrawerOpen, setGlobalDrawerOpen] = useState(false)
   const [globalDrawerDevice, setGlobalDrawerDevice] = useState<DeviceRow | null>(null)
@@ -101,8 +103,10 @@ function App() {
     }
   }
 
-  const handleNavigateToDeviceDetail = (device: DeviceRow, options?: { openNotes?: boolean }) => {
+  const handleNavigateToDeviceDetail = (device: DeviceRow, options?: { openNotes?: boolean; initialSection?: string; createdTemplate?: string }) => {
     setSelectedDevice(device)
+    setDeviceInitialSection(options?.initialSection)
+    setDeviceCreatedTemplate(options?.createdTemplate ?? null)
     setCurrentPage('device-detail')
     if (options?.openNotes) setScrollToNotesForDeviceId(device.id)
     else setScrollToNotesForDeviceId(null)
@@ -161,6 +165,8 @@ function App() {
           fixedRegion={fixedRegion}
           scrollToNotes={scrollToNotesForDeviceId === selectedDevice.id}
           onScrollToNotesDone={() => setScrollToNotesForDeviceId(null)}
+          initialSection={deviceInitialSection}
+          initialCreatedTemplate={deviceCreatedTemplate}
         />
       ) : currentPage === 'tasks' ? (
         <div className="h-screen overflow-hidden">

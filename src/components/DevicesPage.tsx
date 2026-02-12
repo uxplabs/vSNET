@@ -71,7 +71,7 @@ export interface DevicesPageProps {
   onRegionChange?: (region: string) => void;
   onRegionsChange?: (regions: string[]) => void;
   fixedRegion?: string;
-  onNavigateToDeviceDetail?: (device: any) => void;
+  onNavigateToDeviceDetail?: (device: any, options?: { openNotes?: boolean; initialSection?: string; createdTemplate?: string }) => void;
   initialStatusFilter?: string;
   initialConfigStatusFilter?: string;
 }
@@ -101,7 +101,7 @@ const THRESHOLD_ACT_SESS_OPTIONS = ['ACT_SESS', 'All', 'ACT_SESS_1', 'ACT_SESS_2
 const allDeviceCounts = getDeviceSidebarCounts(DEVICES_DATA);
 const allDeviceCountsByRegion = getDeviceSidebarCountsByRegion(DEVICES_DATA);
 
-type RegionOption = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' | 'offline';
+type RegionOption = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' | 'offline' | 'configMismatch';
 type DeviceGroupOption = 'Core network' | 'Radio access' | 'Edge devices' | 'Test environment';
 
 
@@ -180,6 +180,8 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [clearSelectionTrigger, setClearSelectionTrigger] = useState(0);
   const [alarmSelectedCount, setAlarmSelectedCount] = useState(0);
   const [alarmClearSelectionTrigger, setAlarmClearSelectionTrigger] = useState(0);
+  const [eventSelectedCount, setEventSelectedCount] = useState(0);
+  const [eventClearSelectionTrigger, setEventClearSelectionTrigger] = useState(0);
   const deviceFiltersActive = search !== '' || regionFilter !== 'Region' || statusFilter !== 'Status' || configStatusFilter !== 'Config status' || typeFilter !== 'Type' || versionFilter !== 'Version' || alarmsFilter !== 'Alarms' || labelsFilter !== 'Labels';
   const clearDeviceFilters = () => {
     setSearch(''); setRegionFilter('Region'); setStatusFilter('Status'); setSelectedRegion('all'); setConfigStatusFilter('Config status'); setTypeFilter('Type'); setVersionFilter('Version'); setAlarmsFilter('Alarms'); setLabelsFilter('Labels');
@@ -211,12 +213,24 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const thresholdFiltersActive = thresholdActSessFilter !== 'ACT_SESS';
   const clearThresholdFilters = () => setThresholdActSessFilter('ACT_SESS');
 
-  // Keep Status dropdown in sync with sidebar selection
+  // Keep filter dropdowns in sync with sidebar selection
   useEffect(() => {
-    if (selectedRegion === 'disconnected') setStatusFilter('Disconnected');
-    else if (selectedRegion === 'inMaintenance') setStatusFilter('In maintenance');
-    else if (selectedRegion === 'offline') setStatusFilter('Offline');
-    else if (selectedRegion === 'all' || selectedRegion === 'kpiSyncErrors') setStatusFilter('Status');
+    if (selectedRegion === 'disconnected') {
+      setStatusFilter('Disconnected');
+      setConfigStatusFilter('Config status');
+    } else if (selectedRegion === 'inMaintenance') {
+      setStatusFilter('In maintenance');
+      setConfigStatusFilter('Config status');
+    } else if (selectedRegion === 'offline') {
+      setStatusFilter('Offline');
+      setConfigStatusFilter('Config status');
+    } else if (selectedRegion === 'kpiSyncErrors') {
+      setStatusFilter('Status');
+      setConfigStatusFilter('Out of sync');
+    } else if (selectedRegion === 'all' || selectedRegion === 'configMismatch') {
+      setStatusFilter('Status');
+      setConfigStatusFilter('Config status');
+    }
   }, [selectedRegion]);
 
   // Sync external filter props (e.g. navigating from dashboard with a filter)
@@ -241,6 +255,12 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
     else if (value === 'In maintenance') setSelectedRegion('inMaintenance');
     else if (value === 'Offline') setSelectedRegion('offline');
     else setSelectedRegion('all');
+  };
+
+  const handleConfigStatusFilterChange = (value: string) => {
+    setConfigStatusFilter(value);
+    if (value === 'Out of sync') setSelectedRegion('kpiSyncErrors');
+    else if (selectedRegion === 'kpiSyncErrors') setSelectedRegion('all');
   };
 
   return (
@@ -354,6 +374,15 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       <Icon name="power_settings_new" size={18} />
                       <span>Offline</span>
                       <SidebarMenuBadge>{deviceCounts.region.offline}</SidebarMenuBadge>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={selectedRegion === 'configMismatch'}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('configMismatch')}>
+                      <Icon name="compare_arrows" size={18} />
+                      <span>Config mismatch</span>
+                      <SidebarMenuBadge>{deviceCounts.region.configMismatch}</SidebarMenuBadge>
                     </button>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -506,22 +535,22 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   {deviceSelectedCount >= 1 ? (
                     <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0 ml-auto sm:ml-0">
-                      <Button variant="secondary" size="sm">
+                      <Button variant="secondary">
                         Configure
                       </Button>
-                      <Button variant="secondary" size="sm">
+                      <Button variant="secondary">
                         Add to site
                       </Button>
-                      <Button variant="secondary" size="sm">
+                      <Button variant="secondary">
                         Group
                       </Button>
-                      <Button variant="secondary" size="sm" className="gap-1.5">
+                      <Button variant="secondary" className="gap-1.5">
                         <Icon name="delete" size={18} />
                         Delete
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="secondary" size="sm" className="gap-1">
+                          <Button variant="secondary" className="gap-1">
                             More actions
                             <ChevronDown className="h-4 w-4 opacity-50" />
                           </Button>
@@ -578,7 +607,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                             ))}
                           </SelectContent>
                         </Select>
-                        <Select value={configStatusFilter} onValueChange={setConfigStatusFilter}>
+                        <Select value={configStatusFilter} onValueChange={handleConfigStatusFilterChange}>
                           <SelectTrigger className="w-[130px] shrink-0">
                             <SelectValue placeholder="Config status" />
                           </SelectTrigger>
@@ -671,7 +700,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                         const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
                         if (regionFilter !== 'Region') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('Region') });
                         if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('Status'); setSelectedRegion('all'); } });
-                        if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => setConfigStatusFilter('Config status') });
+                        if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => { setConfigStatusFilter('Config status'); if (selectedRegion === 'kpiSyncErrors') setSelectedRegion('all'); } });
                         if (typeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('Type') });
                         if (versionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('Version') });
                         if (alarmsFilter !== 'Alarms') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('Alarms') });
@@ -729,13 +758,13 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                   {alarmSelectedCount >= 1 ? (
                     <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                      <Button variant="secondary" size="sm">
+                      <Button variant="secondary">
                         Acknowledge
                       </Button>
-                      <Button variant="secondary" size="sm">
+                      <Button variant="secondary">
                         Assign ticket
                       </Button>
-                      <Button variant="secondary" size="sm" className="gap-1.5">
+                      <Button variant="secondary" className="gap-1.5">
                         <Icon name="cancel" size={18} />
                         Clear alarms
                       </Button>
@@ -771,7 +800,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                             </SelectContent>
                           </Select>
                         )}
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                           <SelectTrigger className="w-[120px] shrink-0">
                             <SelectValue placeholder="Status" />
                           </SelectTrigger>
@@ -783,7 +812,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                             ))}
                           </SelectContent>
                         </Select>
-                        <Select value={configStatusFilter} onValueChange={setConfigStatusFilter}>
+                        <Select value={configStatusFilter} onValueChange={handleConfigStatusFilterChange}>
                           <SelectTrigger className="w-[130px] shrink-0">
                             <SelectValue placeholder="Config status" />
                           </SelectTrigger>
@@ -865,8 +894,8 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                   const count = getFilteredAlarmsCount({ search, severityFilter: alarmsFilter, regionFilter });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
                   if (regionFilter !== 'Region') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('Region') });
-                  if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => setStatusFilter('Status') });
-                  if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => setConfigStatusFilter('Config status') });
+                  if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('Status'); setSelectedRegion('all'); } });
+                  if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => { setConfigStatusFilter('Config status'); if (selectedRegion === 'kpiSyncErrors') setSelectedRegion('all'); } });
                   if (typeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('Type') });
                   if (versionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('Version') });
                   if (alarmsFilter !== 'Alarms') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('Alarms') });
@@ -908,8 +937,23 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 </div>
               </TabsContent>
               <TabsContent value="events" className="flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
-                {/* Search and filters */}
+                {/* Action bar or search + filters */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
+                  {eventSelectedCount >= 1 ? (
+                    <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+                      <Button variant="secondary">
+                        Acknowledge
+                      </Button>
+                      <Button variant="secondary">
+                        Assign ticket
+                      </Button>
+                      <Button variant="secondary" className="gap-1.5">
+                        <Icon name="delete" size={18} />
+                        Delete
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
                   <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
                     <Icon
                       name="search"
@@ -976,9 +1020,27 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       </SelectContent>
                     </Select>
                   </div>
+                    </>
+                  )}
                 </div>
-                {/* Active filters + result count */}
-                {(() => {
+                {/* Selected count + Clear OR active filters + result count */}
+                {eventSelectedCount >= 1 ? (
+                  <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                    <span className="text-sm text-muted-foreground">
+                      {eventSelectedCount} {eventSelectedCount === 1 ? 'event' : 'events'} selected
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-link hover:text-link-hover"
+                      onClick={() => setEventClearSelectionTrigger((t) => t + 1)}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                ) : null}
+                {eventSelectedCount < 1 && (() => {
+                  /* Active filters + result count */
                   const count = getFilteredEventCount({
                     search: eventsSearch,
                     typeFilter: eventsTypeFilter,
@@ -1024,6 +1086,8 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     sourceFilter={eventsSourceFilter}
                     selectedRegions={regions}
                     regionFilter={regionFilter}
+                    onSelectionChange={setEventSelectedCount}
+                    clearSelectionTrigger={eventClearSelectionTrigger}
                   />
                 </div>
               </TabsContent>

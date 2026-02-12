@@ -9,6 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { toast } from 'sonner';
 
 interface ConfigMismatchItem {
   id: string;
@@ -55,6 +56,8 @@ interface ConfigMismatchSheetProps {
   mismatchCount?: number;
   onOpenChange: (open: boolean) => void;
   onMismatchCountChange?: (newCount: number) => void;
+  onNavigateToCommissioning?: () => void;
+  onTemplateCreated?: () => void;
 }
 
 export function ConfigMismatchSheet({
@@ -63,6 +66,8 @@ export function ConfigMismatchSheet({
   mismatchCount = 3,
   onOpenChange,
   onMismatchCountChange,
+  onNavigateToCommissioning,
+  onTemplateCreated,
 }: ConfigMismatchSheetProps) {
   const [items, setItems] = React.useState<ConfigMismatchItem[]>(() => generateMismatchData(mismatchCount));
 
@@ -125,10 +130,10 @@ export function ConfigMismatchSheet({
                           <span className="text-xs font-mono text-muted-foreground break-all leading-relaxed">{item.parameter}</span>
                         </td>
                         <td className="p-2 px-4 align-middle font-medium">
-                          <span className="inline-block bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded text-sm">{item.goldStandard}</span>
+                          <span className="inline-block bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 px-1.5 py-0.5 rounded text-sm">{item.goldStandard}</span>
                         </td>
                         <td className="p-2 px-4 align-middle">
-                          <span className="inline-block bg-muted px-1.5 py-0.5 rounded text-sm text-muted-foreground">{item.configured}</span>
+                          <span className="inline-block bg-muted px-1.5 py-0.5 rounded text-sm text-muted-foreground dark:text-slate-300">{item.configured}</span>
                         </td>
                       </tr>
                     ))}
@@ -146,7 +151,33 @@ export function ConfigMismatchSheet({
               <Icon name="download" size={16} />
               Export template
             </Button>
-            <Button variant="outline" className="gap-1.5">
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => {
+                const navigateFn = onNavigateToCommissioning;
+                // Notify parent that a template was created
+                onTemplateCreated?.();
+                // Close the sheet first so the toast action button isn't blocked by the sheet overlay
+                onOpenChange(false);
+                setTimeout(() => {
+                  toast.success('Template created successfully', {
+                    description: `Local/bulk template for ${deviceName}`,
+                    ...(navigateFn
+                      ? {
+                          action: {
+                            label: 'View in Commissioning',
+                            onClick: () => {
+                              navigateFn();
+                            },
+                          },
+                        }
+                      : {}),
+                    duration: 6000,
+                  });
+                }, 200);
+              }}
+            >
               <Icon name="add" size={16} />
               Create template
             </Button>
