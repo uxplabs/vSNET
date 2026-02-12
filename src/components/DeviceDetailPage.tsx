@@ -191,6 +191,443 @@ const CELL_PERFORMANCE_ROWS = [
 
 const formatBytes = (value: number) => `${(value / 1_000_000).toFixed(1)} MB`;
 
+/* ─── Interactive SSH / Web Terminal ─────────────────────────── */
+interface TerminalLine {
+  type: 'input' | 'output' | 'system' | 'error';
+  text: string;
+}
+
+function getCommandResponse(cmd: string, device: DeviceRow): string {
+  const trimmed = cmd.trim().toLowerCase();
+  const hostname = device.device.toLowerCase().replace(/\s+/g, '-');
+  const ip = device.ipAddress || '10.12.1.42';
+  const uptime = `${Math.floor(Math.random() * 90) + 10} days, ${Math.floor(Math.random() * 23)}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`;
+
+  if (!trimmed) return '';
+
+  if (trimmed === 'help') {
+    return [
+      'Available commands:',
+      '  help                  Show this help message',
+      '  hostname              Display device hostname',
+      '  whoami                Display current user',
+      '  uptime                Show system uptime',
+      '  date                  Show current date/time',
+      '  ifconfig              Show network interfaces',
+      '  ip addr               Show IP addresses',
+      '  ping <host>           Ping a host',
+      '  traceroute <host>     Trace route to host',
+      '  show version          Show software version',
+      '  show interfaces       Show interface summary',
+      '  show alarms           Show active alarms',
+      '  show inventory        Show hardware inventory',
+      '  show running-config   Show running configuration',
+      '  show status           Show device status',
+      '  show neighbors        Show connected neighbors',
+      '  top                   Show process status',
+      '  df -h                 Show disk usage',
+      '  free -m               Show memory usage',
+      '  ls                    List current directory',
+      '  cat <file>            Display file contents',
+      '  clear                 Clear terminal',
+      '  exit                  Close session',
+    ].join('\n');
+  }
+
+  if (trimmed === 'hostname') return hostname;
+  if (trimmed === 'whoami') return 'admin';
+  if (trimmed === 'uptime') return ` ${new Date().toLocaleTimeString()} up ${uptime}, 1 user, load average: 0.12, 0.08, 0.05`;
+  if (trimmed === 'date') return new Date().toString();
+
+  if (trimmed === 'ifconfig' || trimmed === 'ip addr') {
+    return [
+      `1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536`,
+      `    inet 127.0.0.1/8 scope host lo`,
+      `2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500`,
+      `    inet ${ip}/24 brd ${ip.replace(/\.\d+$/, '.255')} scope global eth0`,
+      `    ether 00:1a:2b:3c:4d:${String(parseInt(device.id) % 100).padStart(2, '0')}`,
+      `3: mgmt0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500`,
+      `    inet 192.168.1.${(parseInt(device.id) % 254) + 1}/24 scope global mgmt0`,
+    ].join('\n');
+  }
+
+  if (trimmed.startsWith('ping ')) {
+    const host = cmd.trim().slice(5).trim() || '8.8.8.8';
+    const lines: string[] = [`PING ${host} (${host}): 56 data bytes`];
+    for (let i = 0; i < 4; i++) {
+      const ms = (Math.random() * 20 + 1).toFixed(3);
+      lines.push(`64 bytes from ${host}: icmp_seq=${i} ttl=64 time=${ms} ms`);
+    }
+    lines.push('', `--- ${host} ping statistics ---`, `4 packets transmitted, 4 received, 0% packet loss`, `rtt min/avg/max/mdev = 1.234/8.456/19.876/4.321 ms`);
+    return lines.join('\n');
+  }
+
+  if (trimmed.startsWith('traceroute ')) {
+    const host = cmd.trim().slice(11).trim() || '8.8.8.8';
+    const lines: string[] = [`traceroute to ${host}, 30 hops max, 60 byte packets`];
+    const hops = Math.floor(Math.random() * 5) + 3;
+    for (let i = 1; i <= hops; i++) {
+      const hopIp = `10.${i}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+      const ms1 = (Math.random() * 10 + 0.5).toFixed(3);
+      const ms2 = (Math.random() * 10 + 0.5).toFixed(3);
+      const ms3 = (Math.random() * 10 + 0.5).toFixed(3);
+      lines.push(` ${i}  ${hopIp}  ${ms1} ms  ${ms2} ms  ${ms3} ms`);
+    }
+    lines.push(` ${hops + 1}  ${host}  ${(Math.random() * 5 + 1).toFixed(3)} ms  ${(Math.random() * 5 + 1).toFixed(3)} ms  ${(Math.random() * 5 + 1).toFixed(3)} ms`);
+    return lines.join('\n');
+  }
+
+  if (trimmed === 'show version') {
+    return [
+      `${device.device} Software, Version ${device.version || '4.2.1'}`,
+      `Copyright (c) 2020-2025 Acme Networks, Inc.`,
+      `Compiled Mon 27-Jan-25 08:00 by release-build`,
+      ``,
+      `ROM: System Bootstrap, Version 15.2(1r)`,
+      ``,
+      `System uptime is ${uptime}`,
+      `System image file is "flash:/system-image-${device.version || '4.2.1'}.bin"`,
+      ``,
+      `Processor: ARM Cortex-A72 @ 1.8GHz`,
+      `Memory: 8192 MB (7856 MB available)`,
+      `Storage: 64 GB eMMC`,
+    ].join('\n');
+  }
+
+  if (trimmed === 'show interfaces') {
+    return [
+      `Interface          Status     Protocol   Speed      Duplex`,
+      `─────────────────  ─────────  ─────────  ─────────  ──────`,
+      `eth0               up         up         1 Gbps     full`,
+      `mgmt0              up         up         100 Mbps   full`,
+      `radio0             up         up         10 Gbps    full`,
+      `radio1             ${device.status === 'Connected' ? 'up' : 'down'}         ${device.status === 'Connected' ? 'up' : 'down'}         10 Gbps    full`,
+      `loopback0          up         up         —          —`,
+    ].join('\n');
+  }
+
+  if (trimmed === 'show alarms') {
+    if (device.alarms === 0) return 'No active alarms.';
+    const severities = ['Critical', 'Major', 'Minor'];
+    const types = ['Link down', 'Radio link failure', 'Config mismatch', 'Device disconnected'];
+    const lines: string[] = [`Active alarms: ${device.alarms}`, '', `Severity   Type                    Source          Time`];
+    lines.push(`─────────  ──────────────────────  ──────────────  ────────────────`);
+    for (let i = 0; i < Math.min(device.alarms, 8); i++) {
+      const sev = severities[i % 3].padEnd(9);
+      const typ = types[i % types.length].padEnd(22);
+      const src = `Cell-${i + 1}`.padEnd(14);
+      const h = 8 + (i * 3) % 12;
+      const m = (i * 7) % 60;
+      lines.push(`${sev}  ${typ}  ${src}  01/27 ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    }
+    return lines.join('\n');
+  }
+
+  if (trimmed === 'show inventory') {
+    return [
+      `NAME: "${device.device}", DESCR: "${device.type || 'SN-LTE'} Network Element"`,
+      `PID: ${device.type || 'SN-LTE'}-4200, VID: V02, SN: FTX${String(parseInt(device.id) + 1000).padStart(4, '0')}A${String(parseInt(device.id) + 100).padStart(3, '0')}`,
+      ``,
+      `NAME: "Power Supply 0", DESCR: "AC Power Supply"`,
+      `PID: PWR-750WAC, VID: V03, SN: ART0${String(parseInt(device.id) + 200).padStart(4, '0')}`,
+      ``,
+      `NAME: "Fan Tray", DESCR: "Fan Assembly"`,
+      `PID: FAN-MOD-4HS, VID: V01, SN: FOC${String(parseInt(device.id) + 300).padStart(4, '0')}`,
+    ].join('\n');
+  }
+
+  if (trimmed === 'show running-config') {
+    return [
+      `! Running configuration`,
+      `! Last modified: ${new Date().toISOString().split('T')[0]}`,
+      `!`,
+      `hostname ${hostname}`,
+      `!`,
+      `interface eth0`,
+      `  ip address ${ip} 255.255.255.0`,
+      `  no shutdown`,
+      `!`,
+      `interface mgmt0`,
+      `  ip address 192.168.1.${(parseInt(device.id) % 254) + 1} 255.255.255.0`,
+      `  no shutdown`,
+      `!`,
+      `interface radio0`,
+      `  description "Primary radio interface"`,
+      `  bandwidth 10000`,
+      `  no shutdown`,
+      `!`,
+      `logging host 10.0.1.50`,
+      `logging trap informational`,
+      `!`,
+      `ntp server 10.0.1.10`,
+      `ntp server 10.0.1.11`,
+      `!`,
+      `snmp-server community public RO`,
+      `snmp-server location "${device.region || 'Pacific Northwest'}"`,
+      `!`,
+      `end`,
+    ].join('\n');
+  }
+
+  if (trimmed === 'show status') {
+    return [
+      `Device:     ${device.device}`,
+      `Status:     ${device.status}`,
+      `Type:       ${device.type || 'SN-LTE'}`,
+      `Version:    ${device.version || '4.2.1'}`,
+      `IP:         ${ip}`,
+      `Region:     ${device.region || 'Pacific Northwest'}`,
+      `Alarms:     ${device.alarms} (${device.alarmType})`,
+      `Uptime:     ${uptime}`,
+      `Config:     ${device.configStatus || 'Synchronized'}`,
+    ].join('\n');
+  }
+
+  if (trimmed === 'show neighbors') {
+    const neighbors = [
+      { id: 'eth0', neighbor: 'sw-core-01', port: 'Gi0/1', platform: 'Switch-4500' },
+      { id: 'radio0', neighbor: 'rn-sector-a', port: 'radio0', platform: 'RN-4200' },
+      { id: 'radio1', neighbor: 'rn-sector-b', port: 'radio0', platform: 'RN-4200' },
+    ];
+    const lines = [`Device ID       Local Intf    Port ID       Platform`, `──────────────  ────────────  ────────────  ─────────────`];
+    neighbors.forEach((n) => lines.push(`${n.neighbor.padEnd(14)}  ${n.id.padEnd(12)}  ${n.port.padEnd(12)}  ${n.platform}`));
+    return lines.join('\n');
+  }
+
+  if (trimmed === 'top') {
+    return [
+      `top - ${new Date().toLocaleTimeString()} up ${uptime}, 1 user, load average: 0.12, 0.08, 0.05`,
+      `Tasks:  87 total,   1 running,  86 sleeping,   0 stopped,   0 zombie`,
+      `%Cpu(s):  3.2 us,  1.1 sy,  0.0 ni, 95.4 id,  0.1 wa,  0.0 hi,  0.2 si`,
+      `MiB Mem :   8192.0 total,   4256.3 free,   2104.8 used,   1830.9 buff/cache`,
+      `MiB Swap:   2048.0 total,   2048.0 free,      0.0 used,   5832.1 avail Mem`,
+      ``,
+      `  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND`,
+      ` 1024 root      20   0  412768  48320  12544 S   2.3   0.6   12:34.56 ne-manager`,
+      ` 1156 root      20   0  285440  32768   8192 S   1.1   0.4    8:22.10 alarm-daemon`,
+      ` 1287 root      20   0  198656  24576   6144 S   0.7   0.3    5:15.33 config-sync`,
+      ` 1342 root      20   0  156400  18432   4096 S   0.3   0.2    3:44.21 snmp-agent`,
+      ` 1498 root      20   0  132096  15360   3072 S   0.1   0.2    2:11.08 radio-ctrl`,
+      `  892 root      20   0   98304  12288   2048 S   0.0   0.1    1:05.42 syslog-ng`,
+    ].join('\n');
+  }
+
+  if (trimmed === 'df -h') {
+    return [
+      `Filesystem      Size  Used Avail Use% Mounted on`,
+      `/dev/mmcblk0p2   56G   12G   41G  23% /`,
+      `tmpfs           3.9G     0  3.9G   0% /dev/shm`,
+      `/dev/mmcblk0p1  256M   48M  209M  19% /boot`,
+      `/dev/mmcblk0p3  4.0G  1.2G  2.6G  32% /var/log`,
+    ].join('\n');
+  }
+
+  if (trimmed === 'free -m') {
+    return [
+      `              total        used        free      shared  buff/cache   available`,
+      `Mem:           8192        2104        4256         128        1830        5832`,
+      `Swap:          2048           0        2048`,
+    ].join('\n');
+  }
+
+  if (trimmed === 'ls') {
+    return [
+      `bin   boot  config  dev  etc  home  lib  log  media  mnt`,
+      `opt   proc  root    run  sbin  srv  sys  tmp  usr    var`,
+    ].join('\n');
+  }
+
+  if (trimmed.startsWith('cat ')) {
+    const file = cmd.trim().slice(4).trim();
+    if (file === '/etc/hostname' || file === 'hostname') return hostname;
+    if (file === '/etc/version' || file === 'version') return device.version || '4.2.1';
+    if (file === '/var/log/syslog' || file === 'syslog') {
+      return [
+        `Jan 27 14:32:18 ${hostname} ne-manager[1024]: System startup complete`,
+        `Jan 27 14:32:19 ${hostname} alarm-daemon[1156]: Monitoring ${device.alarms} active alarms`,
+        `Jan 27 14:32:20 ${hostname} config-sync[1287]: Configuration synchronized`,
+        `Jan 27 14:33:01 ${hostname} snmp-agent[1342]: SNMP community loaded`,
+        `Jan 27 14:35:00 ${hostname} radio-ctrl[1498]: Radio interfaces initialized`,
+      ].join('\n');
+    }
+    return `cat: ${file}: No such file or directory`;
+  }
+
+  if (trimmed === 'exit') return '__EXIT__';
+
+  return `bash: ${cmd.trim().split(' ')[0]}: command not found`;
+}
+
+function SshTerminal({ device }: { device: DeviceRow }) {
+  const hostname = device.device.toLowerCase().replace(/\s+/g, '-');
+  const prompt = `admin@${hostname}:~$`;
+  const [lines, setLines] = React.useState<TerminalLine[]>([
+    { type: 'system', text: `Last login: Mon Jan 27 14:32:18 2025 from 10.0.1.100` },
+    { type: 'system', text: `Welcome to ${device.device}` },
+    { type: 'system', text: `Type 'help' for available commands.` },
+  ]);
+  const [input, setInput] = React.useState('');
+  const [connected, setConnected] = React.useState(true);
+  const [history, setHistory] = React.useState<string[]>([]);
+  const [historyIdx, setHistoryIdx] = React.useState(-1);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [lines]);
+
+  React.useEffect(() => {
+    inputRef.current?.focus();
+  }, [connected]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!connected) return;
+    const cmd = input;
+    setInput('');
+    setHistoryIdx(-1);
+    if (cmd.trim()) {
+      setHistory((prev) => [cmd, ...prev.slice(0, 49)]);
+    }
+
+    const newLines: TerminalLine[] = [{ type: 'input', text: `${prompt} ${cmd}` }];
+
+    if (cmd.trim().toLowerCase() === 'clear') {
+      setLines([]);
+      return;
+    }
+
+    const response = getCommandResponse(cmd, device);
+    if (response === '__EXIT__') {
+      newLines.push({ type: 'system', text: 'Connection closed.' });
+      setLines((prev) => [...prev, ...newLines]);
+      setConnected(false);
+      return;
+    }
+    if (response) {
+      newLines.push({ type: response.startsWith('bash:') || response.startsWith('cat:') ? 'error' : 'output', text: response });
+    }
+    setLines((prev) => [...prev, ...newLines]);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (history.length > 0) {
+        const newIdx = Math.min(historyIdx + 1, history.length - 1);
+        setHistoryIdx(newIdx);
+        setInput(history[newIdx]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIdx > 0) {
+        const newIdx = historyIdx - 1;
+        setHistoryIdx(newIdx);
+        setInput(history[newIdx]);
+      } else {
+        setHistoryIdx(-1);
+        setInput('');
+      }
+    } else if (e.key === 'l' && e.ctrlKey) {
+      e.preventDefault();
+      setLines([]);
+    }
+  };
+
+  const handleReconnect = () => {
+    setConnected(true);
+    setLines([
+      { type: 'system', text: `Last login: ${new Date().toLocaleString()} from 10.0.1.100` },
+      { type: 'system', text: `Welcome to ${device.device}` },
+      { type: 'system', text: `Type 'help' for available commands.` },
+    ]);
+    setHistory([]);
+    setHistoryIdx(-1);
+    setInput('');
+  };
+
+  const lineColor = (type: TerminalLine['type']) => {
+    switch (type) {
+      case 'input': return 'text-[#d4d4d4]';
+      case 'output': return 'text-[#d4d4d4]';
+      case 'system': return 'text-green-400';
+      case 'error': return 'text-red-400';
+    }
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="bg-[#1e1e1e] text-[#d4d4d4] font-mono text-sm flex flex-col" style={{ minHeight: 420 }}>
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-white/10">
+          <div className="flex items-center gap-2 text-xs">
+            <span className={`inline-block w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-muted-foreground">{connected ? 'Connected' : 'Disconnected'} — {device.device} ({device.ipAddress || '10.12.1.42'})</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {!connected && (
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-green-400 hover:text-green-300 hover:bg-white/5" onClick={handleReconnect}>
+                <Icon name="refresh" size={14} className="mr-1" />
+                Reconnect
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-[#d4d4d4] hover:bg-white/5" onClick={() => setLines([])}>
+              <Icon name="delete_sweep" size={14} className="mr-1" />
+              Clear
+            </Button>
+          </div>
+        </div>
+        {/* Output */}
+        <div
+          ref={scrollRef}
+          className="flex-1 p-4 overflow-auto whitespace-pre-wrap break-all cursor-text"
+          style={{ maxHeight: 480 }}
+          onClick={() => inputRef.current?.focus()}
+        >
+          {lines.map((line, i) => (
+            <div key={i} className={lineColor(line.type)}>
+              {line.type === 'input' ? (
+                <>
+                  <span className="text-green-400">{prompt}</span>{' '}
+                  <span>{line.text.slice(prompt.length + 1)}</span>
+                </>
+              ) : (
+                line.text
+              )}
+            </div>
+          ))}
+          {connected && (
+            <div className="flex items-center">
+              <span className="text-green-400">{prompt}</span>
+              <span className="ml-1 animate-pulse">▌</span>
+            </div>
+          )}
+        </div>
+        {/* Input */}
+        {connected && (
+          <form onSubmit={handleSubmit} className="border-t border-white/10 px-4 py-3 flex items-center gap-2">
+            <span className="text-green-400 shrink-0">{prompt}</span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => { setInput(e.target.value); setHistoryIdx(-1); }}
+              onKeyDown={handleKeyDown}
+              placeholder="Enter command..."
+              className="flex-1 bg-transparent border-none outline-none text-[#d4d4d4] placeholder:text-[#666] font-mono text-sm"
+              aria-label="Terminal input"
+              autoFocus
+            />
+          </form>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function DeviceDetailPage({
   device,
   appName = 'AMS',
@@ -1639,29 +2076,7 @@ function DeviceDetailPage({
           )}
 
           {(activeSection === 'ssh-terminal' || activeSection === 'web-terminal') && (
-            <Card className="overflow-hidden">
-              <div className="bg-[#1e1e1e] text-[#d4d4d4] font-mono text-sm min-h-[320px] flex flex-col">
-                <div className="flex-1 p-4 overflow-auto whitespace-pre-wrap break-all">
-                  <div className="text-green-400">Last login: Mon Jan 27 14:32:18 2025 from 10.0.1.100</div>
-                  <div className="mt-1 text-muted-foreground">Welcome to {device.device}</div>
-                  <div className="mt-2 text-muted-foreground">Type &apos;help&apos; for available commands.</div>
-                  <div className="mt-4">
-                    <span className="text-green-400">admin@{device.device.toLowerCase().replace(/\s+/g, '-')}</span>
-                    <span className="text-muted-foreground">:~$ </span>
-                    <span className="animate-pulse">▌</span>
-                  </div>
-                </div>
-                <div className="border-t border-white/10 px-4 py-3 flex items-center gap-2">
-                  <span className="text-green-400 shrink-0">admin@{device.device.toLowerCase().replace(/\s+/g, '-')}:~$</span>
-                  <input
-                    type="text"
-                    placeholder="Enter command..."
-                    className="flex-1 bg-transparent border-none outline-none text-[#d4d4d4] placeholder:text-muted-foreground font-mono text-sm"
-                    aria-label="Terminal input"
-                  />
-                </div>
-              </div>
-            </Card>
+            <SshTerminal device={device} />
           )}
 
           {activeSection === 'snmp-details' && (

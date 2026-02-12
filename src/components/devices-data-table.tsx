@@ -545,8 +545,8 @@ function applyDeviceFilters(devices: DeviceRow[], filters: DeviceTableFilters, s
   return result;
 }
 
-export function getFilteredDeviceCount(filters: DeviceTableFilters): number {
-  return applyDeviceFilters(DEVICES_DATA, filters).length;
+export function getFilteredDeviceCount(filters: DeviceTableFilters, selectedRegions?: string[]): number {
+  return applyDeviceFilters(DEVICES_DATA, filters, selectedRegions).length;
 }
 
 export function DevicesDataTable({

@@ -696,7 +696,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                           versionFilter,
                           alarmsFilter,
                           labelsFilter,
-                        });
+                        }, regions);
                         const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
                         if (regionFilter !== 'Region') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('Region') });
                         if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('Status'); setSelectedRegion('all'); } });
