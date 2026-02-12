@@ -45,7 +45,7 @@ const SOURCE_OPTIONS = ['All', 'eNB', 'RN'] as const;
 const SEVERITY_ICON: Record<EventSeverity, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
   Major: { name: 'error_outline', className: 'text-warning' },
-  Minor: { name: 'warning', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-yellow-500' },
   Info: { name: 'info', className: 'text-muted-foreground' },
 };
 

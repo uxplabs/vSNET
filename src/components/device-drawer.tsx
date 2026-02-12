@@ -37,7 +37,7 @@ import { DeviceStatus } from '@/components/ui/device-status';
 const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
   Major: { name: 'error_outline', className: 'text-warning' },
-  Minor: { name: 'warning', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-yellow-500' },
   None: { name: 'check_circle', className: 'text-muted-foreground' },
 };
 
@@ -68,7 +68,7 @@ const MOCK_NOTES: NoteMessage[] = [
 const SEVERITY_ICON: Record<AlarmSeverity, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
   Major: { name: 'error_outline', className: 'text-warning' },
-  Minor: { name: 'warning', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-yellow-500' },
 };
 
 const DRAWER_ALARM_TYPES = ['Device disconnected', 'Link down', 'Radio link failure', 'Config mismatch'];
@@ -224,11 +224,11 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1.5 text-sm text-warning hover:underline"
+                        className="group/mismatch inline-flex items-center gap-1.5 text-sm text-warning"
                         onClick={() => setConfigMismatchSheetOpen(true)}
                       >
                         <Icon name="difference" size={16} className="shrink-0" />
-                        <span className="tabular-nums">{device.configMismatch} config {device.configMismatch === 1 ? 'mismatch' : 'mismatches'}</span>
+                        <span className="tabular-nums group-hover/mismatch:underline">{device.configMismatch} config {device.configMismatch === 1 ? 'mismatch' : 'mismatches'}</span>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>View configuration mismatches</TooltipContent>

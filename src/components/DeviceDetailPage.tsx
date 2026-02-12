@@ -255,7 +255,7 @@ function DeviceDetailPage({
   const [addRadioNodeSheetOpen, setAddRadioNodeSheetOpen] = useState(false);
   const [configMismatchSheetOpen, setConfigMismatchSheetOpen] = useState(false);
   const [createdTemplateName, setCreatedTemplateName] = useState<string | null>(initialCreatedTemplate ?? null);
-  const [commissioningSubTab, setCommissioningSubTab] = useState('local-templates');
+  const [commissioningSubTab, setCommissioningSubTab] = useState('template-logs');
   // Sync createdTemplateName when navigating to this page with a new template
   React.useEffect(() => {
     if (initialCreatedTemplate) {
@@ -433,11 +433,11 @@ function DeviceDetailPage({
                         <TooltipTrigger asChild>
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1.5 text-sm text-warning hover:underline"
+                            className="group/mismatch inline-flex items-center gap-1.5 text-sm text-warning"
                             onClick={() => setConfigMismatchSheetOpen(true)}
                           >
                             <Icon name="difference" size={16} className="shrink-0" />
-                            <span>{device.configMismatch} config {device.configMismatch === 1 ? 'mismatch' : 'mismatches'}</span>
+                            <span className="group-hover/mismatch:underline">{device.configMismatch} config {device.configMismatch === 1 ? 'mismatch' : 'mismatches'}</span>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>View configuration mismatches</TooltipContent>
@@ -952,11 +952,12 @@ function DeviceDetailPage({
               ...(createdTemplateName ? [{ id: 'lt-new', name: createdTemplateName, imageConstraints: '>=1.0.0', deviceType: device.type || 'SN-LTE' }] : []),
             ];
             const TEMPLATE_LOGS = [
-              { id: 'tl-1', timestamp: '2025-01-27 14:32', action: 'Applied', template: 'Seattle baseline config', user: 'J. Smith', status: 'Success' },
-              { id: 'tl-2', timestamp: '2025-01-26 09:15', action: 'Applied', template: 'Portland RF optimization', user: 'A. Jones', status: 'Success' },
-              { id: 'tl-3', timestamp: '2025-01-25 16:48', action: 'Reverted', template: 'Seattle baseline config', user: 'M. Lee', status: 'Success' },
-              { id: 'tl-4', timestamp: '2025-01-24 11:20', action: 'Applied', template: 'Edge device hardening', user: 'K. Brown', status: 'Failed' },
-              { id: 'tl-5', timestamp: '2025-01-23 08:05', action: 'Applied', template: 'Seattle baseline config', user: 'J. Smith', status: 'Success' },
+              { id: 'tl-1', task: 'Baseline audit', type: 'Reboot', domain: 'seattle-core.acme.net', startTime: '2025-01-27 14:32', lastCompleted: '2025-01-27 14:45' },
+              { id: 'tl-2', task: 'RF optimization sweep', type: 'Configuration', domain: 'portland-ran.acme.net', startTime: '2025-01-26 09:15', lastCompleted: '2025-01-26 09:42' },
+              { id: 'tl-3', task: 'Firmware rollback', type: 'Software upgrade', domain: 'seattle-core.acme.net', startTime: '2025-01-25 16:48', lastCompleted: '2025-01-25 17:10' },
+              { id: 'tl-4', task: 'Edge hardening check', type: 'Health check', domain: 'edge-west.acme.net', startTime: '2025-01-24 11:20', lastCompleted: '2025-01-24 11:35' },
+              { id: 'tl-5', task: 'Nightly config sync', type: 'Configuration', domain: 'seattle-core.acme.net', startTime: '2025-01-23 08:05', lastCompleted: '2025-01-23 08:22' },
+              { id: 'tl-6', task: 'Certificate renewal', type: 'Reboot', domain: 'portland-ran.acme.net', startTime: '2025-01-22 03:00', lastCompleted: '2025-01-22 03:18' },
             ];
             return (
             <div className="flex flex-col gap-6">
@@ -1020,24 +1021,41 @@ function DeviceDetailPage({
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Timestamp</TableHead>
-                          <TableHead>Action</TableHead>
-                          <TableHead>Template</TableHead>
-                          <TableHead>User</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead>Task</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Domain</TableHead>
+                          <TableHead>Start time</TableHead>
+                          <TableHead>Last completed</TableHead>
+                          <TableHead className="w-24 text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {TEMPLATE_LOGS.map((log) => (
                           <TableRow key={log.id}>
-                            <TableCell className="tabular-nums text-sm text-muted-foreground">{log.timestamp}</TableCell>
-                            <TableCell className="text-sm">{log.action}</TableCell>
-                            <TableCell className="text-sm font-medium">{log.template}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{log.user}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary" className={log.status === 'Success' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'}>
-                                {log.status}
-                              </Badge>
+                            <TableCell className="text-sm font-medium">{log.task}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{log.type}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{log.domain}</TableCell>
+                            <TableCell className="tabular-nums text-sm text-muted-foreground">{log.startTime}</TableCell>
+                            <TableCell className="tabular-nums text-sm text-muted-foreground">{log.lastCompleted}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Export">
+                                      <Icon name="download" size={18} />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Export</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Delete">
+                                      <Icon name="delete" size={18} />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Delete</TooltipContent>
+                                </Tooltip>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}

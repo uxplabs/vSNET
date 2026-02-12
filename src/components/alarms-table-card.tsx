@@ -61,7 +61,7 @@ const TIMESTAMP_OPTIONS = ['All', 'Last 24h', 'Last 7 days', 'Last 30 days'] as 
 const SEVERITY_ICON: Record<AlarmSeverity, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
   Major: { name: 'error_outline', className: 'text-warning' },
-  Minor: { name: 'warning', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-yellow-500' },
 };
 
 export const ALARMS_TABLE_DATA: AlarmTableRow[] = [

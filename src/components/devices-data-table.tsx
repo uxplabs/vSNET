@@ -65,7 +65,7 @@ const LABEL_POOL = ['production', 'lte', '5g', 'core', 'radio', 'maintenance', '
 export const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string }> = {
   Critical: { name: 'error', className: 'text-destructive' },
   Major: { name: 'error_outline', className: 'text-warning' },
-  Minor: { name: 'warning', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-yellow-500' },
   None: { name: 'check_circle', className: 'text-muted-foreground' },
 };
 
@@ -384,14 +384,14 @@ function getColumns(
           <TooltipTrigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-2 hover:underline"
+              className="group/mismatch inline-flex items-center gap-2"
               onClick={(e) => {
                 e.stopPropagation();
                 onConfigMismatchClick?.(row.original);
               }}
             >
               <Icon name="difference" size={18} className="text-warning shrink-0" />
-              <span className="tabular-nums">{count}</span>
+              <span className="tabular-nums group-hover/mismatch:underline">{count}</span>
             </button>
           </TooltipTrigger>
           <TooltipContent>View configuration mismatches</TooltipContent>
