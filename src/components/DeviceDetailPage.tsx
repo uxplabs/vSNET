@@ -54,6 +54,7 @@ import { X2ConnectionsDataTable } from './x2-connections-data-table';
 import { DebugLogsDataTable } from './debug-logs-data-table';
 import { IP_INTERFACES_DATA } from './ip-interfaces-data-table';
 import { NameValueField, EditableLabelsField } from './ui/editable-value';
+import { NodeTypeBadge } from './ui/node-type-badge';
 import {
   type ChartConfig,
   ChartContainer,
@@ -84,6 +85,10 @@ interface DeviceDetailPageProps {
   initialSection?: string;
   /** Template name to pre-populate in the commissioning table (from config mismatch sheet). */
   initialCreatedTemplate?: string | null;
+  /** When true, scroll to the alarms card in the Summary section. */
+  scrollToAlarms?: boolean;
+  /** Called after scroll-to-alarms has been applied so parent can clear the flag. */
+  onScrollToAlarmsDone?: () => void;
   /** When true, switch to Notes tab and scroll to the notes section (e.g. after clicking add note in devices table). */
   scrollToNotes?: boolean;
   /** Called after scroll-to-notes has been applied so parent can clear the flag. */
@@ -197,6 +202,8 @@ function DeviceDetailPage({
   onRegionChange,
   onRegionsChange,
   fixedRegion,
+  scrollToAlarms,
+  onScrollToAlarmsDone,
   scrollToNotes,
   onScrollToNotesDone,
   initialSection,
@@ -248,9 +255,13 @@ function DeviceDetailPage({
   const [addRadioNodeSheetOpen, setAddRadioNodeSheetOpen] = useState(false);
   const [configMismatchSheetOpen, setConfigMismatchSheetOpen] = useState(false);
   const [createdTemplateName, setCreatedTemplateName] = useState<string | null>(initialCreatedTemplate ?? null);
+  const [commissioningSubTab, setCommissioningSubTab] = useState('local-templates');
   // Sync createdTemplateName when navigating to this page with a new template
   React.useEffect(() => {
-    if (initialCreatedTemplate) setCreatedTemplateName(initialCreatedTemplate);
+    if (initialCreatedTemplate) {
+      setCreatedTemplateName(initialCreatedTemplate);
+      setCommissioningSubTab('local-templates');
+    }
   }, [initialCreatedTemplate]);
   const [resourcesTimeRange, setResourcesTimeRange] = useState<(typeof RESOURCES_TIME_RANGES)[number]>(RESOURCES_TIME_RANGES[0]);
   const [cellSearch, setCellSearch] = useState('');
@@ -265,6 +276,7 @@ function DeviceDetailPage({
   const [noteInput, setNoteInput] = useState('');
   const notesScrollRef = React.useRef<HTMLDivElement>(null);
   const notesCardRef = React.useRef<HTMLDivElement>(null);
+  const alarmsCardRef = React.useRef<HTMLDivElement>(null);
 
   const [snmpValues, setSnmpValues] = useState({
     ipAddress: device.ipAddress || '10.12.1.42',
@@ -294,10 +306,21 @@ function DeviceDetailPage({
   }, [snmpValues]);
 
   React.useEffect(() => {
+    if (!scrollToAlarms) return;
+    setActiveSection('summary');
+    setAlarmsEventsTab('alarms');
+    const t = setTimeout(() => {
+      alarmsCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      onScrollToAlarmsDone?.();
+    }, 150);
+    return () => clearTimeout(t);
+  }, [scrollToAlarms, onScrollToAlarmsDone]);
+
+  React.useEffect(() => {
     if (!scrollToNotes) return;
     setAlarmsEventsTab('notes');
     const t = setTimeout(() => {
-      notesCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      alarmsCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       onScrollToNotesDone?.();
     }, 150);
     return () => clearTimeout(t);
@@ -371,7 +394,7 @@ function DeviceDetailPage({
       />
       <main className="flex-1 w-full px-4 py-6 md:px-6 lg:px-8 min-h-0 flex flex-col overflow-hidden">
         {/* Header - fixed at top of main */}
-        <div className="shrink-0 bg-gray-900 -mx-4 -mt-6 mb-6 md:-mx-6 lg:-mx-8 rounded-b-lg overflow-hidden">
+        <div className="shrink-0 bg-gray-900 -mx-4 -mt-6 mb-6 md:-mx-6 lg:-mx-8 rounded-b-lg overflow-hidden dark:border-b dark:border-white/10">
           {device.status === 'In maintenance' && (
             <div className="h-4 bg-warning" />
           )}
@@ -729,7 +752,7 @@ function DeviceDetailPage({
             </Card>
 
             {/* Alarms, Events, Conditions, Notes */}
-            <Card>
+            <Card ref={alarmsCardRef}>
               <CardContent className="pt-6">
                 <Tabs value={alarmsEventsTab} onValueChange={setAlarmsEventsTab}>
                   <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
@@ -922,7 +945,21 @@ function DeviceDetailPage({
               },
               { step: 4, name: 'Start rem scan', col2: [], actions: ['Start'], highlight: false },
             ];
+            const LOCAL_TEMPLATES = [
+              { id: 'lt-1', name: 'Seattle baseline config', imageConstraints: '>=2.0.5', deviceType: 'SN-LTE' },
+              { id: 'lt-2', name: 'Portland RF optimization', imageConstraints: '>=3.1.0', deviceType: 'CU' },
+              { id: 'lt-3', name: 'Edge device hardening', imageConstraints: '>=2.2.0', deviceType: 'VCU' },
+              ...(createdTemplateName ? [{ id: 'lt-new', name: createdTemplateName, imageConstraints: '>=1.0.0', deviceType: device.type || 'SN-LTE' }] : []),
+            ];
+            const TEMPLATE_LOGS = [
+              { id: 'tl-1', timestamp: '2025-01-27 14:32', action: 'Applied', template: 'Seattle baseline config', user: 'J. Smith', status: 'Success' },
+              { id: 'tl-2', timestamp: '2025-01-26 09:15', action: 'Applied', template: 'Portland RF optimization', user: 'A. Jones', status: 'Success' },
+              { id: 'tl-3', timestamp: '2025-01-25 16:48', action: 'Reverted', template: 'Seattle baseline config', user: 'M. Lee', status: 'Success' },
+              { id: 'tl-4', timestamp: '2025-01-24 11:20', action: 'Applied', template: 'Edge device hardening', user: 'K. Brown', status: 'Failed' },
+              { id: 'tl-5', timestamp: '2025-01-23 08:05', action: 'Applied', template: 'Seattle baseline config', user: 'J. Smith', status: 'Success' },
+            ];
             return (
+            <div className="flex flex-col gap-6">
             <Card>
               <CardContent className="pt-6">
                 <Table>
@@ -965,6 +1002,88 @@ function DeviceDetailPage({
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Template logs & Local templates */}
+            <Card>
+              <CardContent className="pt-6">
+                <Tabs value={commissioningSubTab} onValueChange={setCommissioningSubTab}>
+                  <TabsList className="w-fit rounded-full p-0.5 h-auto bg-muted">
+                    <TabsTrigger value="template-logs" className="rounded-full px-4 py-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                      Template logs
+                    </TabsTrigger>
+                    <TabsTrigger value="local-templates" className="rounded-full px-4 py-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                      Local templates
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="template-logs" className="mt-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Timestamp</TableHead>
+                          <TableHead>Action</TableHead>
+                          <TableHead>Template</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {TEMPLATE_LOGS.map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell className="tabular-nums text-sm text-muted-foreground">{log.timestamp}</TableCell>
+                            <TableCell className="text-sm">{log.action}</TableCell>
+                            <TableCell className="text-sm font-medium">{log.template}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{log.user}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className={log.status === 'Success' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'}>
+                                {log.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TabsContent>
+
+                  <TabsContent value="local-templates" className="mt-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Template name</TableHead>
+                          <TableHead>Image constraints</TableHead>
+                          <TableHead>Device type</TableHead>
+                          <TableHead className="w-14"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {LOCAL_TEMPLATES.map((tpl) => (
+                          <TableRow key={tpl.id} className={tpl.id === 'lt-new' ? 'bg-success/10 dark:bg-success/5' : ''}>
+                            <TableCell className="text-sm font-medium">{tpl.name}</TableCell>
+                            <TableCell><code className="text-xs bg-muted px-1.5 py-0.5 rounded">{tpl.imageConstraints}</code></TableCell>
+                            <TableCell><NodeTypeBadge type={tpl.deviceType} /></TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
+                                    <Icon name="more_vert" size={20} />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>Edit</DropdownMenuItem>
+                                  <DropdownMenuItem>Duplicate</DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+            </div>
             );
           })()}
 
@@ -1682,7 +1801,10 @@ function DeviceDetailPage({
         deviceName={device.device}
         mismatchCount={device.configMismatch ?? 0}
         onOpenChange={setConfigMismatchSheetOpen}
-        onNavigateToCommissioning={() => setActiveSection('commissioning')}
+        onNavigateToCommissioning={() => {
+          setActiveSection('commissioning');
+          setCommissioningSubTab('local-templates');
+        }}
         onTemplateCreated={() => setCreatedTemplateName(`${device.device}-mismatch-fix`)}
       />
     </div>

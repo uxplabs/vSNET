@@ -161,8 +161,7 @@ export function ConfigMismatchSheet({
                 // Close the sheet first so the toast action button isn't blocked by the sheet overlay
                 onOpenChange(false);
                 setTimeout(() => {
-                  toast.success('Template created successfully', {
-                    description: `Local/bulk template for ${deviceName}`,
+                  toast.success('Template created', {
                     ...(navigateFn
                       ? {
                           action: {

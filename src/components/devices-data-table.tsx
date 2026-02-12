@@ -505,8 +505,13 @@ function filterBySidebarRegion(devices: DeviceRow[], region: SidebarRegionFilter
   }
 }
 
-function applyDeviceFilters(devices: DeviceRow[], filters: DeviceTableFilters): DeviceRow[] {
-  let result = filterBySidebarRegion(devices, filters.sidebarRegion ?? 'all');
+function applyDeviceFilters(devices: DeviceRow[], filters: DeviceTableFilters, selectedRegions?: string[]): DeviceRow[] {
+  let result = devices;
+  // Filter by selected nav regions first
+  if (selectedRegions && selectedRegions.length > 0) {
+    result = result.filter((d) => selectedRegions.includes(d.region));
+  }
+  result = filterBySidebarRegion(result, filters.sidebarRegion ?? 'all');
   if (filters.regionFilter && filters.regionFilter !== 'Region') {
     result = result.filter((d) => d.region === filters.regionFilter);
   }
@@ -627,7 +632,7 @@ export function DevicesDataTable({
         versionFilter,
         alarmsFilter,
         labelsFilter,
-      });
+      }, selectedRegions);
       // Apply mismatch count overrides
       return filtered.map((device) => {
         if (mismatchOverrides[device.id] !== undefined) {
@@ -650,6 +655,7 @@ export function DevicesDataTable({
       alarmsFilter,
       labelsFilter,
       mismatchOverrides,
+      selectedRegions,
     ]
   );
 

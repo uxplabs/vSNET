@@ -36,6 +36,7 @@ function App() {
   const [deviceInitialSection, setDeviceInitialSection] = useState<string | undefined>(undefined)
   const [deviceCreatedTemplate, setDeviceCreatedTemplate] = useState<string | null>(null)
   const [scrollToNotesForDeviceId, setScrollToNotesForDeviceId] = useState<string | null>(null)
+  const [scrollToAlarmsForDeviceId, setScrollToAlarmsForDeviceId] = useState<string | null>(null)
   const [globalDrawerOpen, setGlobalDrawerOpen] = useState(false)
   const [globalDrawerDevice, setGlobalDrawerDevice] = useState<DeviceRow | null>(null)
   const [radioNodeDrawerOpen, setRadioNodeDrawerOpen] = useState(false)
@@ -103,13 +104,15 @@ function App() {
     }
   }
 
-  const handleNavigateToDeviceDetail = (device: DeviceRow, options?: { openNotes?: boolean; initialSection?: string; createdTemplate?: string }) => {
+  const handleNavigateToDeviceDetail = (device: DeviceRow, options?: { openNotes?: boolean; scrollToAlarms?: boolean; initialSection?: string; createdTemplate?: string }) => {
     setSelectedDevice(device)
     setDeviceInitialSection(options?.initialSection)
     setDeviceCreatedTemplate(options?.createdTemplate ?? null)
     setCurrentPage('device-detail')
     if (options?.openNotes) setScrollToNotesForDeviceId(device.id)
     else setScrollToNotesForDeviceId(null)
+    if (options?.scrollToAlarms) setScrollToAlarmsForDeviceId(device.id)
+    else setScrollToAlarmsForDeviceId(null)
   }
 
   const handleSignOut = () => {
@@ -163,6 +166,8 @@ function App() {
           onRegionChange={(r) => setRegions([r])}
           onRegionsChange={setRegions}
           fixedRegion={fixedRegion}
+          scrollToAlarms={scrollToAlarmsForDeviceId === selectedDevice.id}
+          onScrollToAlarmsDone={() => setScrollToAlarmsForDeviceId(null)}
           scrollToNotes={scrollToNotesForDeviceId === selectedDevice.id}
           onScrollToNotesDone={() => setScrollToNotesForDeviceId(null)}
           initialSection={deviceInitialSection}

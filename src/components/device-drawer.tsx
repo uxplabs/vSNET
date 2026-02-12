@@ -133,7 +133,7 @@ interface DeviceDrawerProps {
   device: DeviceRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onNavigateToDetails?: (device: DeviceRow, options?: { openNotes?: boolean; initialSection?: string; createdTemplate?: string }) => void;
+  onNavigateToDetails?: (device: DeviceRow, options?: { openNotes?: boolean; scrollToAlarms?: boolean; initialSection?: string; createdTemplate?: string }) => void;
 }
 
 export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }: DeviceDrawerProps) {
@@ -536,6 +536,7 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
                   onClick={() => setDetailsExpanded(!detailsExpanded)}
                 >
                   {detailsExpanded ? 'Show less' : 'See more'}
+                  <Icon name={detailsExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'} size={16} className="ml-1" />
                 </Button>
               </CardContent>
             </Card>
@@ -595,8 +596,19 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
                     </TableBody>
                   </Table>
                 </div>
-                <Button variant="ghost" size="sm" className="h-7 text-xs w-full justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs w-full justify-center"
+                  onClick={() => {
+                    if (device && onNavigateToDetails) {
+                      onOpenChange(false);
+                      onNavigateToDetails(device, { scrollToAlarms: true });
+                    }
+                  }}
+                >
                   See all
+                  <Icon name="arrow_forward" size={14} className="ml-1" />
                 </Button>
               </CardContent>
             </Card>
