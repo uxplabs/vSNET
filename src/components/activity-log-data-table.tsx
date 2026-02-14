@@ -49,16 +49,16 @@ const STATUS_ICON: Record<ActivityLogStatus, { name: string; className: string }
 };
 
 const ACTIVITY_LOG_DATA: ActivityLogRow[] = [
-  { id: '1', host: 'eNB-SEA-001', type: 'SN-LTE', previousVersion: '3.1.0', newVersion: '3.1.2', status: 'Not transferred', startedBy: 'J. Smith', updatedDate: '2025-01-27 09:12' },
-  { id: '2', host: 'RN-PDX-002', type: 'SN-LTE', previousVersion: '2.4.0', newVersion: '2.4.1', status: 'Complete', startedBy: 'A. Jones', updatedDate: '2025-01-27 08:45' },
-  { id: '3', host: 'eNB-PHX-001', type: 'SN-LTE', previousVersion: '1.8.0', newVersion: '1.8.0', status: 'Complete', startedBy: 'System', updatedDate: '2025-01-26 14:20' },
-  { id: '4', host: 'eNB-NYC-001', type: 'SN-LTE', previousVersion: '3.0.8', newVersion: '3.0.8', status: 'Complete', startedBy: 'M. Lee', updatedDate: '2025-01-26 11:05' },
-  { id: '5', host: 'RN-SFO-003', type: 'SN-LTE', previousVersion: '1.0.2', newVersion: '1.0.3', status: 'Error', startedBy: 'K. Brown', updatedDate: '2025-01-27 07:30' },
-  { id: '6', host: 'eNB-CHI-002', type: 'SN-LTE', previousVersion: '2.2.1', newVersion: '2.2.1', status: 'Complete', startedBy: 'System', updatedDate: '2025-01-25 16:00' },
-  { id: '7', host: 'eNB-MIA-002', type: 'SN-LTE', previousVersion: '2.2.5', newVersion: '3.0.8', status: 'Transfer complete', startedBy: 'J. Smith', updatedDate: '2025-01-27 09:00' },
-  { id: '8', host: 'RN-DEN-002', type: 'SN-LTE', previousVersion: '1.1.0', newVersion: '1.2.0', status: 'Updating', startedBy: 'A. Jones', updatedDate: '2025-01-27 08:55' },
-  { id: '9', host: 'RN-ATL-005', type: 'SN-LTE', previousVersion: '1.5.2', newVersion: '1.5.2', status: 'Complete', startedBy: 'System', updatedDate: '2025-01-24 10:15' },
-  { id: '10', host: 'eNB-BOS-001', type: 'SN-LTE', previousVersion: '2.0.5', newVersion: '2.1.0', status: 'Not transferred', startedBy: 'M. Lee', updatedDate: '2025-01-27 08:30' },
+  { id: '1', host: 'eNB-SEA-001', type: 'SN', previousVersion: '3.1.0', newVersion: '3.1.2', status: 'Not transferred', startedBy: 'J. Smith', updatedDate: '2025-01-27 09:12' },
+  { id: '2', host: 'RN-PDX-002', type: 'SN', previousVersion: '2.4.0', newVersion: '2.4.1', status: 'Complete', startedBy: 'A. Jones', updatedDate: '2025-01-27 08:45' },
+  { id: '3', host: 'eNB-PHX-001', type: 'SN', previousVersion: '1.8.0', newVersion: '1.8.0', status: 'Complete', startedBy: 'System', updatedDate: '2025-01-26 14:20' },
+  { id: '4', host: 'eNB-NYC-001', type: 'SN', previousVersion: '3.0.8', newVersion: '3.0.8', status: 'Complete', startedBy: 'M. Lee', updatedDate: '2025-01-26 11:05' },
+  { id: '5', host: 'RN-SFO-003', type: 'SN', previousVersion: '1.0.2', newVersion: '1.0.3', status: 'Error', startedBy: 'K. Brown', updatedDate: '2025-01-27 07:30' },
+  { id: '6', host: 'eNB-CHI-002', type: 'SN', previousVersion: '2.2.1', newVersion: '2.2.1', status: 'Complete', startedBy: 'System', updatedDate: '2025-01-25 16:00' },
+  { id: '7', host: 'eNB-MIA-002', type: 'SN', previousVersion: '2.2.5', newVersion: '3.0.8', status: 'Transfer complete', startedBy: 'J. Smith', updatedDate: '2025-01-27 09:00' },
+  { id: '8', host: 'RN-DEN-002', type: 'SN', previousVersion: '1.1.0', newVersion: '1.2.0', status: 'Updating', startedBy: 'A. Jones', updatedDate: '2025-01-27 08:55' },
+  { id: '9', host: 'RN-ATL-005', type: 'SN', previousVersion: '1.5.2', newVersion: '1.5.2', status: 'Complete', startedBy: 'System', updatedDate: '2025-01-24 10:15' },
+  { id: '10', host: 'eNB-BOS-001', type: 'SN', previousVersion: '2.0.5', newVersion: '2.1.0', status: 'Not transferred', startedBy: 'M. Lee', updatedDate: '2025-01-27 08:30' },
 ];
 
 const columns: ColumnDef<ActivityLogRow>[] = [

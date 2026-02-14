@@ -202,7 +202,7 @@ function alarmSourceToDeviceRow(source: string): DeviceRow {
   return {
     id: source,
     device: source,
-    type: 'SN-LTE',
+    type: 'SN',
     notes: '',
     status: 'Unknown',
     alarms: 0,

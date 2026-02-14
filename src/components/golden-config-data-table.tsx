@@ -32,7 +32,7 @@ import { NodeTypeBadge } from '@/components/ui/node-type-badge';
 import { SelectConfigurationModal } from './select-configuration-modal';
 import { toast } from 'sonner';
 
-type DeviceType = 'SN-LTE' | 'RCP' | 'DAS';
+type DeviceType = 'SN' | 'RCP' | 'DAS';
 
 interface GoldenConfigVersion {
   id: string;
@@ -49,7 +49,7 @@ interface GoldenConfigSection {
 
 const INITIAL_GOLDEN_CONFIG_DATA: GoldenConfigSection[] = [
   {
-    deviceType: 'SN-LTE',
+    deviceType: 'SN',
     versions: [
       { id: 'snlte-1', version: 'v3.2.1', lastUpdated: 'Jan 28, 2025', appliedDevices: 24, deviceMismatches: 2 },
       { id: 'snlte-2', version: 'v3.1.0', lastUpdated: 'Jan 15, 2025', appliedDevices: 18, deviceMismatches: 0 },
@@ -165,7 +165,7 @@ function VersionRow({ version }: { version: GoldenConfigVersion }) {
 export function GoldenConfigDataTable() {
   const [configData, setConfigData] = React.useState<GoldenConfigSection[]>(INITIAL_GOLDEN_CONFIG_DATA);
   const [openSections, setOpenSections] = React.useState<Record<DeviceType, boolean>>({
-    'SN-LTE': true,
+    'SN': true,
     'RCP': true,
     'DAS': true,
   });

@@ -69,36 +69,74 @@ export const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string
   None: { name: 'check_circle', className: 'text-muted-foreground' },
 };
 
-const DEVICE_PREFIXES = [
-  // Pacific Northwest
-  'eNB-SEA', 'eNB-PDX', 'RN-SEA',
-  // Northern California / Southern California
-  'eNB-SFO', 'RN-SFO', 'eNB-LAX',
-  // Desert Southwest
-  'RN-PHX', 'eNB-PHX', 'RN-LAS', 'eNB-LAS',
-  // Mountain West / Great Plains
-  'RN-DEN', 'eNB-DEN', 'eNB-SLC',
-  // Texas / Gulf Coast
-  'eNB-AUS', 'eNB-DAL', 'RN-HOU',
-  // Great Lakes / Midwest
-  'eNB-CHI', 'RN-CHI', 'eNB-DET',
-  // Northeast / Mid-Atlantic
-  'eNB-NYC', 'RN-NYC', 'eNB-PHL',
-  // New England / Eastern Canada
-  'eNB-BOS', 'RN-BOS',
-  // Southeast / Florida
-  'RN-ATL', 'eNB-ATL', 'eNB-MIA', 'RN-MIA',
-];
-const TYPES = ['SN-LTE', 'SN-LTE', 'DAS', 'SN-LTE', 'SN-LTE', 'SN-LTE', 'CU', 'SN-LTE', 'RCP', 'SN-LTE'];
+/** Device name prefixes grouped by region – devices pick from their assigned region */
+const REGION_PREFIXES: Record<string, string[]> = {
+  'Pacific Northwest': ['eNB-SEA', 'eNB-PDX', 'RN-SEA', 'RN-PDX'],
+  'Northern California': ['eNB-SFO', 'RN-SFO', 'eNB-OAK', 'RN-SJC'],
+  'Southern California': ['eNB-LAX', 'RN-LAX', 'eNB-SAN', 'RN-SAN'],
+  'Desert Southwest': ['eNB-PHX', 'RN-PHX', 'eNB-LAS', 'RN-LAS'],
+  'Mountain West': ['eNB-DEN', 'RN-DEN', 'eNB-SLC', 'RN-SLC'],
+  'Great Plains': ['eNB-OMA', 'RN-OMA', 'eNB-KC', 'RN-KC'],
+  'Texas': ['eNB-DAL', 'RN-DAL', 'eNB-AUS', 'RN-AUS'],
+  'Gulf Coast': ['eNB-HOU', 'RN-HOU', 'eNB-NOL', 'RN-NOL'],
+  'Southeast': ['eNB-ATL', 'RN-ATL', 'eNB-CLT', 'RN-CLT'],
+  'Florida': ['eNB-MIA', 'RN-MIA', 'eNB-TPA', 'RN-TPA'],
+  'Midwest': ['eNB-CHI', 'RN-CHI', 'eNB-IND', 'RN-IND'],
+  'Great Lakes': ['eNB-DET', 'RN-DET', 'eNB-CLE', 'RN-CLE'],
+  'Northeast': ['eNB-NYC', 'RN-NYC', 'eNB-PHL', 'RN-PHL'],
+  'New England': ['eNB-BOS', 'RN-BOS', 'eNB-PVD', 'RN-PVD'],
+  'Mid-Atlantic': ['eNB-DCA', 'RN-DCA', 'eNB-BAL', 'RN-BAL'],
+  'Eastern Canada': ['eNB-TOR', 'RN-TOR', 'eNB-MTL', 'RN-MTL'],
+};
+// DAS prefixes per region (used when the device type is DAS)
+const REGION_DAS_PREFIXES: Record<string, string[]> = {
+  'Pacific Northwest': ['DAS-SEA', 'DAS-PDX'],
+  'Northern California': ['DAS-SFO', 'DAS-OAK'],
+  'Southern California': ['DAS-LAX', 'DAS-SAN'],
+  'Desert Southwest': ['DAS-PHX', 'DAS-LAS'],
+  'Mountain West': ['DAS-DEN', 'DAS-SLC'],
+  'Great Plains': ['DAS-OMA', 'DAS-KC'],
+  'Texas': ['DAS-DAL', 'DAS-AUS'],
+  'Gulf Coast': ['DAS-HOU', 'DAS-NOL'],
+  'Southeast': ['DAS-ATL', 'DAS-CLT'],
+  'Florida': ['DAS-MIA', 'DAS-TPA'],
+  'Midwest': ['DAS-CHI', 'DAS-IND'],
+  'Great Lakes': ['DAS-DET', 'DAS-CLE'],
+  'Northeast': ['DAS-NYC', 'DAS-PHL'],
+  'New England': ['DAS-BOS', 'DAS-PVD'],
+  'Mid-Atlantic': ['DAS-DCA', 'DAS-BAL'],
+  'Eastern Canada': ['DAS-TOR', 'DAS-MTL'],
+};
+// Deterministic type selector that distributes types across all regions
+// Uses a simple hash to break alignment with the 16-region cycle
+function getDeviceType(i: number): string {
+  // Simple integer hash to decorrelate from region assignment (i % 16)
+  let h = i;
+  h = ((h >>> 0) * 2654435761) >>> 0; // Knuth multiplicative hash
+  const r = h % 100;
+  // ~50% SN, ~15% CU, ~10% RCP, ~10% DAS, remaining SN
+  if (r < 50) return 'SN';
+  if (r < 65) return 'CU';
+  if (r < 75) return 'RCP';
+  if (r < 85) return 'DAS';
+  return 'SN';
+}
 // Deterministic pseudo-random status: ~72% Connected, ~10% Disconnected, ~18% In maintenance
-function getDeviceStatus(i: number): string {
-  const hash = ((i * 2654435761) >>> 0) % 100;
+// DAS devices are ~90% Connected
+function getDeviceStatus(i: number, deviceType?: string): string {
+  // Use a different multiplier than getDeviceType to avoid correlation
+  const hash = ((i * 1597334677) >>> 0) % 100;
+  if (deviceType === 'DAS') {
+    if (hash < 90) return 'Connected';
+    if (hash < 95) return 'Disconnected';
+    return 'In maintenance';
+  }
   if (hash < 72) return 'Connected';
   if (hash < 82) return 'Disconnected';
   return 'In maintenance';
 }
 const ALARM_TYPES: Array<'Critical' | 'Major' | 'Minor' | 'None'> = ['None', 'Minor', 'Critical', 'Major', 'None', 'Minor', 'Critical', 'None', 'Major', 'Critical'];
-const CONFIG_STATUSES = ['Synchronized', 'Synchronized', 'Out of sync', 'Synchronized', 'Pending', 'Synchronized', 'Out of sync', 'Synchronized', 'Synchronized', 'Out of sync'];
+const CONFIG_STATUSES = ['Synchronized', 'Synchronized', 'Synchronized', 'Synchronized', 'Pending', 'Synchronized', 'Out of sync', 'Synchronized', 'Synchronized', 'Out of sync'];
 const VERSIONS = ['v3.0', 'v2.2', 'v2.1', 'v3.1', 'v2.2', 'v2.1', 'v2.2', 'v3.0', 'v3.1', 'v2.1'];
 const DEVICE_GROUPS: DeviceGroup[] = ['Core network', 'Radio access', 'Edge devices', 'Test environment'];
 
@@ -109,14 +147,33 @@ function generateDevices(count: number): DeviceRow[] {
     { count: 4, type: 'Critical' }, { count: 5, type: 'Critical' }, { count: 2, type: 'Major' }, { count: 0, type: 'None' },
     { count: 1, type: 'Major' }, { count: 6, type: 'Critical' },
   ];
+  // Track per-region counters for unique device numbering
+  const regionCounters: Record<string, number> = {};
+  const dasRegionCounters: Record<string, number> = {};
   for (let i = 1; i <= count; i++) {
-    const pi = (i - 1) % TYPES.length;
-    const prefix = DEVICE_PREFIXES[(i - 1) % DEVICE_PREFIXES.length];
-    const num = String(i).padStart(3, '0');
+    const pi = (i - 1) % 10;
+    const deviceType = getDeviceType(i);
+    const region = NORTH_AMERICAN_REGIONS[i % NORTH_AMERICAN_REGIONS.length];
+    let prefix: string;
+    let num: string;
+    if (deviceType === 'DAS') {
+      const dasPrefixes = REGION_DAS_PREFIXES[region] ?? ['DAS-UNK'];
+      if (!dasRegionCounters[region]) dasRegionCounters[region] = 0;
+      dasRegionCounters[region]++;
+      prefix = dasPrefixes[(dasRegionCounters[region] - 1) % dasPrefixes.length];
+      num = String(Math.ceil(dasRegionCounters[region] / dasPrefixes.length)).padStart(3, '0');
+    } else {
+      const prefixes = REGION_PREFIXES[region] ?? ['eNB-UNK'];
+      if (!regionCounters[region]) regionCounters[region] = 0;
+      regionCounters[region]++;
+      prefix = prefixes[(regionCounters[region] - 1) % prefixes.length];
+      num = String(Math.ceil(regionCounters[region] / prefixes.length)).padStart(3, '0');
+    }
     const octet4 = ((i % 250) + 1).toString();
     const octet3 = (Math.floor(i / 250) % 256).toString();
     const alarm = alarmCombos[i % alarmCombos.length];
-    const notes = `${prefix}-${num}` === 'RN-ATL-009'
+    const deviceName = `${prefix}-${num}`;
+    const notes = deviceName === 'RN-ATL-001'
       ? 'Primary site – monitor connectivity and KPI sync status.'
       : i % 4 === 0 ? (i % 3 === 0 ? 'Core site' : 'Radio node') : '';
     const deviceGroup: DeviceGroup = notes === 'Core site' ? 'Core network' : notes === 'Radio node' ? 'Radio access' : i % 3 === 0 ? 'Edge devices' : 'Test environment';
@@ -136,15 +193,13 @@ function generateDevices(count: number): DeviceRow[] {
     for (let j = 0; j < labelCount && j < LABEL_POOL.length; j++) {
       labels.push(LABEL_POOL[(startIdx + j) % LABEL_POOL.length]);
     }
-    const region = NORTH_AMERICAN_REGIONS[i % NORTH_AMERICAN_REGIONS.length];
-    const deviceName = `${prefix}-${num}`;
-    const configMismatch = deviceName === 'RN-LAS-005' ? 24 : deviceName === 'eNB-SFO-004' ? 2 : i % 11 === 0 ? Math.ceil(i / 7) : undefined;
-    const status = deviceName === 'RN-LAS-005' ? 'Connected' : getDeviceStatus(i);
-    const configStatus = deviceName === 'RN-LAS-005' ? 'Synchronized' : CONFIG_STATUSES[pi];
+    const configMismatch = i === 5 ? 24 : i === 12 ? 2 : i % 11 === 0 ? Math.ceil(i / 7) : undefined;
+    const status = i === 5 ? 'Connected' : getDeviceStatus(i, deviceType);
+    const configStatus = i === 5 ? 'Synchronized' : CONFIG_STATUSES[pi];
     devices.push({
       id: String(i),
       device: deviceName,
-      type: deviceName === 'RN-ATL-029' || deviceName === 'RN-NYC-035' ? 'DAS' : TYPES[pi],
+      type: deviceType,
       notes,
       notesUpdatedAt,
       status,
@@ -162,7 +217,7 @@ function generateDevices(count: number): DeviceRow[] {
   return devices;
 }
 
-export const DEVICES_DATA: DeviceRow[] = generateDevices(587);
+export const DEVICES_DATA: DeviceRow[] = generateDevices(918);
 
 export function getDeviceSidebarCounts(devices: DeviceRow[]) {
   const region = {
@@ -289,7 +344,7 @@ function getColumns(
   {
     accessorKey: 'type',
     size: 120,
-    header: ({ column }) => <SortableHeader column={column}>Type</SortableHeader>,
+    header: ({ column }) => <SortableHeader column={column}>Device type</SortableHeader>,
     cell: ({ row }) => (
       <NodeTypeBadge type={row.getValue('type') as string} />
     ),
@@ -507,15 +562,15 @@ function filterBySidebarRegion(devices: DeviceRow[], region: SidebarRegionFilter
 
 function applyDeviceFilters(devices: DeviceRow[], filters: DeviceTableFilters, selectedRegions?: string[]): DeviceRow[] {
   let result = devices;
-  // Filter by selected nav regions first
-  if (selectedRegions && selectedRegions.length > 0) {
+  // Filter by selected nav regions first (skip if 'All' is selected or no regions specified)
+  if (selectedRegions && selectedRegions.length > 0 && !selectedRegions.includes('All')) {
     result = result.filter((d) => selectedRegions.includes(d.region));
   }
   result = filterBySidebarRegion(result, filters.sidebarRegion ?? 'all');
-  if (filters.regionFilter && filters.regionFilter !== 'Region') {
+  if (filters.regionFilter && filters.regionFilter !== 'All') {
     result = result.filter((d) => d.region === filters.regionFilter);
   }
-  if (filters.statusFilter && filters.statusFilter !== 'Status') {
+  if (filters.statusFilter && filters.statusFilter !== 'All') {
     result = result.filter((d) => d.status === filters.statusFilter);
   }
   if (filters.search?.trim()) {
@@ -526,19 +581,19 @@ function applyDeviceFilters(devices: DeviceRow[], filters: DeviceTableFilters, s
         (d.notes && d.notes.toLowerCase().includes(q))
     );
   }
-  if (filters.configStatusFilter && filters.configStatusFilter !== 'Config status') {
+  if (filters.configStatusFilter && filters.configStatusFilter !== 'All') {
     result = result.filter((d) => d.configStatus === filters.configStatusFilter);
   }
-  if (filters.typeFilter && filters.typeFilter !== 'Type') {
+  if (filters.typeFilter && filters.typeFilter !== 'All') {
     result = result.filter((d) => d.type === filters.typeFilter);
   }
-  if (filters.versionFilter && filters.versionFilter !== 'Version') {
+  if (filters.versionFilter && filters.versionFilter !== 'All') {
     result = result.filter((d) => d.version === filters.versionFilter);
   }
-  if (filters.alarmsFilter && filters.alarmsFilter !== 'Alarms') {
+  if (filters.alarmsFilter && filters.alarmsFilter !== 'All') {
     result = result.filter((d) => d.alarmType === filters.alarmsFilter);
   }
-  if (filters.labelsFilter && filters.labelsFilter !== 'Labels') {
+  if (filters.labelsFilter && filters.labelsFilter !== 'All') {
     const label = filters.labelsFilter!.toLowerCase();
     result = result.filter((d) => d.labels.some((l) => l.toLowerCase() === label));
   }
@@ -556,14 +611,14 @@ export function DevicesDataTable({
   clearSelectionTrigger,
   selectedRegions = [],
   sidebarRegion = 'all',
-  regionFilter = 'Region',
-  statusFilter = 'Status',
+  regionFilter = 'All',
+  statusFilter = 'All',
   search = '',
-  configStatusFilter = 'Config status',
-  typeFilter = 'Type',
-  versionFilter = 'Version',
-  alarmsFilter = 'Alarms',
-  labelsFilter = 'Labels',
+  configStatusFilter = 'All',
+  typeFilter = 'All',
+  versionFilter = 'All',
+  alarmsFilter = 'All',
+  labelsFilter = 'All',
 }: DevicesDataTableProps = {}) {
   const showRegionColumn = selectedRegions.length > 1;
   const pageSize = useResponsivePageSize();

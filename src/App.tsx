@@ -16,6 +16,7 @@ import TasksPage from './components/TasksPage'
 import AdministrationPage from './components/AdministrationPage'
 import PerformancePage from './components/PerformancePage'
 import DesignSystemPage from './components/DesignSystemPage'
+import WebTerminalPage from './components/WebTerminalPage'
 import type { DeviceRow } from './components/devices-data-table'
 
 type Page = 'dashboard' | 'devices' | 'device-detail' | 'tasks' | 'administration' | 'performance' | 'design-system'
@@ -24,8 +25,8 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [devicesTab, setDevicesTab] = useState('device')
-  const [devicesStatusFilter, setDevicesStatusFilter] = useState<string>('Status')
-  const [devicesConfigStatusFilter, setDevicesConfigStatusFilter] = useState<string>('Config status')
+  const [devicesStatusFilter, setDevicesStatusFilter] = useState<string>('All')
+  const [devicesConfigStatusFilter, setDevicesConfigStatusFilter] = useState<string>('All')
   const [regions, setRegions] = useState<string[]>(['Pacific Northwest'])
   const region = regions[0] ?? 'Pacific Northwest'
 
@@ -76,7 +77,7 @@ function App() {
       device = {
         id: deviceName,
         device: deviceName,
-        type: 'SN-LTE',
+        type: 'SN',
         notes: '',
         status: 'Connected',
         alarms: 0,
@@ -99,8 +100,8 @@ function App() {
       setSelectedDevice(null)
       setScrollToNotesForDeviceId(null)
       setDevicesTab(tab ?? 'device')
-      setDevicesStatusFilter(filters?.statusFilter ?? 'Status')
-      setDevicesConfigStatusFilter(filters?.configStatusFilter ?? 'Config status')
+      setDevicesStatusFilter(filters?.statusFilter ?? 'All')
+      setDevicesConfigStatusFilter(filters?.configStatusFilter ?? 'All')
     }
   }
 
@@ -125,6 +126,34 @@ function App() {
     setCurrentPage('devices')
     setSelectedDevice(null)
     setScrollToNotesForDeviceId(null)
+  }
+
+  const handleOpenWebTerminal = (device: DeviceRow) => {
+    window.open(`${window.location.origin}${window.location.pathname}?terminal=${encodeURIComponent(device.id)}`, '_blank')
+  }
+
+  // Detect if this window was opened as a web terminal tab
+  const [terminalDevice] = useState<DeviceRow | null>(() => {
+    const params = new URLSearchParams(window.location.search)
+    const terminalId = params.get('terminal')
+    if (terminalId) {
+      return DEVICES_DATA.find((d) => d.id === terminalId) ?? null
+    }
+    return null
+  })
+  const isTerminalTab = terminalDevice !== null
+
+  // If opened as a terminal tab, render only the terminal page
+  if (isTerminalTab && terminalDevice) {
+    return (
+      <>
+        <WebTerminalPage
+          device={terminalDevice}
+          appName="AMS"
+        />
+        <Toaster />
+      </>
+    )
   }
 
   if (!isAuthenticated) {
@@ -161,6 +190,7 @@ function App() {
           onSignOut={handleSignOut}
           onBack={handleBackToDevices}
           onNavigate={handleNavigate}
+          onOpenWebTerminal={handleOpenWebTerminal}
           region={region}
           regions={regions}
           onRegionChange={(r) => setRegions([r])}

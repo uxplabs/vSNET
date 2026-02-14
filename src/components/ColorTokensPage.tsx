@@ -108,6 +108,34 @@ const COLOR_TOKEN_SECTIONS: TokenSection[] = [
   },
 ];
 
+/* ─── Chart color palette ─────────────────────────── */
+interface ChartColorRow {
+  name: string;
+  variable: string;
+  light: string;
+  dark: string;
+  usage: string;
+}
+
+const CHART_SEQUENTIAL_COLORS: ChartColorRow[] = [
+  { name: 'Chart 1', variable: '--chart-1', light: '#004F69', dark: '#38BDF8', usage: 'Primary series / single-metric charts' },
+  { name: 'Chart 2', variable: '--chart-2', light: '#2A9D8F', dark: '#2DD4BF', usage: 'Secondary series / comparisons' },
+  { name: 'Chart 3', variable: '--chart-3', light: '#E9C46A', dark: '#FBBF24', usage: 'Tertiary series / highlights' },
+  { name: 'Chart 4', variable: '--chart-4', light: '#F4A261', dark: '#FB923C', usage: 'Fourth series / warm accent' },
+  { name: 'Chart 5', variable: '--chart-5', light: '#E76F51', dark: '#F87171', usage: 'Fifth series / alert-adjacent' },
+  { name: 'Chart 6', variable: '--chart-6', light: '#7C3AED', dark: '#A78BFA', usage: 'Extended palette' },
+  { name: 'Chart 7', variable: '--chart-7', light: '#0EA5E9', dark: '#22D3EE', usage: 'Extended palette' },
+  { name: 'Chart 8', variable: '--chart-8', light: '#10B981', dark: '#34D399', usage: 'Extended palette' },
+  { name: 'Chart 9', variable: '--chart-9', light: '#F43F5E', dark: '#FB7185', usage: 'Extended palette' },
+  { name: 'Chart 10', variable: '--chart-10', light: '#8B5CF6', dark: '#C4B5FD', usage: 'Extended palette' },
+];
+
+const CHART_SEMANTIC_COLORS: ChartColorRow[] = [
+  { name: 'Positive', variable: '--chart-positive', light: '#009B3A', dark: '#4ADE80', usage: 'Growth, success, uptrend' },
+  { name: 'Negative', variable: '--chart-negative', light: '#D13C59', dark: '#F87171', usage: 'Decline, error, downtrend' },
+  { name: 'Neutral', variable: '--chart-neutral', light: '#64748B', dark: '#94A3B8', usage: 'Baseline, average, inactive' },
+];
+
 function ColorSwatch({ hex }: { hex: string; label: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
@@ -197,6 +225,7 @@ function ColorTokensPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsListUnderline className="w-full justify-start">
               <TabsTriggerUnderline value="colors">Colors</TabsTriggerUnderline>
+              <TabsTriggerUnderline value="chart-colors">Chart Colors</TabsTriggerUnderline>
               <TabsTriggerUnderline value="spacing">Spacing</TabsTriggerUnderline>
               <TabsTriggerUnderline value="shadows">Shadows</TabsTriggerUnderline>
               <TabsTriggerUnderline value="radius">Border Radius</TabsTriggerUnderline>
@@ -275,6 +304,370 @@ function ColorTokensPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Chart Colors Tab */}
+      {activeTab === 'chart-colors' && (
+        <div className="space-y-6">
+          <p className="text-sm text-muted-foreground">
+            Chart color palette for data visualizations. Use CSS variables like <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">var(--chart-1)</code> or Tailwind classes like <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">bg-chart-1</code>. Colors are optimized for contrast and accessibility in both light and dark themes.
+          </p>
+
+          {/* Sequential palette visual strip */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Sequential Palette</CardTitle>
+              <CardDescription>
+                Primary 10-color palette for multi-series charts. Use colors in order — start with Chart 1 for single-series, add Chart 2+ as series increase.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Swatch strip */}
+              <div className="flex rounded-lg overflow-hidden h-12 border border-border">
+                {CHART_SEQUENTIAL_COLORS.map((c) => (
+                  <div
+                    key={c.variable}
+                    className="flex-1 relative group cursor-pointer transition-all hover:flex-[2]"
+                    style={{ backgroundColor: `var(${c.variable})` }}
+                    title={`${c.name}: ${c.variable}`}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[10px] font-mono font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+                        {c.variable.replace('--chart-', '')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left font-medium text-foreground py-3 px-4 w-[140px]">Token</th>
+                      <th className="text-left font-medium text-foreground py-3 px-4 w-[180px]">Variable</th>
+                      <th className="text-left font-medium text-foreground py-3 px-4">Light</th>
+                      <th className="text-left font-medium text-foreground py-3 px-4">Dark</th>
+                      <th className="text-left font-medium text-foreground py-3 px-4">Usage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {CHART_SEQUENTIAL_COLORS.map((row) => (
+                      <tr key={row.variable} className="border-b border-border last:border-b-0 hover:bg-muted/50">
+                        <td className="py-3 px-4 font-medium text-card-foreground">
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-4 w-4 rounded border border-border shrink-0"
+                              style={{ backgroundColor: `var(${row.variable})` }}
+                            />
+                            {row.name}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <code className="text-xs font-mono text-muted-foreground">{row.variable}</code>
+                        </td>
+                        <td className="py-3 px-4">
+                          <ColorSwatch hex={row.light} label="Light" />
+                        </td>
+                        <td className="py-3 px-4">
+                          <ColorSwatch hex={row.dark} label="Dark" />
+                        </td>
+                        <td className="py-3 px-4 text-muted-foreground text-xs">{row.usage}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Semantic colors */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Semantic Colors</CardTitle>
+              <CardDescription>
+                Use these for charts that communicate direction or sentiment — e.g. positive/negative deltas, up/down trends, or KPI status indicators.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex rounded-lg overflow-hidden h-12 border border-border">
+                {CHART_SEMANTIC_COLORS.map((c) => (
+                  <div
+                    key={c.variable}
+                    className="flex-1 relative group cursor-pointer transition-all hover:flex-[2]"
+                    style={{ backgroundColor: `var(${c.variable})` }}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[10px] font-mono font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+                        {c.name}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left font-medium text-foreground py-3 px-4 w-[140px]">Token</th>
+                      <th className="text-left font-medium text-foreground py-3 px-4 w-[180px]">Variable</th>
+                      <th className="text-left font-medium text-foreground py-3 px-4">Light</th>
+                      <th className="text-left font-medium text-foreground py-3 px-4">Dark</th>
+                      <th className="text-left font-medium text-foreground py-3 px-4">Usage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {CHART_SEMANTIC_COLORS.map((row) => (
+                      <tr key={row.variable} className="border-b border-border last:border-b-0 hover:bg-muted/50">
+                        <td className="py-3 px-4 font-medium text-card-foreground">
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-4 w-4 rounded border border-border shrink-0"
+                              style={{ backgroundColor: `var(${row.variable})` }}
+                            />
+                            {row.name}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <code className="text-xs font-mono text-muted-foreground">{row.variable}</code>
+                        </td>
+                        <td className="py-3 px-4">
+                          <ColorSwatch hex={row.light} label="Light" />
+                        </td>
+                        <td className="py-3 px-4">
+                          <ColorSwatch hex={row.dark} label="Dark" />
+                        </td>
+                        <td className="py-3 px-4 text-muted-foreground text-xs">{row.usage}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Chart preview examples */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Usage Examples</CardTitle>
+              <CardDescription>
+                Visual reference for how chart colors appear in common chart patterns.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {/* Simulated bar chart */}
+              <div>
+                <p className="text-sm font-medium mb-4">Multi-series bar chart</p>
+                <div className="flex items-end gap-3 h-40">
+                  {[
+                    { heights: [75, 60, 45], label: 'Jan' },
+                    { heights: [80, 55, 50], label: 'Feb' },
+                    { heights: [65, 70, 40], label: 'Mar' },
+                    { heights: [90, 65, 55], label: 'Apr' },
+                    { heights: [85, 75, 60], label: 'May' },
+                    { heights: [70, 80, 50], label: 'Jun' },
+                  ].map((group) => (
+                    <div key={group.label} className="flex-1 flex flex-col items-center gap-1">
+                      <div className="flex items-end gap-0.5 w-full justify-center h-32">
+                        {group.heights.map((h, i) => (
+                          <div
+                            key={i}
+                            className="flex-1 max-w-4 rounded-t transition-all"
+                            style={{
+                              height: `${h}%`,
+                              backgroundColor: `var(--chart-${i + 1})`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{group.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4 mt-3">
+                  {['Chart 1', 'Chart 2', 'Chart 3'].map((label, i) => (
+                    <div key={label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: `var(--chart-${i + 1})` }} />
+                      {label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Simulated donut chart */}
+              <div>
+                <p className="text-sm font-medium mb-4">Donut / pie chart</p>
+                <div className="flex items-center gap-8">
+                  <div className="relative w-32 h-32">
+                    <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                      {[
+                        { pct: 35, offset: 0, color: 'var(--chart-1)' },
+                        { pct: 25, offset: 35, color: 'var(--chart-2)' },
+                        { pct: 20, offset: 60, color: 'var(--chart-3)' },
+                        { pct: 12, offset: 80, color: 'var(--chart-4)' },
+                        { pct: 8, offset: 92, color: 'var(--chart-5)' },
+                      ].map((seg, i) => (
+                        <circle
+                          key={i}
+                          cx="50" cy="50" r="40"
+                          fill="none"
+                          stroke={seg.color}
+                          strokeWidth="16"
+                          strokeDasharray={`${seg.pct * 2.51327} ${251.327}`}
+                          strokeDashoffset={`${-seg.offset * 2.51327}`}
+                        />
+                      ))}
+                    </svg>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {['SN (35%)', 'CU (25%)', 'RCP (20%)', 'DAS (12%)', 'Other (8%)'].map((label, i) => (
+                      <div key={label} className="flex items-center gap-2 text-sm">
+                        <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ backgroundColor: `var(--chart-${i + 1})` }} />
+                        <span className="text-muted-foreground">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Simulated sparkline area */}
+              <div>
+                <p className="text-sm font-medium mb-4">Area / line chart</p>
+                <div className="relative h-24 border border-border rounded-lg overflow-hidden">
+                  <svg viewBox="0 0 200 60" className="w-full h-full" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="chart1-grad" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-1)" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0.02" />
+                      </linearGradient>
+                      <linearGradient id="chart2-grad" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-2)" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="var(--chart-2)" stopOpacity="0.02" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M0,45 L30,38 L60,42 L90,28 L120,32 L150,18 L180,22 L200,15 L200,60 L0,60Z" fill="url(#chart1-grad)" />
+                    <path d="M0,45 L30,38 L60,42 L90,28 L120,32 L150,18 L180,22 L200,15" fill="none" stroke="var(--chart-1)" strokeWidth="1.5" />
+                    <path d="M0,50 L30,48 L60,52 L90,40 L120,44 L150,35 L180,38 L200,30 L200,60 L0,60Z" fill="url(#chart2-grad)" />
+                    <path d="M0,50 L30,48 L60,52 L90,40 L120,44 L150,35 L180,38 L200,30" fill="none" stroke="var(--chart-2)" strokeWidth="1.5" />
+                  </svg>
+                </div>
+                <div className="flex items-center gap-4 mt-3">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="h-0.5 w-4 rounded-full" style={{ backgroundColor: 'var(--chart-1)' }} />
+                    Throughput
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="h-0.5 w-4 rounded-full" style={{ backgroundColor: 'var(--chart-2)' }} />
+                    Latency
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Positive / negative example */}
+              <div>
+                <p className="text-sm font-medium mb-4">Positive / negative delta bars</p>
+                <div className="flex items-center gap-2 h-20">
+                  {[18, -5, 12, -8, 22, 7, -3, 15, -12, 9, 4, -6].map((val, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center justify-center h-full relative">
+                      <div
+                        className="w-full max-w-5 rounded-sm absolute"
+                        style={{
+                          height: `${Math.abs(val) * 2}px`,
+                          backgroundColor: val >= 0 ? 'var(--chart-positive)' : 'var(--chart-negative)',
+                          bottom: val >= 0 ? '50%' : undefined,
+                          top: val < 0 ? '50%' : undefined,
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-4 mt-2 justify-center">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: 'var(--chart-positive)' }} />
+                    Positive
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: 'var(--chart-negative)' }} />
+                    Negative
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: 'var(--chart-neutral)' }} />
+                    Neutral
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Usage guidelines */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Guidelines</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Do</p>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 mt-0.5">&#10003;</span>
+                      Use Chart 1 for single-series charts
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 mt-0.5">&#10003;</span>
+                      Add colors sequentially (1, 2, 3...) as series grow
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 mt-0.5">&#10003;</span>
+                      Use semantic colors for up/down or pass/fail data
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 mt-0.5">&#10003;</span>
+                      Pair with the <code className="text-xs font-mono bg-muted px-1 rounded">ChartContainer</code> component for theme-aware rendering
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 mt-0.5">&#10003;</span>
+                      Reference via CSS variable for automatic dark mode support
+                    </li>
+                  </ul>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Don't</p>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-0.5">&#10007;</span>
+                      Hard-code hex values — always use CSS variables
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-0.5">&#10007;</span>
+                      Use more than 5 colors in a single small chart
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-0.5">&#10007;</span>
+                      Mix sequential and semantic palettes in one chart
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-0.5">&#10007;</span>
+                      Use Chart 5 (red) for positive data or Chart 2 (teal) for errors
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-destructive mt-0.5">&#10007;</span>
+                      Skip colors in the sequence (e.g. Chart 1, Chart 4)
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 

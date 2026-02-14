@@ -150,7 +150,7 @@ export interface AlarmTableFilters {
 
 function filterAlarms(alarms: AlarmRow[], filters: AlarmTableFilters): AlarmRow[] {
   let result = alarms;
-  if (filters.regionFilter && filters.regionFilter !== 'Region') {
+  if (filters.regionFilter && filters.regionFilter !== 'All') {
     result = result.filter((a) => a.region === filters.regionFilter);
   }
   if (filters.search?.trim()) {
@@ -162,7 +162,7 @@ function filterAlarms(alarms: AlarmRow[], filters: AlarmTableFilters): AlarmRow[
         a.managedObject.toLowerCase().includes(q)
     );
   }
-  if (filters.severityFilter && filters.severityFilter !== 'Alarms') {
+  if (filters.severityFilter && filters.severityFilter !== 'All') {
     result = result.filter((a) => a.severity === filters.severityFilter);
   }
   return result;
@@ -176,7 +176,7 @@ function alarmSourceToDeviceRow(source: string): DeviceRow {
   return {
     id: source,
     device: source,
-    type: 'SN-LTE',
+    type: 'SN',
     notes: '',
     status: 'Unknown',
     alarms: 0,
@@ -386,9 +386,9 @@ export interface AlarmsDataTableProps {
 
 export function AlarmsDataTable({ 
   search = '', 
-  severityFilter = 'Alarms',
+  severityFilter = 'All',
   selectedRegions = [],
-  regionFilter = 'Region',
+  regionFilter = 'All',
   onSelectionChange,
   clearSelectionTrigger,
 }: AlarmsDataTableProps = {}) {

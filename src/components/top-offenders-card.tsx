@@ -23,13 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { FilterSelect } from '@/components/ui/filter-select';
 import { Icon } from '@/components/Icon';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
@@ -195,11 +189,11 @@ function filterBySearch(row: Row<TopOffenderRow>, _columnId: string, filterValue
   );
 }
 
-const REGION_OPTIONS = ['Region', 'Southeast', 'Northeast', 'Pacific Northwest', 'Desert Southwest', 'Midwest', 'Mountain West'] as const;
-const TYPE_OPTIONS = ['Type', 'SN-LTE'] as const;
-const STATUS_OPTIONS = ['Status', 'Connected', 'Disconnected'] as const;
-const ALARM_TYPE_FILTER_OPTIONS = ['Alarm type', 'Critical', 'Major', 'Minor'] as const;
-const CONFIG_STATUS_OPTIONS = ['Config status', 'Synchronized', 'Out of sync'] as const;
+const REGION_OPTIONS = ['All', 'Southeast', 'Northeast', 'Pacific Northwest', 'Desert Southwest', 'Midwest', 'Mountain West'] as const;
+const TYPE_OPTIONS = ['All', 'SN', 'CU', 'RCP', 'DAS'] as const;
+const STATUS_OPTIONS = ['All', 'Connected', 'Disconnected'] as const;
+const ALARM_TYPE_FILTER_OPTIONS = ['All', 'Critical', 'Major', 'Minor'] as const;
+const CONFIG_STATUS_OPTIONS = ['All', 'Synchronized', 'Out of sync'] as const;
 
 export function TopOffendersCard() {
   const pageSize = useResponsivePageSize();
@@ -207,11 +201,11 @@ export function TopOffendersCard() {
   const [selectedDevice, setSelectedDevice] = React.useState<TopOffenderRow | null>(null);
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'alarms', desc: true }]);
   const [globalFilter, setGlobalFilter] = React.useState('');
-  const [regionFilter, setRegionFilter] = React.useState<string>('Region');
-  const [typeFilter, setTypeFilter] = React.useState<string>('Type');
-  const [statusFilter, setStatusFilter] = React.useState<string>('Status');
-  const [alarmTypeFilter, setAlarmTypeFilter] = React.useState<string>('Alarm type');
-  const [configStatusFilter, setConfigStatusFilter] = React.useState<string>('Config status');
+  const [regionFilter, setRegionFilter] = React.useState<string>('All');
+  const [typeFilter, setTypeFilter] = React.useState<string>('All');
+  const [statusFilter, setStatusFilter] = React.useState<string>('All');
+  const [alarmTypeFilter, setAlarmTypeFilter] = React.useState<string>('All');
+  const [configStatusFilter, setConfigStatusFilter] = React.useState<string>('All');
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize });
 
   const handleDeviceClick = React.useCallback((row: TopOffenderRow) => {
@@ -227,22 +221,22 @@ export function TopOffendersCard() {
 
   const columnFilters = React.useMemo<ColumnFiltersState>(() => {
     const filters: ColumnFiltersState = [];
-    if (regionFilter !== 'Region') filters.push({ id: 'region', value: regionFilter });
-    if (typeFilter !== 'Type') filters.push({ id: 'type', value: typeFilter });
-    if (statusFilter !== 'Status') filters.push({ id: 'status', value: statusFilter });
-    if (alarmTypeFilter !== 'Alarm type') filters.push({ id: 'alarmType', value: alarmTypeFilter });
-    if (configStatusFilter !== 'Config status') filters.push({ id: 'configStatus', value: configStatusFilter });
+    if (regionFilter !== 'All') filters.push({ id: 'region', value: regionFilter });
+    if (typeFilter !== 'All') filters.push({ id: 'type', value: typeFilter });
+    if (statusFilter !== 'All') filters.push({ id: 'status', value: statusFilter });
+    if (alarmTypeFilter !== 'All') filters.push({ id: 'alarmType', value: alarmTypeFilter });
+    if (configStatusFilter !== 'All') filters.push({ id: 'configStatus', value: configStatusFilter });
     return filters;
   }, [regionFilter, typeFilter, statusFilter, alarmTypeFilter, configStatusFilter]);
 
-  const filtersActive = globalFilter !== '' || regionFilter !== 'Region' || typeFilter !== 'Type' || statusFilter !== 'Status' || alarmTypeFilter !== 'Alarm type' || configStatusFilter !== 'Config status';
+  const filtersActive = globalFilter !== '' || regionFilter !== 'All' || typeFilter !== 'All' || statusFilter !== 'All' || alarmTypeFilter !== 'All' || configStatusFilter !== 'All';
   const clearFilters = () => {
     setGlobalFilter('');
-    setRegionFilter('Region');
-    setTypeFilter('Type');
-    setStatusFilter('Status');
-    setAlarmTypeFilter('Alarm type');
-    setConfigStatusFilter('Config status');
+    setRegionFilter('All');
+    setTypeFilter('All');
+    setStatusFilter('All');
+    setAlarmTypeFilter('All');
+    setConfigStatusFilter('All');
   };
 
   const table = useReactTable({
@@ -282,56 +276,11 @@ export function TopOffendersCard() {
             />
           </div>
           <div className="flex flex-nowrap items-center gap-2 min-w-0 overflow-x-auto">
-            <Select value={regionFilter} onValueChange={setRegionFilter}>
-              <SelectTrigger className="w-[140px] shrink-0 h-9">
-                <SelectValue placeholder="Region" />
-              </SelectTrigger>
-              <SelectContent>
-                {REGION_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[110px] shrink-0 h-9">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[120px] shrink-0 h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={alarmTypeFilter} onValueChange={setAlarmTypeFilter}>
-              <SelectTrigger className="w-[120px] shrink-0 h-9">
-                <SelectValue placeholder="Alarm type" />
-              </SelectTrigger>
-              <SelectContent>
-                {ALARM_TYPE_FILTER_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={configStatusFilter} onValueChange={setConfigStatusFilter}>
-              <SelectTrigger className="w-[130px] shrink-0 h-9">
-                <SelectValue placeholder="Config status" />
-              </SelectTrigger>
-              <SelectContent>
-                {CONFIG_STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={[...REGION_OPTIONS]} className="w-[140px] shrink-0 h-9" />
+            <FilterSelect value={typeFilter} onValueChange={setTypeFilter} label="Type" options={[...TYPE_OPTIONS]} className="w-[110px] shrink-0 h-9" />
+            <FilterSelect value={statusFilter} onValueChange={setStatusFilter} label="Status" options={[...STATUS_OPTIONS]} className="w-[120px] shrink-0 h-9" />
+            <FilterSelect value={alarmTypeFilter} onValueChange={setAlarmTypeFilter} label="Alarm type" options={[...ALARM_TYPE_FILTER_OPTIONS]} className="w-[120px] shrink-0 h-9" />
+            <FilterSelect value={configStatusFilter} onValueChange={setConfigStatusFilter} label="Config status" options={[...CONFIG_STATUS_OPTIONS]} className="w-[130px] shrink-0 h-9" />
           </div>
           {filtersActive && (
             <Button variant="ghost" size="sm" className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground h-9" onClick={clearFilters}>

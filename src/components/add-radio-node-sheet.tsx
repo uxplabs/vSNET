@@ -25,9 +25,9 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Icon } from './Icon';
 import { cn } from '@/lib/utils';
 
-const TYPE_OPTIONS = ['Type', 'ABAB123', 'FGH456', 'Standard'] as const;
-const LOCATION_TYPE_OPTIONS = ['Location type', 'Indoor', 'Outdoor', 'Rooftop', 'Tower'] as const;
-const ZONE_OPTIONS = ['Zone', 'Zone A', 'Zone B', 'Zone C', 'North', 'South'] as const;
+const TYPE_OPTIONS = ['ABAB123', 'FGH456', 'Standard'] as const;
+const LOCATION_TYPE_OPTIONS = ['Indoor', 'Outdoor', 'Rooftop', 'Tower'] as const;
+const ZONE_OPTIONS = ['Zone A', 'Zone B', 'Zone C', 'North', 'South'] as const;
 
 export interface AddRadioNodeSheetProps {
   open: boolean;
@@ -205,7 +205,7 @@ export function AddRadioNodeSheet({
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {TYPE_OPTIONS.filter((o) => o !== 'Type').map((opt) => (
+                      {TYPE_OPTIONS.map((opt) => (
                         <SelectItem key={opt} value={opt}>
                           {opt}
                         </SelectItem>
@@ -312,7 +312,7 @@ export function AddRadioNodeSheet({
                           <SelectValue placeholder="Location type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {LOCATION_TYPE_OPTIONS.filter((o) => o !== 'Location type').map((opt) => (
+                          {LOCATION_TYPE_OPTIONS.map((opt) => (
                             <SelectItem key={opt} value={opt}>
                               {opt}
                             </SelectItem>
@@ -327,7 +327,7 @@ export function AddRadioNodeSheet({
                           <SelectValue placeholder="Zone" />
                         </SelectTrigger>
                         <SelectContent>
-                          {ZONE_OPTIONS.filter((o) => o !== 'Zone').map((opt) => (
+                          {ZONE_OPTIONS.map((opt) => (
                             <SelectItem key={opt} value={opt}>
                               {opt}
                             </SelectItem>

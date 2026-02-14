@@ -84,7 +84,7 @@ function toDeviceRow(d: DisconnectedDeviceRow): DeviceRow {
   return {
     id: d.id,
     device: d.device,
-    type: 'SN-LTE',
+    type: 'SN',
     notes: '',
     status: 'Disconnected',
     alarms: 0,

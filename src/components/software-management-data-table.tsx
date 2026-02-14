@@ -55,16 +55,16 @@ const STATUS_ICON: Record<SoftwareStatus, { name: string; className: string }> =
 };
 
 const SOFTWARE_DATA: SoftwareRow[] = [
-  { id: '1', host: 'eNB-SEA-001', type: 'SN-LTE', currentVersion: '3.1.0', newVersion: '3.1.2', status: 'Not transferred' },
-  { id: '2', host: 'RN-PDX-002', type: 'SN-LTE', currentVersion: '2.4.0', newVersion: '2.4.1', status: 'Not transferred' },
-  { id: '3', host: 'eNB-PHX-001', type: 'SN-LTE', currentVersion: '1.8.0', newVersion: '1.8.0', status: 'Complete' },
-  { id: '4', host: 'eNB-NYC-001', type: 'SN-LTE', currentVersion: '3.0.8', newVersion: '3.0.8', status: 'Complete' },
-  { id: '5', host: 'RN-SFO-003', type: 'SN-LTE', currentVersion: '1.0.2', newVersion: '1.0.3', status: 'Error' },
-  { id: '6', host: 'eNB-CHI-002', type: 'SN-LTE', currentVersion: '2.2.1', newVersion: '2.2.1', status: 'Complete' },
-  { id: '7', host: 'eNB-MIA-002', type: 'SN-LTE', currentVersion: '2.2.5', newVersion: '3.0.8', status: 'Transfer complete' },
-  { id: '8', host: 'RN-DEN-002', type: 'SN-LTE', currentVersion: '1.1.0', newVersion: '1.2.0', status: 'Updating' },
-  { id: '9', host: 'RN-ATL-005', type: 'SN-LTE', currentVersion: '1.5.2', newVersion: '1.5.2', status: 'Complete' },
-  { id: '10', host: 'eNB-BOS-001', type: 'SN-LTE', currentVersion: '2.0.5', newVersion: '2.1.0', status: 'Not transferred' },
+  { id: '1', host: 'eNB-SEA-001', type: 'SN', currentVersion: '3.1.0', newVersion: '3.1.2', status: 'Not transferred' },
+  { id: '2', host: 'RN-PDX-002', type: 'SN', currentVersion: '2.4.0', newVersion: '2.4.1', status: 'Not transferred' },
+  { id: '3', host: 'eNB-PHX-001', type: 'SN', currentVersion: '1.8.0', newVersion: '1.8.0', status: 'Complete' },
+  { id: '4', host: 'eNB-NYC-001', type: 'SN', currentVersion: '3.0.8', newVersion: '3.0.8', status: 'Complete' },
+  { id: '5', host: 'RN-SFO-003', type: 'SN', currentVersion: '1.0.2', newVersion: '1.0.3', status: 'Error' },
+  { id: '6', host: 'eNB-CHI-002', type: 'SN', currentVersion: '2.2.1', newVersion: '2.2.1', status: 'Complete' },
+  { id: '7', host: 'eNB-MIA-002', type: 'SN', currentVersion: '2.2.5', newVersion: '3.0.8', status: 'Transfer complete' },
+  { id: '8', host: 'RN-DEN-002', type: 'SN', currentVersion: '1.1.0', newVersion: '1.2.0', status: 'Updating' },
+  { id: '9', host: 'RN-ATL-005', type: 'SN', currentVersion: '1.5.2', newVersion: '1.5.2', status: 'Complete' },
+  { id: '10', host: 'eNB-BOS-001', type: 'SN', currentVersion: '2.0.5', newVersion: '2.1.0', status: 'Not transferred' },
 ];
 
 const columns: ColumnDef<SoftwareRow>[] = [
@@ -196,9 +196,9 @@ function filterSoftware(rows: SoftwareRow[], filters: SoftwareTableFilters): Sof
     const q = filters.search.trim().toLowerCase();
     result = result.filter((r) => r.host.toLowerCase().includes(q));
   }
-  if (filters.typeFilter && filters.typeFilter !== 'Type') result = result.filter((r) => r.type === filters.typeFilter);
-  if (filters.statusFilter && filters.statusFilter !== 'Status') result = result.filter((r) => r.status === filters.statusFilter);
-  if (filters.versionFilter && filters.versionFilter !== 'Version') result = result.filter((r) => r.currentVersion === filters.versionFilter || r.newVersion === filters.versionFilter);
+  if (filters.typeFilter && filters.typeFilter !== 'All') result = result.filter((r) => r.type === filters.typeFilter);
+  if (filters.statusFilter && filters.statusFilter !== 'All') result = result.filter((r) => r.status === filters.statusFilter);
+  if (filters.versionFilter && filters.versionFilter !== 'All') result = result.filter((r) => r.currentVersion === filters.versionFilter || r.newVersion === filters.versionFilter);
   return result;
 }
 
@@ -215,9 +215,9 @@ export interface SoftwareManagementDataTableProps {
 
 export function SoftwareManagementDataTable({
   search = '',
-  typeFilter = 'Type',
-  statusFilter = 'Status',
-  versionFilter = 'Version',
+  typeFilter = 'All',
+  statusFilter = 'All',
+  versionFilter = 'All',
 }: SoftwareManagementDataTableProps = {}) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'status', desc: false },

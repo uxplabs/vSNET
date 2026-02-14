@@ -4,13 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
+import { FilterSelect } from './ui/filter-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
   Tooltip,
@@ -35,10 +29,10 @@ import {
 import { Label } from './ui/label';
 import { FaultManagementDataTable, FAULT_MANAGEMENT_DATA } from './fault-management-data-table';
 
-const CATEGORY_OPTIONS = ['Category', 'Alarm', 'Event', 'Trap', 'Syslog'] as const;
-const SEVERITY_OPTIONS = ['Severity', 'Critical', 'Major', 'Minor', 'Warning', 'Info'] as const;
-const SNMP_OPTIONS = ['SNMP', 'Enabled', 'Disabled', 'All'] as const;
-const EMAIL_OPTIONS = ['Email', 'Enabled', 'Disabled', 'All'] as const;
+const CATEGORY_OPTIONS = ['All', 'Alarm', 'Event', 'Trap', 'Syslog'] as const;
+const SEVERITY_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'Warning', 'Info'] as const;
+const SNMP_OPTIONS = ['All', 'Enabled', 'Disabled'] as const;
+const EMAIL_OPTIONS = ['All', 'Enabled', 'Disabled'] as const;
 
 function getNotificationGroupsWithCounts(): { name: string; count: number }[] {
   const counts: Record<string, number> = {};
@@ -60,10 +54,10 @@ export default function FaultManagementPage({ onBack }: FaultManagementPageProps
   const [groupSearch, setGroupSearch] = useState('');
   const notificationGroups = useMemo(() => getNotificationGroupsWithCounts(), []);
   const [selectedGroup, setSelectedGroup] = useState(() => getNotificationGroupsWithCounts()[0]?.name ?? '');
-  const [categoryFilter, setCategoryFilter] = useState<string>('Category');
-  const [severityFilter, setSeverityFilter] = useState<string>('Severity');
-  const [snmpFilter, setSnmpFilter] = useState<string>('SNMP');
-  const [emailFilter, setEmailFilter] = useState<string>('Email');
+  const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [severityFilter, setSeverityFilter] = useState<string>('All');
+  const [snmpFilter, setSnmpFilter] = useState<string>('All');
+  const [emailFilter, setEmailFilter] = useState<string>('All');
   const [addGroupDialogOpen, setAddGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [emptyGroups, setEmptyGroups] = useState<string[]>([]);
@@ -122,7 +116,7 @@ export default function FaultManagementPage({ onBack }: FaultManagementPageProps
         <TabsContent value="events-configuration" className="mt-6">
           <div className="flex gap-6">
             {/* Notification groups sidebar */}
-            <aside className="w-52 shrink-0 rounded-lg border bg-muted/30 border-border/80 overflow-hidden">
+            <aside className="w-52 shrink-0 rounded-lg border bg-muted/30 border-border/80 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)] self-start">
               <div className="p-3 border-b border-border/80 bg-muted/20">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-foreground truncate">Notification groups</h3>
@@ -145,7 +139,7 @@ export default function FaultManagementPage({ onBack }: FaultManagementPageProps
                   />
                 </div>
               </div>
-              <nav className="p-2 max-h-[min(400px,60vh)] overflow-y-auto">
+              <nav className="p-2 flex-1 min-h-0 overflow-y-auto">
                 {filteredGroups.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-4 text-center">No groups match</p>
                 ) : (
@@ -232,46 +226,10 @@ export default function FaultManagementPage({ onBack }: FaultManagementPageProps
                           className="pl-9 w-full"
                         />
                       </div>
-                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="Category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CATEGORY_OPTIONS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="Severity" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SEVERITY_OPTIONS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={snmpFilter} onValueChange={setSnmpFilter}>
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="SNMP" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SNMP_OPTIONS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={emailFilter} onValueChange={setEmailFilter}>
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="Email" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {EMAIL_OPTIONS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FilterSelect value={categoryFilter} onValueChange={setCategoryFilter} label="Category" options={[...CATEGORY_OPTIONS]} className="w-[120px]" />
+                      <FilterSelect value={severityFilter} onValueChange={setSeverityFilter} label="Severity" options={[...SEVERITY_OPTIONS]} className="w-[120px]" />
+                      <FilterSelect value={snmpFilter} onValueChange={setSnmpFilter} label="SNMP" options={[...SNMP_OPTIONS]} className="w-[120px]" />
+                      <FilterSelect value={emailFilter} onValueChange={setEmailFilter} label="Email" options={[...EMAIL_OPTIONS]} className="w-[120px]" />
                       <div className="ml-auto flex items-center gap-2">
                         <Button variant="outline" size="default" className="gap-1">
                           <Icon name="add" size={18} />

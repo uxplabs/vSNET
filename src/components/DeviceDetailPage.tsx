@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { FilterSelect } from './ui/filter-select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,6 +78,7 @@ interface DeviceDetailPageProps {
   onSignOut?: () => void;
   onBack?: () => void;
   onNavigate?: (page: string, tab?: string) => void;
+  onOpenWebTerminal?: (device: DeviceRow) => void;
   region?: string;
   regions?: string[];
   onRegionChange?: (region: string) => void;
@@ -325,8 +327,8 @@ function getCommandResponse(cmd: string, device: DeviceRow): string {
 
   if (trimmed === 'show inventory') {
     return [
-      `NAME: "${device.device}", DESCR: "${device.type || 'SN-LTE'} Network Element"`,
-      `PID: ${device.type || 'SN-LTE'}-4200, VID: V02, SN: FTX${String(parseInt(device.id) + 1000).padStart(4, '0')}A${String(parseInt(device.id) + 100).padStart(3, '0')}`,
+      `NAME: "${device.device}", DESCR: "${device.type || 'SN'} Network Element"`,
+      `PID: ${device.type || 'SN'}-4200, VID: V02, SN: FTX${String(parseInt(device.id) + 1000).padStart(4, '0')}A${String(parseInt(device.id) + 100).padStart(3, '0')}`,
       ``,
       `NAME: "Power Supply 0", DESCR: "AC Power Supply"`,
       `PID: PWR-750WAC, VID: V03, SN: ART0${String(parseInt(device.id) + 200).padStart(4, '0')}`,
@@ -373,7 +375,7 @@ function getCommandResponse(cmd: string, device: DeviceRow): string {
     return [
       `Device:     ${device.device}`,
       `Status:     ${device.status}`,
-      `Type:       ${device.type || 'SN-LTE'}`,
+      `Type:       ${device.type || 'SN'}`,
       `Version:    ${device.version || '4.2.1'}`,
       `IP:         ${ip}`,
       `Region:     ${device.region || 'Pacific Northwest'}`,
@@ -634,6 +636,7 @@ function DeviceDetailPage({
   onSignOut,
   onBack,
   onNavigate,
+  onOpenWebTerminal,
   region,
   regions,
   onRegionChange,
@@ -674,10 +677,10 @@ function DeviceDetailPage({
   const [alarmsEventsTab, setAlarmsEventsTab] = React.useState('alarms');
   const [performanceTab, setPerformanceTab] = React.useState('site');
   const [filesTab, setFilesTab] = React.useState('debug-logs');
-  const ALARMS_OPTIONS = ['Alarms', 'Critical', 'Major', 'Minor', 'None'] as const;
-  const EVENTS_TYPE_OPTIONS = ['Type', 'Configuration change', 'Connection', 'Performance', 'Security', 'System'] as const;
-  const EVENTS_SEVERITY_OPTIONS = ['Severity', 'Critical', 'Major', 'Minor', 'Info'] as const;
-  const EVENTS_SOURCE_OPTIONS = ['Source', 'All sources', 'eNB', 'RN'] as const;
+  const ALARMS_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'None'] as const;
+  const EVENTS_TYPE_OPTIONS = ['All', 'Configuration change', 'Connection', 'Performance', 'Security', 'System'] as const;
+  const EVENTS_SEVERITY_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'Info'] as const;
+  const EVENTS_SOURCE_OPTIONS = ['All', 'eNB', 'RN'] as const;
 
   const INITIAL_NOTES = [
     { id: '1', author: 'J. Smith', content: 'Scheduled maintenance completed. All systems nominal.', datetime: 'Jan 25, 2025 at 2:34 PM' },
@@ -687,8 +690,8 @@ function DeviceDetailPage({
 
   const [notes, setNotes] = useState<Array<{ id: string; author: string; content: string; datetime: string }>>([...INITIAL_NOTES]);
   const [radioNodesSearch, setRadioNodesSearch] = useState('');
-  const [radioNodesStatusFilter, setRadioNodesStatusFilter] = useState('Status');
-  const [radioNodesModelFilter, setRadioNodesModelFilter] = useState('Model');
+  const [radioNodesStatusFilter, setRadioNodesStatusFilter] = useState('All');
+  const [radioNodesModelFilter, setRadioNodesModelFilter] = useState('All');
   const [addRadioNodeSheetOpen, setAddRadioNodeSheetOpen] = useState(false);
   const [configMismatchSheetOpen, setConfigMismatchSheetOpen] = useState(false);
   const [createdTemplateName, setCreatedTemplateName] = useState<string | null>(initialCreatedTemplate ?? null);
@@ -971,23 +974,35 @@ function DeviceDetailPage({
               const key = toKey(label);
               const isActive = activeSection === key;
               const count = SIDEBAR_BADGE_COUNTS[key];
+              const isWebTerminal = key === 'web-terminal';
               return (
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setActiveSection(key)}
+                  onClick={() => {
+                    if (isWebTerminal && onOpenWebTerminal) {
+                      onOpenWebTerminal(device);
+                    } else {
+                      setActiveSection(key);
+                    }
+                  }}
                   className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    isActive
+                    isActive && !isWebTerminal
                       ? 'bg-muted font-medium'
                       : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                   }`}
                 >
                   <span className="truncate">{label}</span>
-                  {count != null && (
-                    <Badge variant="secondary" className="shrink-0 h-5 min-w-5 px-1.5 text-xs tabular-nums">
-                      {count}
-                    </Badge>
-                  )}
+                  <span className="flex items-center gap-1.5 shrink-0">
+                    {count != null && (
+                      <Badge variant="secondary" className="shrink-0 h-5 min-w-5 px-1.5 text-xs tabular-nums">
+                        {count}
+                      </Badge>
+                    )}
+                    {isWebTerminal && (
+                      <Icon name="open_in_new" size={14} className="text-muted-foreground" />
+                    )}
+                  </span>
                 </button>
               );
             })}
@@ -1123,7 +1138,7 @@ function DeviceDetailPage({
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Model #</span>
-                          <span className="font-medium">SN-LTE-2000</span>
+                          <span className="font-medium">SN-2000</span>
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
@@ -1383,10 +1398,10 @@ function DeviceDetailPage({
               { step: 4, name: 'Start rem scan', col2: [], actions: ['Start'], highlight: false },
             ];
             const LOCAL_TEMPLATES = [
-              { id: 'lt-1', name: 'Seattle baseline config', imageConstraints: '>=2.0.5', deviceType: 'SN-LTE' },
+              { id: 'lt-1', name: 'Seattle baseline config', imageConstraints: '>=2.0.5', deviceType: 'SN' },
               { id: 'lt-2', name: 'Portland RF optimization', imageConstraints: '>=3.1.0', deviceType: 'CU' },
               { id: 'lt-3', name: 'Edge device hardening', imageConstraints: '>=2.2.0', deviceType: 'VCU' },
-              ...(createdTemplateName ? [{ id: 'lt-new', name: createdTemplateName, imageConstraints: '>=1.0.0', deviceType: device.type || 'SN-LTE' }] : []),
+              ...(createdTemplateName ? [{ id: 'lt-new', name: createdTemplateName, imageConstraints: '>=1.0.0', deviceType: device.type || 'SN' }] : []),
             ];
             const TEMPLATE_LOGS = [
               { id: 'tl-1', task: 'Baseline audit', type: 'Reboot', domain: 'seattle-core.acme.net', startTime: '2025-01-27 14:32', lastCompleted: '2025-01-27 14:45' },
@@ -1574,26 +1589,8 @@ function DeviceDetailPage({
                       onChange={(e) => setRadioNodesSearch(e.target.value)}
                     />
                   </div>
-                  <Select value={radioNodesStatusFilter} onValueChange={setRadioNodesStatusFilter}>
-                    <SelectTrigger className="w-[130px]">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RADIO_NODES_STATUS_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={radioNodesModelFilter} onValueChange={setRadioNodesModelFilter}>
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue placeholder="Model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RADIO_NODES_MODEL_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FilterSelect value={radioNodesStatusFilter} onValueChange={setRadioNodesStatusFilter} label="Status" options={[...RADIO_NODES_STATUS_OPTIONS]} className="w-[130px]" />
+                  <FilterSelect value={radioNodesModelFilter} onValueChange={setRadioNodesModelFilter} label="Model" options={[...RADIO_NODES_MODEL_OPTIONS]} className="w-[120px]" />
                 </div>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1979,7 +1976,7 @@ function DeviceDetailPage({
                                 <SelectValue placeholder="Status" />
                               </SelectTrigger>
                               <SelectContent>
-                                {['Status', 'Open', 'Acknowledged', 'Cleared'].map((opt) => (
+                                {['All', 'Open', 'Acknowledged', 'Cleared'].map((opt) => (
                                   <SelectItem key={opt} value={opt}>
                                     {opt}
                                   </SelectItem>
@@ -2075,12 +2072,12 @@ function DeviceDetailPage({
             </Card>
           )}
 
-          {(activeSection === 'ssh-terminal' || activeSection === 'web-terminal') && (
+          {activeSection === 'ssh-terminal' && (
             <SshTerminal device={device} />
           )}
 
           {activeSection === 'snmp-details' && (
-            <>
+            <div className="space-y-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-end space-y-0 pb-2">
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={handleOpenSnmpEdit}>
@@ -2115,6 +2112,183 @@ function DeviceDetailPage({
                       <span className="font-medium font-mono text-sm">{snmpValues.writeCommunity || '—'}</span>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Alarms, Events, Conditions, Notes */}
+              <Card>
+                <CardContent className="pt-6">
+                  <Tabs value={alarmsEventsTab} onValueChange={setAlarmsEventsTab}>
+                    <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
+                      <TabsTrigger value="alarms" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
+                        Alarms
+                      </TabsTrigger>
+                      <TabsTrigger value="events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
+                        Events
+                      </TabsTrigger>
+                      <TabsTrigger value="conditions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
+                        Conditions
+                      </TabsTrigger>
+                      <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 gap-2">
+                        Notes
+                        <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs tabular-nums">
+                          {notes.length}
+                        </Badge>
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="alarms" className="mt-6">
+                      <div className="flex flex-wrap items-center gap-3 mb-4">
+                        <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
+                          <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                          <Input placeholder="Search alarms..." className="pl-9 w-full" />
+                        </div>
+                        <Select>
+                          <SelectTrigger className="w-[110px]">
+                            <SelectValue placeholder="Alarms" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ALARMS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="min-h-[200px]">
+                        <AlarmsDataTable />
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="events" className="mt-6">
+                      <div className="flex flex-wrap items-center gap-3 mb-4">
+                        <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
+                          <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                          <Input placeholder="Search events..." className="pl-9 w-full" />
+                        </div>
+                        <Select>
+                          <SelectTrigger className="w-[160px]">
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EVENTS_TYPE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Severity" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EVENTS_SEVERITY_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select>
+                          <SelectTrigger className="w-[130px]">
+                            <SelectValue placeholder="Source" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EVENTS_SOURCE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="min-h-[200px]">
+                        <EventsDataTable />
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="conditions" className="mt-6">
+                      <div className="flex flex-wrap items-center gap-3 mb-4">
+                        <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
+                          <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                          <Input placeholder="Search conditions..." className="pl-9 w-full" />
+                        </div>
+                      </div>
+                      <div className="min-h-[200px]">
+                        <ThresholdCrossingAlertsDataTable deviceId={device.device} hideDeviceColumn />
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="notes" className="mt-6">
+                      <div className="flex flex-col min-h-[320px]">
+                        <div ref={notesScrollRef} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto space-y-4 pb-3 pr-1">
+                          {notes.map((note) => {
+                            const isMine = note.author === 'You';
+                            return (
+                              <div key={note.id} className={`group flex flex-col gap-1 w-full ${isMine ? 'items-end' : 'items-start'}`}>
+                                <div className={`flex items-center gap-1.5 w-2/3 min-w-0 ${isMine ? 'ml-auto justify-end' : ''}`}>
+                                  {isMine && (
+                                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" aria-hidden>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                        aria-label="Edit note"
+                                        onClick={() => {
+                                          setNoteInput(note.content);
+                                          setNotes((prev) => prev.filter((n) => n.id !== note.id));
+                                        }}
+                                      >
+                                        <Icon name="edit" size={18} />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        aria-label="Delete note"
+                                        onClick={() => setNotes((prev) => prev.filter((n) => n.id !== note.id))}
+                                      >
+                                        <Icon name="delete" size={18} />
+                                      </Button>
+                                    </div>
+                                  )}
+                                  <div
+                                    className={
+                                      isMine
+                                        ? 'rounded-2xl rounded-tr-sm bg-primary text-primary-foreground px-3 py-2 text-base w-max max-w-full break-words shrink-0 min-w-0'
+                                        : 'rounded-2xl rounded-tl-sm bg-muted/60 px-3 py-2 text-base text-foreground w-max max-w-full break-words shrink-0 min-w-0'
+                                    }
+                                  >
+                                    {note.content}
+                                  </div>
+                                </div>
+                                <div className={`w-2/3 min-w-0 ${isMine ? 'ml-auto text-right pr-3' : 'text-left pl-3'}`}>
+                                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                                    {note.author} · {note.datetime}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-end gap-2 pt-3 border-t shrink-0">
+                          <div className="flex-1 flex items-end gap-2 rounded-2xl border bg-muted/30 px-3 py-2 min-h-[44px]">
+                            <Textarea
+                              placeholder="Add a note..."
+                              value={noteInput}
+                              onChange={(e) => setNoteInput(e.target.value)}
+                              onKeyDown={handleNoteKeyDown}
+                              className="min-h-[36px] max-h-[100px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none px-0 py-1.5 text-base"
+                              rows={1}
+                            />
+                            <Button
+                              type="button"
+                              size="icon"
+                              className="h-9 w-9 shrink-0 rounded-full bg-primary hover:bg-primary/90"
+                              aria-label="Send note"
+                              onClick={handleSendNote}
+                            >
+                              <Icon name="arrow_upward" size={18} className="text-primary-foreground" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
 
@@ -2217,7 +2391,7 @@ function DeviceDetailPage({
                   </SheetFooter>
                 </SheetContent>
               </Sheet>
-            </>
+            </div>
           )}
           </div>
         </div>

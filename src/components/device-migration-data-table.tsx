@@ -18,16 +18,16 @@ export interface DeviceMigrationRow {
 }
 
 export const DEVICE_MIGRATION_DATA: DeviceMigrationRow[] = [
-  { id: '1', host: 'ENB-SEA-001', type: 'SN-LTE', status: 'In progress' },
-  { id: '2', host: 'ENB-SEA-002', type: 'SN-LTE', status: 'In progress' },
-  { id: '3', host: 'ENB-PDX-001', type: 'SN-LTE', status: 'In progress' },
-  { id: '4', host: 'ENB-SFO-001', type: 'SN-LTE', status: 'In progress' },
-  { id: '5', host: 'ENB-PHX-001', type: 'SN-LTE', status: 'In progress' },
-  { id: '6', host: 'RN-SEA-001', type: 'SN-LTE', status: 'In progress' },
-  { id: '7', host: 'RN-SEA-002', type: 'SN-LTE', status: 'In progress' },
-  { id: '8', host: 'RN-PDX-001', type: 'SN-LTE', status: 'In progress' },
-  { id: '9', host: 'ENB-NYC-001', type: 'SN-LTE', status: 'In progress' },
-  { id: '10', host: 'ENB-NYC-002', type: 'SN-LTE', status: 'In progress' },
+  { id: '1', host: 'ENB-SEA-001', type: 'SN', status: 'In progress' },
+  { id: '2', host: 'ENB-SEA-002', type: 'SN', status: 'In progress' },
+  { id: '3', host: 'ENB-PDX-001', type: 'SN', status: 'In progress' },
+  { id: '4', host: 'ENB-SFO-001', type: 'SN', status: 'In progress' },
+  { id: '5', host: 'ENB-PHX-001', type: 'SN', status: 'In progress' },
+  { id: '6', host: 'RN-SEA-001', type: 'SN', status: 'In progress' },
+  { id: '7', host: 'RN-SEA-002', type: 'SN', status: 'In progress' },
+  { id: '8', host: 'RN-PDX-001', type: 'SN', status: 'In progress' },
+  { id: '9', host: 'ENB-NYC-001', type: 'SN', status: 'In progress' },
+  { id: '10', host: 'ENB-NYC-002', type: 'SN', status: 'In progress' },
 ];
 
 const STATUS_ICON: Record<DeviceMigrationRow['status'], { name: string; className: string }> = {

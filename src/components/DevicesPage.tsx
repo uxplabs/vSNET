@@ -3,13 +3,7 @@ import { Navbar01 } from './navbar-01';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
+import { FilterSelect } from './ui/filter-select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,27 +70,27 @@ export interface DevicesPageProps {
   initialConfigStatusFilter?: string;
 }
 
-const STATUS_OPTIONS = ['Status', 'Connected', 'Disconnected', 'In maintenance', 'Offline'] as const;
-const CONFIG_STATUS_OPTIONS = ['Config status', 'Synchronized', 'Out of sync', 'Pending'] as const;
-const TYPE_OPTIONS = ['Type', 'SN-LTE'] as const;
-const VERSION_OPTIONS = ['Version', 'v2.1', 'v2.2', 'v3.0', 'v3.1'] as const;
-const ALARMS_OPTIONS = ['Alarms', 'Critical', 'Major', 'Minor', 'None'] as const;
-const LABELS_OPTIONS = ['Labels', 'Production', 'Test', 'Staging', 'Legacy'] as const;
-const EVENTS_TYPE_OPTIONS = ['Type', 'Configuration change', 'Connection', 'Performance', 'Security', 'System'] as const;
-const EVENTS_SEVERITY_OPTIONS = ['Severity', 'Critical', 'Major', 'Minor', 'Info'] as const;
-const EVENTS_SOURCE_OPTIONS = ['Source', 'All sources', 'eNB', 'RN'] as const;
-const TASKS_TYPE_OPTIONS = ['Type', 'Backup', 'Sync', 'Report', 'Maintenance'] as const;
-const TASKS_STATUS_OPTIONS = ['Status', 'Scheduled', 'Running', 'Completed', 'Failed'] as const;
-const TASKS_DOMAIN_OPTIONS = ['Domain', 'All devices', ...NORTH_AMERICAN_REGIONS, 'Core network', 'Radio access', 'Edge devices'] as const;
-const SOFTWARE_TYPE_OPTIONS = ['Type', 'SN-LTE'] as const;
-const SOFTWARE_STATUS_OPTIONS = ['Status', 'Not transferred', 'Transfer complete', 'Updating', 'Error', 'Complete'] as const;
-const SOFTWARE_VERSION_OPTIONS = ['Version', 'v2.1', 'v2.2', 'v3.0', 'v3.1'] as const;
-const REPORT_TYPE_OPTIONS = ['Type', 'Daily', 'Weekly', 'Monthly', 'Custom'] as const;
-const REPORT_TASK_OPTIONS = ['Task', 'Alarm report', 'Config backup', 'KPI sync', 'Inventory sync', 'Firmware check', 'Health check', 'Report generation'] as const;
-const REPORT_CREATED_OPTIONS = ['Created', 'Today', 'This week', 'This month', 'All time'] as const;
-const PERFORMANCE_LTE_OPTIONS = ['LTE', 'All', 'SN-LTE'] as const;
-const PERFORMANCE_TIME_OPTIONS = ['Last hour', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
-const THRESHOLD_ACT_SESS_OPTIONS = ['ACT_SESS', 'All', 'ACT_SESS_1', 'ACT_SESS_2', 'ACT_SESS_3'] as const;
+const STATUS_OPTIONS = ['All', 'Connected', 'Disconnected', 'In maintenance', 'Offline'] as const;
+const CONFIG_STATUS_OPTIONS = ['All', 'Synchronized', 'Out of sync', 'Pending'] as const;
+const TYPE_OPTIONS = ['All', 'SN', 'CU', 'RCP', 'DAS'] as const;
+const VERSION_OPTIONS = ['All', 'v2.1', 'v2.2', 'v3.0', 'v3.1'] as const;
+const ALARMS_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'None'] as const;
+const LABELS_OPTIONS = ['All', 'Production', 'Test', 'Staging', 'Legacy'] as const;
+const EVENTS_TYPE_OPTIONS = ['All', 'Configuration change', 'Connection', 'Performance', 'Security', 'System'] as const;
+const EVENTS_SEVERITY_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'Info'] as const;
+const EVENTS_SOURCE_OPTIONS = ['All', 'eNB', 'RN'] as const;
+const TASKS_TYPE_OPTIONS = ['All', 'Backup', 'Sync', 'Report', 'Maintenance'] as const;
+const TASKS_STATUS_OPTIONS = ['All', 'Scheduled', 'Running', 'Completed', 'Failed'] as const;
+const TASKS_DOMAIN_OPTIONS = ['All', ...NORTH_AMERICAN_REGIONS, 'Core network', 'Radio access', 'Edge devices'] as const;
+const SOFTWARE_TYPE_OPTIONS = ['All', 'SN', 'CU', 'RCP', 'DAS'] as const;
+const SOFTWARE_STATUS_OPTIONS = ['All', 'Not transferred', 'Transfer complete', 'Updating', 'Error', 'Complete'] as const;
+const SOFTWARE_VERSION_OPTIONS = ['All', 'v2.1', 'v2.2', 'v3.0', 'v3.1'] as const;
+const REPORT_TYPE_OPTIONS = ['All', 'Daily', 'Weekly', 'Monthly', 'Custom'] as const;
+const REPORT_TASK_OPTIONS = ['All', 'Alarm report', 'Config backup', 'KPI sync', 'Inventory sync', 'Firmware check', 'Health check', 'Report generation'] as const;
+const REPORT_CREATED_OPTIONS = ['All', 'Today', 'This week', 'This month', 'All time'] as const;
+const PERFORMANCE_LTE_OPTIONS = ['All', 'SN'] as const;
+const PERFORMANCE_TIME_OPTIONS = ['All', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
+const THRESHOLD_ACT_SESS_OPTIONS = ['All', 'ACT_SESS_1', 'ACT_SESS_2', 'ACT_SESS_3'] as const;
 
 const allDeviceCounts = getDeviceSidebarCounts(DEVICES_DATA);
 const allDeviceCountsByRegion = getDeviceSidebarCountsByRegion(DEVICES_DATA);
@@ -137,40 +131,40 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
 
   const ungroupedCount = Math.max(0, deviceCounts.region.all - Object.values(deviceCounts.groups).reduce((a, b) => a + b, 0));
   const [search, setSearch] = useState('');
-  const [regionFilter, setRegionFilter] = useState<string>('Region');
-  const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter ?? 'Status');
-  const [configStatusFilter, setConfigStatusFilter] = useState<string>(initialConfigStatusFilter ?? 'Config status');
-  const [typeFilter, setTypeFilter] = useState<string>('Type');
-  const [versionFilter, setVersionFilter] = useState<string>('Version');
-  const [alarmsFilter, setAlarmsFilter] = useState<string>('Alarms');
-  const [labelsFilter, setLabelsFilter] = useState<string>('Labels');
+  const [regionFilter, setRegionFilter] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter ?? 'All');
+  const [configStatusFilter, setConfigStatusFilter] = useState<string>(initialConfigStatusFilter ?? 'All');
+  const [typeFilter, setTypeFilter] = useState<string>('All');
+  const [versionFilter, setVersionFilter] = useState<string>('All');
+  const [alarmsFilter, setAlarmsFilter] = useState<string>('All');
+  const [labelsFilter, setLabelsFilter] = useState<string>('All');
   const [eventsSearch, setEventsSearch] = useState('');
-  const [eventsTypeFilter, setEventsTypeFilter] = useState<string>('Type');
-  const [eventsSeverityFilter, setEventsSeverityFilter] = useState<string>('Severity');
-  const [eventsSourceFilter, setEventsSourceFilter] = useState<string>('Source');
+  const [eventsTypeFilter, setEventsTypeFilter] = useState<string>('All');
+  const [eventsSeverityFilter, setEventsSeverityFilter] = useState<string>('All');
+  const [eventsSourceFilter, setEventsSourceFilter] = useState<string>('All');
   const [tasksSearch, setTasksSearch] = useState('');
-  const [tasksTypeFilter, setTasksTypeFilter] = useState<string>('Type');
-  const [tasksStatusFilter, setTasksStatusFilter] = useState<string>('Status');
-  const [tasksDomainFilter, setTasksDomainFilter] = useState<string>('Domain');
+  const [tasksTypeFilter, setTasksTypeFilter] = useState<string>('All');
+  const [tasksStatusFilter, setTasksStatusFilter] = useState<string>('All');
+  const [tasksDomainFilter, setTasksDomainFilter] = useState<string>('All');
   const [softwareSearch, setSoftwareSearch] = useState('');
-  const [softwareTypeFilter, setSoftwareTypeFilter] = useState<string>('Type');
-  const [softwareStatusFilter, setSoftwareStatusFilter] = useState<string>('Status');
-  const [softwareVersionFilter, setSoftwareVersionFilter] = useState<string>('Version');
+  const [softwareTypeFilter, setSoftwareTypeFilter] = useState<string>('All');
+  const [softwareStatusFilter, setSoftwareStatusFilter] = useState<string>('All');
+  const [softwareVersionFilter, setSoftwareVersionFilter] = useState<string>('All');
   const [reportsSearch, setReportsSearch] = useState('');
-  const [reportsTypeFilter, setReportsTypeFilter] = useState<string>('Type');
-  const [reportsTaskFilter, setReportsTaskFilter] = useState<string>('Task');
-  const [reportsCreatedFilter, setReportsCreatedFilter] = useState<string>('Created');
+  const [reportsTypeFilter, setReportsTypeFilter] = useState<string>('All');
+  const [reportsTaskFilter, setReportsTaskFilter] = useState<string>('All');
+  const [reportsCreatedFilter, setReportsCreatedFilter] = useState<string>('All');
   const [performanceSearch, setPerformanceSearch] = useState('');
-  const [performanceLteFilter, setPerformanceLteFilter] = useState<string>('LTE');
-  const [performanceTimeFilter, setPerformanceTimeFilter] = useState<string>('Last hour');
-  const [performanceStatusFilter, setPerformanceStatusFilter] = useState<'all' | 'good' | 'bad'>('all');
-  const [thresholdActSessFilter, setThresholdActSessFilter] = useState<string>('ACT_SESS');
+  const [performanceLteFilter, setPerformanceLteFilter] = useState<string>('All');
+  const [performanceTimeFilter, setPerformanceTimeFilter] = useState<string>('All');
+  const [performanceStatusFilter, setPerformanceStatusFilter] = useState<'all' | 'degraded' | 'optimal'>('all');
+  const [thresholdActSessFilter, setThresholdActSessFilter] = useState<string>('All');
   const [inventorySearch, setInventorySearch] = useState('');
   const [inventoryViewFilter, setInventoryViewFilter] = useState('radio-nodes');
-  const [inventoryStatusFilter, setInventoryStatusFilter] = useState<string>('Status');
-  const [inventoryTypeFilter, setInventoryTypeFilter] = useState<string>('Type');
-  const [inventoryVersionFilter, setInventoryVersionFilter] = useState<string>('Version');
-  const [inventoryAlarmFilter, setInventoryAlarmFilter] = useState<string>('Alarms');
+  const [inventoryStatusFilter, setInventoryStatusFilter] = useState<string>('All');
+  const [inventoryTypeFilter, setInventoryTypeFilter] = useState<string>('All');
+  const [inventoryVersionFilter, setInventoryVersionFilter] = useState<string>('All');
+  const [inventoryAlarmFilter, setInventoryAlarmFilter] = useState<string>('All');
   const [softwareManagementTab, setSoftwareManagementTab] = useState('tasks');
   const [performanceTab, setPerformanceTab] = useState('activity');
   const [selectedTask, setSelectedTask] = useState<ScheduledTaskRow | null>(null);
@@ -182,60 +176,60 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [alarmClearSelectionTrigger, setAlarmClearSelectionTrigger] = useState(0);
   const [eventSelectedCount, setEventSelectedCount] = useState(0);
   const [eventClearSelectionTrigger, setEventClearSelectionTrigger] = useState(0);
-  const deviceFiltersActive = search !== '' || regionFilter !== 'Region' || statusFilter !== 'Status' || configStatusFilter !== 'Config status' || typeFilter !== 'Type' || versionFilter !== 'Version' || alarmsFilter !== 'Alarms' || labelsFilter !== 'Labels';
+  const deviceFiltersActive = search !== '' || regionFilter !== 'All' || statusFilter !== 'All' || configStatusFilter !== 'All' || typeFilter !== 'All' || versionFilter !== 'All' || alarmsFilter !== 'All' || labelsFilter !== 'All';
   const clearDeviceFilters = () => {
-    setSearch(''); setRegionFilter('Region'); setStatusFilter('Status'); setSelectedRegion('all'); setConfigStatusFilter('Config status'); setTypeFilter('Type'); setVersionFilter('Version'); setAlarmsFilter('Alarms'); setLabelsFilter('Labels');
+    setSearch(''); setRegionFilter('All'); setStatusFilter('All'); setSelectedRegion('all'); setConfigStatusFilter('All'); setTypeFilter('All'); setVersionFilter('All'); setAlarmsFilter('All'); setLabelsFilter('All');
   };
-  const eventsFiltersActive = eventsSearch !== '' || regionFilter !== 'Region' || eventsTypeFilter !== 'Type' || eventsSeverityFilter !== 'Severity' || eventsSourceFilter !== 'Source';
+  const eventsFiltersActive = eventsSearch !== '' || regionFilter !== 'All' || eventsTypeFilter !== 'All' || eventsSeverityFilter !== 'All' || eventsSourceFilter !== 'All';
   const clearEventsFilters = () => {
-    setEventsSearch(''); setRegionFilter('Region'); setEventsTypeFilter('Type'); setEventsSeverityFilter('Severity'); setEventsSourceFilter('Source');
+    setEventsSearch(''); setRegionFilter('All'); setEventsTypeFilter('All'); setEventsSeverityFilter('All'); setEventsSourceFilter('All');
   };
-  const tasksFiltersActive = tasksSearch !== '' || tasksTypeFilter !== 'Type' || tasksStatusFilter !== 'Status' || tasksDomainFilter !== 'Domain';
+  const tasksFiltersActive = tasksSearch !== '' || tasksTypeFilter !== 'All' || tasksStatusFilter !== 'All' || tasksDomainFilter !== 'All';
   const clearTasksFilters = () => {
-    setTasksSearch(''); setTasksTypeFilter('Type'); setTasksStatusFilter('Status'); setTasksDomainFilter('Domain');
+    setTasksSearch(''); setTasksTypeFilter('All'); setTasksStatusFilter('All'); setTasksDomainFilter('All');
   };
-  const softwareFiltersActive = softwareSearch !== '' || softwareTypeFilter !== 'Type' || softwareStatusFilter !== 'Status' || softwareVersionFilter !== 'Version';
+  const softwareFiltersActive = softwareSearch !== '' || softwareTypeFilter !== 'All' || softwareStatusFilter !== 'All' || softwareVersionFilter !== 'All';
   const clearSoftwareFilters = () => {
-    setSoftwareSearch(''); setSoftwareTypeFilter('Type'); setSoftwareStatusFilter('Status'); setSoftwareVersionFilter('Version');
+    setSoftwareSearch(''); setSoftwareTypeFilter('All'); setSoftwareStatusFilter('All'); setSoftwareVersionFilter('All');
   };
-  const inventoryFiltersActive = inventorySearch !== '' || inventoryViewFilter !== 'radio-nodes' || inventoryStatusFilter !== 'Status' || inventoryTypeFilter !== 'Type' || inventoryVersionFilter !== 'Version' || inventoryAlarmFilter !== 'Alarms';
+  const inventoryFiltersActive = inventorySearch !== '' || inventoryViewFilter !== 'radio-nodes' || inventoryStatusFilter !== 'All' || inventoryTypeFilter !== 'All' || inventoryVersionFilter !== 'All' || inventoryAlarmFilter !== 'All';
   const clearInventoryFilters = () => {
-    setInventorySearch(''); setInventoryViewFilter('radio-nodes'); setInventoryStatusFilter('Status'); setInventoryTypeFilter('Type'); setInventoryVersionFilter('Version'); setInventoryAlarmFilter('Alarms');
+    setInventorySearch(''); setInventoryViewFilter('radio-nodes'); setInventoryStatusFilter('All'); setInventoryTypeFilter('All'); setInventoryVersionFilter('All'); setInventoryAlarmFilter('All');
   };
-  const reportsFiltersActive = reportsSearch !== '' || reportsTypeFilter !== 'Type' || reportsTaskFilter !== 'Task' || reportsCreatedFilter !== 'Created';
+  const reportsFiltersActive = reportsSearch !== '' || reportsTypeFilter !== 'All' || reportsTaskFilter !== 'All' || reportsCreatedFilter !== 'All';
   const clearReportsFilters = () => {
-    setReportsSearch(''); setReportsTypeFilter('Type'); setReportsTaskFilter('Task'); setReportsCreatedFilter('Created');
+    setReportsSearch(''); setReportsTypeFilter('All'); setReportsTaskFilter('All'); setReportsCreatedFilter('All');
   };
-  const performanceFiltersActive = performanceSearch !== '' || performanceLteFilter !== 'LTE' || performanceTimeFilter !== 'Last hour' || performanceStatusFilter !== 'all';
+  const performanceFiltersActive = performanceSearch !== '' || performanceLteFilter !== 'All' || performanceTimeFilter !== 'All' || performanceStatusFilter !== 'all';
   const clearPerformanceFilters = () => {
-    setPerformanceSearch(''); setPerformanceLteFilter('LTE'); setPerformanceTimeFilter('Last hour'); setPerformanceStatusFilter('all');
+    setPerformanceSearch(''); setPerformanceLteFilter('All'); setPerformanceTimeFilter('All'); setPerformanceStatusFilter('all');
   };
-  const thresholdFiltersActive = thresholdActSessFilter !== 'ACT_SESS';
-  const clearThresholdFilters = () => setThresholdActSessFilter('ACT_SESS');
+  const thresholdFiltersActive = thresholdActSessFilter !== 'All';
+  const clearThresholdFilters = () => setThresholdActSessFilter('All');
 
   // Keep filter dropdowns in sync with sidebar selection
   useEffect(() => {
     if (selectedRegion === 'disconnected') {
       setStatusFilter('Disconnected');
-      setConfigStatusFilter('Config status');
+      setConfigStatusFilter('All');
     } else if (selectedRegion === 'inMaintenance') {
       setStatusFilter('In maintenance');
-      setConfigStatusFilter('Config status');
+      setConfigStatusFilter('All');
     } else if (selectedRegion === 'offline') {
       setStatusFilter('Offline');
-      setConfigStatusFilter('Config status');
+      setConfigStatusFilter('All');
     } else if (selectedRegion === 'kpiSyncErrors') {
-      setStatusFilter('Status');
+      setStatusFilter('All');
       setConfigStatusFilter('Out of sync');
     } else if (selectedRegion === 'all' || selectedRegion === 'configMismatch') {
-      setStatusFilter('Status');
-      setConfigStatusFilter('Config status');
+      setStatusFilter('All');
+      setConfigStatusFilter('All');
     }
   }, [selectedRegion]);
 
   // Sync external filter props (e.g. navigating from dashboard with a filter)
   useEffect(() => {
-    if (initialStatusFilter && initialStatusFilter !== 'Status') {
+    if (initialStatusFilter && initialStatusFilter !== 'All') {
       setStatusFilter(initialStatusFilter);
       if (initialStatusFilter === 'Disconnected') setSelectedRegion('disconnected');
       else if (initialStatusFilter === 'In maintenance') setSelectedRegion('inMaintenance');
@@ -244,7 +238,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   }, [initialStatusFilter]);
 
   useEffect(() => {
-    if (initialConfigStatusFilter && initialConfigStatusFilter !== 'Config status') {
+    if (initialConfigStatusFilter && initialConfigStatusFilter !== 'All') {
       setConfigStatusFilter(initialConfigStatusFilter);
     }
   }, [initialConfigStatusFilter]);
@@ -497,7 +491,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 <Separator orientation="vertical" className="mr-2 h-4 shrink-0" />
                 <TabsList className="inline-flex h-auto gap-0 bg-transparent p-0 shrink-0 border-0 rounded-none">
                   <TabsTrigger value="device" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
-                    Device
+                    Devices
                   </TabsTrigger>
                   <TabsTrigger value="alarms" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2">
                     Alarms
@@ -581,92 +575,14 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       </div>
                       <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                         {regions && regions.length > 1 && (
-                          <Select value={regionFilter} onValueChange={setRegionFilter}>
-                            <SelectTrigger className="w-[140px] shrink-0">
-                              <SelectValue placeholder="Region" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Region">Region</SelectItem>
-                              {regions.map((r) => (
-                                <SelectItem key={r} value={r}>
-                                  {r}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={['All', ...regions]} className="w-[140px] shrink-0" />
                         )}
-                        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                          <SelectTrigger className="w-[120px] shrink-0">
-                            <SelectValue placeholder="Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATUS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={configStatusFilter} onValueChange={handleConfigStatusFilterChange}>
-                          <SelectTrigger className="w-[130px] shrink-0">
-                            <SelectValue placeholder="Config status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CONFIG_STATUS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={typeFilter} onValueChange={setTypeFilter}>
-                          <SelectTrigger className="w-[110px] shrink-0">
-                            <SelectValue placeholder="Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TYPE_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={versionFilter} onValueChange={setVersionFilter}>
-                          <SelectTrigger className="w-[100px] shrink-0">
-                            <SelectValue placeholder="Version" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {VERSION_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={alarmsFilter} onValueChange={setAlarmsFilter}>
-                          <SelectTrigger className="w-[110px] shrink-0">
-                            <SelectValue placeholder="Alarms" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ALARMS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={labelsFilter} onValueChange={setLabelsFilter}>
-                          <SelectTrigger className="w-[110px] shrink-0">
-                            <SelectValue placeholder="Labels" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {LABELS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FilterSelect value={statusFilter} onValueChange={handleStatusFilterChange} label="Status" options={STATUS_OPTIONS} className="w-[120px] shrink-0" />
+                        <FilterSelect value={configStatusFilter} onValueChange={handleConfigStatusFilterChange} label="Config status" options={CONFIG_STATUS_OPTIONS} className="w-[130px] shrink-0" />
+                        <FilterSelect value={typeFilter} onValueChange={setTypeFilter} label="Device type" options={TYPE_OPTIONS} className="w-[130px] shrink-0" />
+                        <FilterSelect value={versionFilter} onValueChange={setVersionFilter} label="Version" options={VERSION_OPTIONS} className="w-[100px] shrink-0" />
+                        <FilterSelect value={alarmsFilter} onValueChange={setAlarmsFilter} label="Alarms" options={ALARMS_OPTIONS} className="w-[110px] shrink-0" />
+                        <FilterSelect value={labelsFilter} onValueChange={setLabelsFilter} label="Labels" options={LABELS_OPTIONS} className="w-[110px] shrink-0" />
                       </div>
                     </>
                   )}
@@ -698,13 +614,13 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                           labelsFilter,
                         }, regions);
                         const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                        if (regionFilter !== 'Region') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('Region') });
-                        if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('Status'); setSelectedRegion('all'); } });
-                        if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => { setConfigStatusFilter('Config status'); if (selectedRegion === 'kpiSyncErrors') setSelectedRegion('all'); } });
-                        if (typeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('Type') });
-                        if (versionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('Version') });
-                        if (alarmsFilter !== 'Alarms') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('Alarms') });
-                        if (labelsFilter !== 'Labels') activeFilters.push({ key: 'labels', label: `Labels: ${labelsFilter}`, onClear: () => setLabelsFilter('Labels') });
+                        if (regionFilter !== 'All') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('All') });
+                        if (statusFilter !== 'All') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('All'); setSelectedRegion('all'); } });
+                        if (configStatusFilter !== 'All') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => { setConfigStatusFilter('All'); if (selectedRegion === 'kpiSyncErrors') setSelectedRegion('all'); } });
+                        if (typeFilter !== 'All') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('All') });
+                        if (versionFilter !== 'All') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('All') });
+                        if (alarmsFilter !== 'All') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('All') });
+                        if (labelsFilter !== 'All') activeFilters.push({ key: 'labels', label: `Labels: ${labelsFilter}`, onClear: () => setLabelsFilter('All') });
                         if (search.trim()) activeFilters.push({ key: 'search', label: `Search: "${search.trim()}"`, onClear: () => setSearch('') });
                         const hasActive = activeFilters.length > 0;
                         return (
@@ -786,92 +702,14 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       </div>
                       <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                         {regions && regions.length > 1 && (
-                          <Select value={regionFilter} onValueChange={setRegionFilter}>
-                            <SelectTrigger className="w-[140px] shrink-0">
-                              <SelectValue placeholder="Region" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Region">Region</SelectItem>
-                              {regions.map((r) => (
-                                <SelectItem key={r} value={r}>
-                                  {r}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={['All', ...regions]} className="w-[140px] shrink-0" />
                         )}
-                        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                          <SelectTrigger className="w-[120px] shrink-0">
-                            <SelectValue placeholder="Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STATUS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={configStatusFilter} onValueChange={handleConfigStatusFilterChange}>
-                          <SelectTrigger className="w-[130px] shrink-0">
-                            <SelectValue placeholder="Config status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CONFIG_STATUS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={typeFilter} onValueChange={setTypeFilter}>
-                          <SelectTrigger className="w-[110px] shrink-0">
-                            <SelectValue placeholder="Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TYPE_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={versionFilter} onValueChange={setVersionFilter}>
-                          <SelectTrigger className="w-[100px] shrink-0">
-                            <SelectValue placeholder="Version" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {VERSION_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={alarmsFilter} onValueChange={setAlarmsFilter}>
-                          <SelectTrigger className="w-[110px] shrink-0">
-                            <SelectValue placeholder="Alarms" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ALARMS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={labelsFilter} onValueChange={setLabelsFilter}>
-                          <SelectTrigger className="w-[110px] shrink-0">
-                            <SelectValue placeholder="Labels" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {LABELS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FilterSelect value={statusFilter} onValueChange={handleStatusFilterChange} label="Status" options={STATUS_OPTIONS} className="w-[120px] shrink-0" />
+                        <FilterSelect value={configStatusFilter} onValueChange={handleConfigStatusFilterChange} label="Config status" options={CONFIG_STATUS_OPTIONS} className="w-[130px] shrink-0" />
+                        <FilterSelect value={typeFilter} onValueChange={setTypeFilter} label="Device type" options={TYPE_OPTIONS} className="w-[130px] shrink-0" />
+                        <FilterSelect value={versionFilter} onValueChange={setVersionFilter} label="Version" options={VERSION_OPTIONS} className="w-[100px] shrink-0" />
+                        <FilterSelect value={alarmsFilter} onValueChange={setAlarmsFilter} label="Alarms" options={ALARMS_OPTIONS} className="w-[110px] shrink-0" />
+                        <FilterSelect value={labelsFilter} onValueChange={setLabelsFilter} label="Labels" options={LABELS_OPTIONS} className="w-[110px] shrink-0" />
                       </div>
                     </>
                   )}
@@ -893,13 +731,13 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 ) : (() => {
                   const count = getFilteredAlarmsCount({ search, severityFilter: alarmsFilter, regionFilter });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                  if (regionFilter !== 'Region') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('Region') });
-                  if (statusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('Status'); setSelectedRegion('all'); } });
-                  if (configStatusFilter !== 'Config status') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => { setConfigStatusFilter('Config status'); if (selectedRegion === 'kpiSyncErrors') setSelectedRegion('all'); } });
-                  if (typeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('Type') });
-                  if (versionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('Version') });
-                  if (alarmsFilter !== 'Alarms') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('Alarms') });
-                  if (labelsFilter !== 'Labels') activeFilters.push({ key: 'labels', label: `Labels: ${labelsFilter}`, onClear: () => setLabelsFilter('Labels') });
+                  if (regionFilter !== 'All') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('All') });
+                  if (statusFilter !== 'All') activeFilters.push({ key: 'status', label: `Status: ${statusFilter}`, onClear: () => { setStatusFilter('All'); setSelectedRegion('all'); } });
+                  if (configStatusFilter !== 'All') activeFilters.push({ key: 'config', label: `Config: ${configStatusFilter}`, onClear: () => { setConfigStatusFilter('All'); if (selectedRegion === 'kpiSyncErrors') setSelectedRegion('all'); } });
+                  if (typeFilter !== 'All') activeFilters.push({ key: 'type', label: `Type: ${typeFilter}`, onClear: () => setTypeFilter('All') });
+                  if (versionFilter !== 'All') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('All') });
+                  if (alarmsFilter !== 'All') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('All') });
+                  if (labelsFilter !== 'All') activeFilters.push({ key: 'labels', label: `Labels: ${labelsFilter}`, onClear: () => setLabelsFilter('All') });
                   if (search.trim()) activeFilters.push({ key: 'search', label: `Search: "${search.trim()}"`, onClear: () => setSearch('') });
                   const hasActive = activeFilters.length > 0;
                   return (
@@ -969,56 +807,11 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                   </div>
                   <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
                     {regions && regions.length > 1 && (
-                      <Select value={regionFilter} onValueChange={setRegionFilter}>
-                        <SelectTrigger className="w-[140px] shrink-0">
-                          <SelectValue placeholder="Region" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Region">Region</SelectItem>
-                          {regions.map((r) => (
-                            <SelectItem key={r} value={r}>
-                              {r}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={['All', ...regions]} className="w-[140px] shrink-0" />
                     )}
-                    <Select value={eventsTypeFilter} onValueChange={setEventsTypeFilter}>
-                      <SelectTrigger className="w-[160px] shrink-0">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EVENTS_TYPE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={eventsSeverityFilter} onValueChange={setEventsSeverityFilter}>
-                      <SelectTrigger className="w-[120px] shrink-0">
-                        <SelectValue placeholder="Severity" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EVENTS_SEVERITY_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={eventsSourceFilter} onValueChange={setEventsSourceFilter}>
-                      <SelectTrigger className="w-[130px] shrink-0">
-                        <SelectValue placeholder="Source" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {EVENTS_SOURCE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FilterSelect value={eventsTypeFilter} onValueChange={setEventsTypeFilter} label="Type" options={EVENTS_TYPE_OPTIONS} className="w-[160px] shrink-0" />
+                    <FilterSelect value={eventsSeverityFilter} onValueChange={setEventsSeverityFilter} label="Severity" options={EVENTS_SEVERITY_OPTIONS} className="w-[120px] shrink-0" />
+                    <FilterSelect value={eventsSourceFilter} onValueChange={setEventsSourceFilter} label="Source" options={EVENTS_SOURCE_OPTIONS} className="w-[130px] shrink-0" />
                   </div>
                     </>
                   )}
@@ -1049,10 +842,10 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     regionFilter,
                   });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                  if (regionFilter !== 'Region') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('Region') });
-                  if (eventsTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${eventsTypeFilter}`, onClear: () => setEventsTypeFilter('Type') });
-                  if (eventsSeverityFilter !== 'Severity') activeFilters.push({ key: 'severity', label: `Severity: ${eventsSeverityFilter}`, onClear: () => setEventsSeverityFilter('Severity') });
-                  if (eventsSourceFilter !== 'Source') activeFilters.push({ key: 'source', label: `Source: ${eventsSourceFilter}`, onClear: () => setEventsSourceFilter('Source') });
+                  if (regionFilter !== 'All') activeFilters.push({ key: 'region', label: `Region: ${regionFilter}`, onClear: () => setRegionFilter('All') });
+                  if (eventsTypeFilter !== 'All') activeFilters.push({ key: 'type', label: `Type: ${eventsTypeFilter}`, onClear: () => setEventsTypeFilter('All') });
+                  if (eventsSeverityFilter !== 'All') activeFilters.push({ key: 'severity', label: `Severity: ${eventsSeverityFilter}`, onClear: () => setEventsSeverityFilter('All') });
+                  if (eventsSourceFilter !== 'All') activeFilters.push({ key: 'source', label: `Source: ${eventsSourceFilter}`, onClear: () => setEventsSourceFilter('All') });
                   if (eventsSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${eventsSearch.trim()}"`, onClear: () => setEventsSearch('') });
                   const hasActive = activeFilters.length > 0;
                   return (
@@ -1128,46 +921,10 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     ))}
                   </div>
                   {/* Filters */}
-                  <Select value={inventoryStatusFilter} onValueChange={setInventoryStatusFilter}>
-                    <SelectTrigger className="w-[110px] shrink-0">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INVENTORY_STATUS_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={inventoryTypeFilter} onValueChange={setInventoryTypeFilter}>
-                    <SelectTrigger className="w-[130px] shrink-0">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INVENTORY_TYPE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={inventoryVersionFilter} onValueChange={setInventoryVersionFilter}>
-                    <SelectTrigger className="w-[120px] shrink-0">
-                      <SelectValue placeholder="Version" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INVENTORY_VERSION_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={inventoryAlarmFilter} onValueChange={setInventoryAlarmFilter}>
-                    <SelectTrigger className="w-[120px] shrink-0">
-                      <SelectValue placeholder="Alarms" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INVENTORY_ALARM_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FilterSelect value={inventoryStatusFilter} onValueChange={setInventoryStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-[110px] shrink-0" />
+                  <FilterSelect value={inventoryTypeFilter} onValueChange={setInventoryTypeFilter} label="Type" options={INVENTORY_TYPE_OPTIONS} className="w-[130px] shrink-0" />
+                  <FilterSelect value={inventoryVersionFilter} onValueChange={setInventoryVersionFilter} label="Version" options={INVENTORY_VERSION_OPTIONS} className="w-[120px] shrink-0" />
+                  <FilterSelect value={inventoryAlarmFilter} onValueChange={setInventoryAlarmFilter} label="Alarms" options={INVENTORY_ALARM_OPTIONS} className="w-[120px] shrink-0" />
                   <div className="ml-auto">
                     <Button variant="outline" size="default" className="gap-1.5">
                       <Icon name="download" size={16} />
@@ -1187,10 +944,10 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                   });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
                   if (inventoryViewFilter !== 'radio-nodes') activeFilters.push({ key: 'view', label: `View: NR cells`, onClear: () => setInventoryViewFilter('radio-nodes') });
-                  if (inventoryStatusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${inventoryStatusFilter}`, onClear: () => setInventoryStatusFilter('Status') });
-                  if (inventoryTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${inventoryTypeFilter}`, onClear: () => setInventoryTypeFilter('Type') });
-                  if (inventoryVersionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${inventoryVersionFilter}`, onClear: () => setInventoryVersionFilter('Version') });
-                  if (inventoryAlarmFilter !== 'Alarms') activeFilters.push({ key: 'alarm', label: `Alarms: ${inventoryAlarmFilter}`, onClear: () => setInventoryAlarmFilter('Alarms') });
+                  if (inventoryStatusFilter !== 'All') activeFilters.push({ key: 'status', label: `Status: ${inventoryStatusFilter}`, onClear: () => setInventoryStatusFilter('All') });
+                  if (inventoryTypeFilter !== 'All') activeFilters.push({ key: 'type', label: `Type: ${inventoryTypeFilter}`, onClear: () => setInventoryTypeFilter('All') });
+                  if (inventoryVersionFilter !== 'All') activeFilters.push({ key: 'version', label: `Version: ${inventoryVersionFilter}`, onClear: () => setInventoryVersionFilter('All') });
+                  if (inventoryAlarmFilter !== 'All') activeFilters.push({ key: 'alarm', label: `Alarms: ${inventoryAlarmFilter}`, onClear: () => setInventoryAlarmFilter('All') });
                   if (inventorySearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${inventorySearch.trim()}"`, onClear: () => setInventorySearch('') });
                   const hasActive = activeFilters.length > 0;
                   return (
@@ -1244,42 +1001,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                    <Select value={tasksTypeFilter} onValueChange={setTasksTypeFilter}>
-                      <SelectTrigger className="w-[130px] shrink-0">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TASKS_TYPE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={tasksStatusFilter} onValueChange={setTasksStatusFilter}>
-                      <SelectTrigger className="w-[120px] shrink-0">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TASKS_STATUS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={tasksDomainFilter} onValueChange={setTasksDomainFilter}>
-                      <SelectTrigger className="w-[140px] shrink-0">
-                        <SelectValue placeholder="Domain" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TASKS_DOMAIN_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FilterSelect value={tasksTypeFilter} onValueChange={setTasksTypeFilter} label="Type" options={TASKS_TYPE_OPTIONS} className="w-[130px] shrink-0" />
+                    <FilterSelect value={tasksStatusFilter} onValueChange={setTasksStatusFilter} label="Status" options={TASKS_STATUS_OPTIONS} className="w-[120px] shrink-0" />
+                    <FilterSelect value={tasksDomainFilter} onValueChange={setTasksDomainFilter} label="Domain" options={TASKS_DOMAIN_OPTIONS} className="w-[140px] shrink-0" />
                   </div>
                   <Button variant="outline" size="default" className="shrink-0 gap-1 ml-auto" onClick={() => setAddTaskDialogOpen(true)}>
                     <Icon name="add" size={18} />
@@ -1300,9 +1024,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     domainFilter: tasksDomainFilter,
                   });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                  if (tasksTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${tasksTypeFilter}`, onClear: () => setTasksTypeFilter('Type') });
-                  if (tasksStatusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${tasksStatusFilter}`, onClear: () => setTasksStatusFilter('Status') });
-                  if (tasksDomainFilter !== 'Domain') activeFilters.push({ key: 'domain', label: `Domain: ${tasksDomainFilter}`, onClear: () => setTasksDomainFilter('Domain') });
+                  if (tasksTypeFilter !== 'All') activeFilters.push({ key: 'type', label: `Type: ${tasksTypeFilter}`, onClear: () => setTasksTypeFilter('All') });
+                  if (tasksStatusFilter !== 'All') activeFilters.push({ key: 'status', label: `Status: ${tasksStatusFilter}`, onClear: () => setTasksStatusFilter('All') });
+                  if (tasksDomainFilter !== 'All') activeFilters.push({ key: 'domain', label: `Domain: ${tasksDomainFilter}`, onClear: () => setTasksDomainFilter('All') });
                   if (tasksSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${tasksSearch.trim()}"`, onClear: () => setTasksSearch('') });
                   const hasActive = activeFilters.length > 0;
                   return (
@@ -1376,42 +1100,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                    <Select value={softwareTypeFilter} onValueChange={setSoftwareTypeFilter}>
-                      <SelectTrigger className="w-[130px] shrink-0">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SOFTWARE_TYPE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={softwareStatusFilter} onValueChange={setSoftwareStatusFilter}>
-                      <SelectTrigger className="w-[120px] shrink-0">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SOFTWARE_STATUS_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={softwareVersionFilter} onValueChange={setSoftwareVersionFilter}>
-                      <SelectTrigger className="w-[100px] shrink-0">
-                        <SelectValue placeholder="Version" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SOFTWARE_VERSION_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FilterSelect value={softwareTypeFilter} onValueChange={setSoftwareTypeFilter} label="Type" options={SOFTWARE_TYPE_OPTIONS} className="w-[130px] shrink-0" />
+                    <FilterSelect value={softwareStatusFilter} onValueChange={setSoftwareStatusFilter} label="Status" options={SOFTWARE_STATUS_OPTIONS} className="w-[120px] shrink-0" />
+                    <FilterSelect value={softwareVersionFilter} onValueChange={setSoftwareVersionFilter} label="Version" options={SOFTWARE_VERSION_OPTIONS} className="w-[100px] shrink-0" />
                   </div>
                 </div>
                 {(() => {
@@ -1422,9 +1113,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     versionFilter: softwareVersionFilter,
                   });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                  if (softwareTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${softwareTypeFilter}`, onClear: () => setSoftwareTypeFilter('Type') });
-                  if (softwareStatusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${softwareStatusFilter}`, onClear: () => setSoftwareStatusFilter('Status') });
-                  if (softwareVersionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${softwareVersionFilter}`, onClear: () => setSoftwareVersionFilter('Version') });
+                  if (softwareTypeFilter !== 'All') activeFilters.push({ key: 'type', label: `Type: ${softwareTypeFilter}`, onClear: () => setSoftwareTypeFilter('All') });
+                  if (softwareStatusFilter !== 'All') activeFilters.push({ key: 'status', label: `Status: ${softwareStatusFilter}`, onClear: () => setSoftwareStatusFilter('All') });
+                  if (softwareVersionFilter !== 'All') activeFilters.push({ key: 'version', label: `Version: ${softwareVersionFilter}`, onClear: () => setSoftwareVersionFilter('All') });
                   if (softwareSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${softwareSearch.trim()}"`, onClear: () => setSoftwareSearch('') });
                   const hasActive = activeFilters.length > 0;
                   return (
@@ -1479,42 +1170,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                         />
                       </div>
                       <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                        <Select value={softwareTypeFilter} onValueChange={setSoftwareTypeFilter}>
-                          <SelectTrigger className="w-[130px] shrink-0">
-                            <SelectValue placeholder="Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SOFTWARE_TYPE_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={softwareStatusFilter} onValueChange={setSoftwareStatusFilter}>
-                          <SelectTrigger className="w-[120px] shrink-0">
-                            <SelectValue placeholder="Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SOFTWARE_STATUS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={softwareVersionFilter} onValueChange={setSoftwareVersionFilter}>
-                          <SelectTrigger className="w-[100px] shrink-0">
-                            <SelectValue placeholder="Version" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SOFTWARE_VERSION_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FilterSelect value={softwareTypeFilter} onValueChange={setSoftwareTypeFilter} label="Type" options={SOFTWARE_TYPE_OPTIONS} className="w-[130px] shrink-0" />
+                        <FilterSelect value={softwareStatusFilter} onValueChange={setSoftwareStatusFilter} label="Status" options={SOFTWARE_STATUS_OPTIONS} className="w-[120px] shrink-0" />
+                        <FilterSelect value={softwareVersionFilter} onValueChange={setSoftwareVersionFilter} label="Version" options={SOFTWARE_VERSION_OPTIONS} className="w-[100px] shrink-0" />
                       </div>
                     </div>
                     {(() => {
@@ -1525,9 +1183,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                         versionFilter: softwareVersionFilter,
                       });
                       const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                      if (softwareTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${softwareTypeFilter}`, onClear: () => setSoftwareTypeFilter('Type') });
-                      if (softwareStatusFilter !== 'Status') activeFilters.push({ key: 'status', label: `Status: ${softwareStatusFilter}`, onClear: () => setSoftwareStatusFilter('Status') });
-                      if (softwareVersionFilter !== 'Version') activeFilters.push({ key: 'version', label: `Version: ${softwareVersionFilter}`, onClear: () => setSoftwareVersionFilter('Version') });
+                      if (softwareTypeFilter !== 'All') activeFilters.push({ key: 'type', label: `Type: ${softwareTypeFilter}`, onClear: () => setSoftwareTypeFilter('All') });
+                      if (softwareStatusFilter !== 'All') activeFilters.push({ key: 'status', label: `Status: ${softwareStatusFilter}`, onClear: () => setSoftwareStatusFilter('All') });
+                      if (softwareVersionFilter !== 'All') activeFilters.push({ key: 'version', label: `Version: ${softwareVersionFilter}`, onClear: () => setSoftwareVersionFilter('All') });
                       if (softwareSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${softwareSearch.trim()}"`, onClear: () => setSoftwareSearch('') });
                       const hasActive = activeFilters.length > 0;
                       return (
@@ -1576,42 +1234,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                    <Select value={reportsTypeFilter} onValueChange={setReportsTypeFilter}>
-                      <SelectTrigger className="w-[110px] shrink-0">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {REPORT_TYPE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={reportsTaskFilter} onValueChange={setReportsTaskFilter}>
-                      <SelectTrigger className="w-[140px] shrink-0">
-                        <SelectValue placeholder="Task" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {REPORT_TASK_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={reportsCreatedFilter} onValueChange={setReportsCreatedFilter}>
-                      <SelectTrigger className="w-[120px] shrink-0">
-                        <SelectValue placeholder="Created" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {REPORT_CREATED_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FilterSelect value={reportsTypeFilter} onValueChange={setReportsTypeFilter} label="Type" options={REPORT_TYPE_OPTIONS} className="w-[110px] shrink-0" />
+                    <FilterSelect value={reportsTaskFilter} onValueChange={setReportsTaskFilter} label="Task" options={REPORT_TASK_OPTIONS} className="w-[140px] shrink-0" />
+                    <FilterSelect value={reportsCreatedFilter} onValueChange={setReportsCreatedFilter} label="Created" options={REPORT_CREATED_OPTIONS} className="w-[120px] shrink-0" />
                   </div>
                 </div>
                 {(() => {
@@ -1622,9 +1247,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     createdFilter: reportsCreatedFilter,
                   });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                  if (reportsTypeFilter !== 'Type') activeFilters.push({ key: 'type', label: `Type: ${reportsTypeFilter}`, onClear: () => setReportsTypeFilter('Type') });
-                  if (reportsTaskFilter !== 'Task') activeFilters.push({ key: 'task', label: `Task: ${reportsTaskFilter}`, onClear: () => setReportsTaskFilter('Task') });
-                  if (reportsCreatedFilter !== 'Created') activeFilters.push({ key: 'created', label: `Created: ${reportsCreatedFilter}`, onClear: () => setReportsCreatedFilter('Created') });
+                  if (reportsTypeFilter !== 'All') activeFilters.push({ key: 'type', label: `Type: ${reportsTypeFilter}`, onClear: () => setReportsTypeFilter('All') });
+                  if (reportsTaskFilter !== 'All') activeFilters.push({ key: 'task', label: `Task: ${reportsTaskFilter}`, onClear: () => setReportsTaskFilter('All') });
+                  if (reportsCreatedFilter !== 'All') activeFilters.push({ key: 'created', label: `Created: ${reportsCreatedFilter}`, onClear: () => setReportsCreatedFilter('All') });
                   if (reportsSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${reportsSearch.trim()}"`, onClear: () => setReportsSearch('') });
                   const hasActive = activeFilters.length > 0;
                   return (
@@ -1686,35 +1311,13 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                         />
                       </div>
                       <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                        <Select value={performanceLteFilter} onValueChange={setPerformanceLteFilter}>
-                          <SelectTrigger className="w-[110px] shrink-0">
-                            <SelectValue placeholder="LTE" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PERFORMANCE_LTE_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select value={performanceTimeFilter} onValueChange={setPerformanceTimeFilter}>
-                          <SelectTrigger className="w-[120px] shrink-0">
-                            <SelectValue placeholder="Last hour" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PERFORMANCE_TIME_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FilterSelect value={performanceLteFilter} onValueChange={setPerformanceLteFilter} label="LTE" options={PERFORMANCE_LTE_OPTIONS} className="w-[110px] shrink-0" />
+                        <FilterSelect value={performanceTimeFilter} onValueChange={setPerformanceTimeFilter} label="Last hour" options={PERFORMANCE_TIME_OPTIONS} className="w-[120px] shrink-0" />
                         <div className="inline-flex items-center rounded-md border border-input shadow-sm shrink-0">
                           {([
                             { value: 'all', label: 'All' },
-                            { value: 'good', label: 'Good' },
-                            { value: 'bad', label: 'Bad' },
+                            { value: 'degraded', label: 'Degraded' },
+                            { value: 'optimal', label: 'Optimal' },
                           ] as const).map((opt, i, arr) => (
                             <button
                               key={opt.value}
@@ -1740,8 +1343,8 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                         statusFilter: performanceStatusFilter,
                       });
                       const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                      if (performanceLteFilter !== 'LTE') activeFilters.push({ key: 'lte', label: `LTE: ${performanceLteFilter}`, onClear: () => setPerformanceLteFilter('LTE') });
-                      if (performanceTimeFilter !== 'Last hour') activeFilters.push({ key: 'time', label: `Time: ${performanceTimeFilter}`, onClear: () => setPerformanceTimeFilter('Last hour') });
+                      if (performanceLteFilter !== 'All') activeFilters.push({ key: 'lte', label: `LTE: ${performanceLteFilter}`, onClear: () => setPerformanceLteFilter('All') });
+                      if (performanceTimeFilter !== 'All') activeFilters.push({ key: 'time', label: `Time: ${performanceTimeFilter}`, onClear: () => setPerformanceTimeFilter('All') });
                       if (performanceStatusFilter !== 'all') activeFilters.push({ key: 'status', label: `Status: ${performanceStatusFilter}`, onClear: () => setPerformanceStatusFilter('all') });
                       if (performanceSearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${performanceSearch.trim()}"`, onClear: () => setPerformanceSearch('') });
                       const hasActive = activeFilters.length > 0;
@@ -1780,24 +1383,13 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                   <TabsContent value="threshold-crossing-alerts" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                        <Select value={thresholdActSessFilter} onValueChange={setThresholdActSessFilter}>
-                          <SelectTrigger className="w-[140px] shrink-0">
-                            <SelectValue placeholder="ACT_SESS" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {THRESHOLD_ACT_SESS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FilterSelect value={thresholdActSessFilter} onValueChange={setThresholdActSessFilter} label="ACT_SESS" options={THRESHOLD_ACT_SESS_OPTIONS} className="w-[140px] shrink-0" />
                       </div>
                     </div>
                     {(() => {
                       const count = getFilteredThresholdCount({ actSessFilter: thresholdActSessFilter });
                       const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                      if (thresholdActSessFilter !== 'ACT_SESS') activeFilters.push({ key: 'actSess', label: `ACT_SESS: ${thresholdActSessFilter}`, onClear: () => setThresholdActSessFilter('ACT_SESS') });
+                      if (thresholdActSessFilter !== 'All') activeFilters.push({ key: 'actSess', label: `ACT_SESS: ${thresholdActSessFilter}`, onClear: () => setThresholdActSessFilter('All') });
                       const hasActive = activeFilters.length > 0;
                       return (
                         <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">

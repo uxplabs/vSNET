@@ -33,7 +33,7 @@ export interface TaskTemplateRow {
 }
 
 export const TASK_TEMPLATES_DATA: TaskTemplateRow[] = [
-  { id: '1', name: 'Config backup template', golden: true, imageConstraints: 'v2.x, v3.x', domain: 'All devices', deviceType: 'SN-LTE' },
+  { id: '1', name: 'Config backup template', golden: true, imageConstraints: 'v2.x, v3.x', domain: 'All devices', deviceType: 'SN' },
   { id: '2', name: 'KPI sync template', golden: false, imageConstraints: 'v3.0+', domain: 'Pacific Northwest', deviceType: 'CU' },
   { id: '3', name: 'Report generation template', golden: true, imageConstraints: 'v2.1+', domain: 'Core network', deviceType: 'RCP' },
   { id: '4', name: 'Firmware check template', golden: false, imageConstraints: 'v2.2, v3.x', domain: 'Radio access', deviceType: 'DAS' },
@@ -148,7 +148,9 @@ const columns: ColumnDef<TaskTemplateRow>[] = [
   {
     id: 'actions',
     header: '',
-    cell: () => (
+    cell: ({ row }) => {
+      const isGolden = row.original.golden;
+      return (
       <div className="inline-flex items-center gap-0.5 justify-end">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -160,11 +162,13 @@ const columns: ColumnDef<TaskTemplateRow>[] = [
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Delete">
-              <Icon name="delete" size={20} />
-            </Button>
+            <span className="inline-flex">
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Delete" disabled={isGolden}>
+                <Icon name="delete" size={20} />
+              </Button>
+            </span>
           </TooltipTrigger>
-          <TooltipContent>Delete</TooltipContent>
+          <TooltipContent>{isGolden ? 'Golden configuration templates cannot be deleted' : 'Delete'}</TooltipContent>
         </Tooltip>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -175,11 +179,12 @@ const columns: ColumnDef<TaskTemplateRow>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuItem>Edit</DropdownMenuItem>
             <DropdownMenuItem>Duplicate</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" disabled={isGolden}>Delete</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    ),
+      );
+    },
     enableSorting: false,
     meta: {
       headerClassName: 'sticky right-0 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',

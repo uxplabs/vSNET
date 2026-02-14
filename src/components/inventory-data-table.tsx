@@ -117,10 +117,10 @@ export const INVENTORY_DATA: InventoryRow[] = generateInventoryData();
 
 // ── Filter options ─────────────────────────────────────────────
 
-export const INVENTORY_STATUS_OPTIONS = ['Status', 'Up', 'Down'] as const;
-export const INVENTORY_TYPE_OPTIONS = ['Type', 'Radio node', 'NR cell'] as const;
-export const INVENTORY_VERSION_OPTIONS = ['Version', ...VERSIONS] as const;
-export const INVENTORY_ALARM_OPTIONS = ['Alarms', 'Critical', 'Major', 'Minor', 'None'] as const;
+export const INVENTORY_STATUS_OPTIONS = ['All', 'Up', 'Down'] as const;
+export const INVENTORY_TYPE_OPTIONS = ['All', 'Radio node', 'NR cell'] as const;
+export const INVENTORY_VERSION_OPTIONS = ['All', ...VERSIONS] as const;
+export const INVENTORY_ALARM_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'None'] as const;
 
 // ── Filtered count helper ──────────────────────────────────────
 
@@ -135,10 +135,10 @@ export function getFilteredInventoryCount(opts: {
   return INVENTORY_DATA.filter((row) => {
     if (opts.viewFilter === 'radio-nodes' && row.type !== 'Radio node') return false;
     if (opts.viewFilter === 'nr-cells' && row.type !== 'NR cell') return false;
-    if (opts.statusFilter !== 'Status' && row.status !== opts.statusFilter) return false;
-    if (opts.typeFilter !== 'Type' && row.type !== opts.typeFilter) return false;
-    if (opts.versionFilter !== 'Version' && row.version !== opts.versionFilter) return false;
-    if (opts.alarmFilter !== 'Alarms' && row.alarmType !== opts.alarmFilter) return false;
+    if (opts.statusFilter !== 'All' && row.status !== opts.statusFilter) return false;
+    if (opts.typeFilter !== 'All' && row.type !== opts.typeFilter) return false;
+    if (opts.versionFilter !== 'All' && row.version !== opts.versionFilter) return false;
+    if (opts.alarmFilter !== 'All' && row.alarmType !== opts.alarmFilter) return false;
     if (opts.search.trim()) {
       const q = opts.search.toLowerCase();
       return (
@@ -352,10 +352,10 @@ export interface InventoryDataTableProps {
 export function InventoryDataTable({
   search = '',
   viewFilter = 'all',
-  statusFilter = 'Status',
-  typeFilter = 'Type',
-  versionFilter = 'Version',
-  alarmFilter = 'Alarms',
+  statusFilter = 'All',
+  typeFilter = 'All',
+  versionFilter = 'All',
+  alarmFilter = 'All',
 }: InventoryDataTableProps) {
   const columns = React.useMemo(() => getColumns(), []);
 
@@ -363,10 +363,10 @@ export function InventoryDataTable({
     return INVENTORY_DATA.filter((row) => {
       if (viewFilter === 'radio-nodes' && row.type !== 'Radio node') return false;
       if (viewFilter === 'nr-cells' && row.type !== 'NR cell') return false;
-      if (statusFilter !== 'Status' && row.status !== statusFilter) return false;
-      if (typeFilter !== 'Type' && row.type !== typeFilter) return false;
-      if (versionFilter !== 'Version' && row.version !== versionFilter) return false;
-      if (alarmFilter !== 'Alarms' && row.alarmType !== alarmFilter) return false;
+      if (statusFilter !== 'All' && row.status !== statusFilter) return false;
+      if (typeFilter !== 'All' && row.type !== typeFilter) return false;
+      if (versionFilter !== 'All' && row.version !== versionFilter) return false;
+      if (alarmFilter !== 'All' && row.alarmType !== alarmFilter) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         return (

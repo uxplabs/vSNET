@@ -33,8 +33,8 @@ export const RADIO_NODES_DATA: RadioNodeRow[] = [
   { index: 5, name: 'Radio Node 5', description: 'Test sector', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', nrCell1: 'NR-005', nrCell2: 'NR-006', ethernetId: '00:1a:2b:3c:4d:62', model: 'FGH456' },
 ];
 
-const STATUS_OPTIONS = ['Status', 'Connected', 'Disconnected'] as const;
-const MODEL_OPTIONS = ['Model', 'ABAB123', 'FGH456'] as const;
+const STATUS_OPTIONS = ['All', 'Connected', 'Disconnected'] as const;
+const MODEL_OPTIONS = ['All', 'ABAB123', 'FGH456'] as const;
 
 const columns: ColumnDef<RadioNodeRow>[] = [
   {
@@ -146,11 +146,11 @@ export function filterRadioNodes(
       ].join(' ').toLowerCase();
       if (!searchable.includes(searchLower)) return false;
     }
-    if (statusFilter && statusFilter !== 'Status') {
+    if (statusFilter && statusFilter !== 'All') {
       const status = row.status === 'Up' ? 'Connected' : 'Disconnected';
       if (status !== statusFilter) return false;
     }
-    if (modelFilter && modelFilter !== 'Model') {
+    if (modelFilter && modelFilter !== 'All') {
       if (row.model !== modelFilter) return false;
     }
     return true;

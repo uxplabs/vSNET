@@ -1,24 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Navbar01 } from './navbar-01';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { FilterSelect } from './ui/filter-select';
+import { Tabs, TabsContent, TabsList, TabsListUnderline, TabsTrigger, TabsTriggerUnderline } from './ui/tabs';
+import { Checkbox } from './ui/checkbox';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
+import { Card, CardContent } from './ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { AccessControlUsersDataTable, ACCESS_CONTROL_USERS_DATA } from './access-control-users-data-table';
 import { AccessControlDomainsDataTable, ACCESS_CONTROL_DOMAINS_DATA } from './access-control-domains-data-table';
 import type { AccessControlDomainRow } from './access-control-domains-data-table';
@@ -29,6 +34,7 @@ import FaultManagementPage from './FaultManagementPage';
 import LabelManagementPage from './LabelManagementPage';
 import FileManagementPage from './FileManagementPage';
 import DeviceMigrationPage from './DeviceMigrationPage';
+import { PerformanceDataTable } from './performance-data-table';
 import {
   Sidebar,
   SidebarContent,
@@ -58,12 +64,28 @@ const SIDEBAR_ITEMS = [
   { label: 'Fault management', icon: 'error' },
   { label: 'Service settings', icon: 'settings' },
   { label: 'Device migration', icon: 'swap_horiz' },
+  { label: 'Performance', icon: 'speed' },
   { label: 'Label management', icon: 'label' },
 ] as const;
 
-const PROFILE_OPTIONS = ['All profiles', 'Administrator', 'Operator', 'Viewer'] as const;
-const DEPARTMENT_OPTIONS = ['Department', 'Engineering', 'Operations', 'Support', 'Management'] as const;
-const LOCATION_OPTIONS = ['Location', 'Seattle', 'Portland', 'San Francisco', 'Phoenix', 'New York'] as const;
+const PROFILE_OPTIONS = ['All', 'Administrator', 'Operator', 'Viewer'] as const;
+const DEPARTMENT_OPTIONS = ['All', 'Engineering', 'Operations', 'Support', 'Management'] as const;
+const LOCATION_OPTIONS = ['All', 'Seattle', 'Portland', 'San Francisco', 'Phoenix', 'New York'] as const;
+const PERF_LTE_OPTIONS = ['All', 'SN'] as const;
+const PERF_TIME_OPTIONS = ['All', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
+
+const PERF_PROFILES = [
+  { name: 'LTE Throughput Baseline', kpis: 6, devices: 124 },
+  { name: 'NR Cell Availability', kpis: 4, devices: 87 },
+  { name: 'ERAB Drop Rate', kpis: 3, devices: 56 },
+  { name: 'RRC Setup Success', kpis: 5, devices: 93 },
+  { name: 'Handover Success Rate', kpis: 4, devices: 71 },
+  { name: 'VoLTE Call Drop', kpis: 3, devices: 42 },
+  { name: 'Latency SLA', kpis: 2, devices: 38 },
+  { name: 'CPU Utilization', kpis: 2, devices: 65 },
+  { name: 'Packet Loss', kpis: 3, devices: 51 },
+  { name: 'UL/DL Throughput', kpis: 5, devices: 110 },
+];
 
 export interface AdministrationPageProps {
   appName?: string;
@@ -93,9 +115,21 @@ export default function AdministrationPage({
   const [editDomainSheetOpen, setEditDomainSheetOpen] = useState(false);
   const [selectedDomainForEdit, setSelectedDomainForEdit] = useState<AccessControlDomainRow | null>(null);
   const [search, setSearch] = useState('');
-  const [profileFilter, setProfileFilter] = useState<string>('All profiles');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('Department');
-  const [locationFilter, setLocationFilter] = useState<string>('Location');
+  const [profileFilter, setProfileFilter] = useState<string>('All');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('All');
+  const [locationFilter, setLocationFilter] = useState<string>('All');
+  const [perfSearch, setPerfSearch] = useState('');
+  const [perfLteFilter, setPerfLteFilter] = useState<string>('All');
+  const [perfTimeFilter, setPerfTimeFilter] = useState<string>('All');
+  const [perfStatusFilter, setPerfStatusFilter] = useState<'all' | 'degraded' | 'optimal'>('all');
+  const [perfProfileSearch, setPerfProfileSearch] = useState('');
+  const [selectedPerfProfile, setSelectedPerfProfile] = useState('LTE Throughput Baseline');
+  const [perfTab, setPerfTab] = useState<'thresholds' | 'devices'>('thresholds');
+  const [perfScheduleTab, setPerfScheduleTab] = useState('1');
+  const [perfName, setPerfName] = useState(selectedPerfProfile);
+  const [perfNameEditing, setPerfNameEditing] = useState(false);
+  const [perfDescription, setPerfDescription] = useState('Monitors key LTE performance indicators including throughput, latency, and call quality metrics. Alerts are triggered when thresholds are exceeded for the configured number of consecutive samples.');
+  const [perfDescEditing, setPerfDescEditing] = useState(false);
 
   const activeLabel = SIDEBAR_ITEMS.find((item) => toKey(item.label) === activeSection)?.label ?? activeSection;
 
@@ -219,36 +253,9 @@ export default function AdministrationPage({
                           className="pl-9 w-full"
                         />
                       </div>
-                      <Select value={profileFilter} onValueChange={setProfileFilter}>
-                        <SelectTrigger className="w-[130px]">
-                          <SelectValue placeholder="All profiles" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PROFILE_OPTIONS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                        <SelectTrigger className="w-[130px]">
-                          <SelectValue placeholder="Department" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DEPARTMENT_OPTIONS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={locationFilter} onValueChange={setLocationFilter}>
-                        <SelectTrigger className="w-[130px]">
-                          <SelectValue placeholder="Location" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LOCATION_OPTIONS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FilterSelect value={profileFilter} onValueChange={setProfileFilter} label="Profile" options={[...PROFILE_OPTIONS]} className="w-[130px]" />
+                      <FilterSelect value={departmentFilter} onValueChange={setDepartmentFilter} label="Department" options={[...DEPARTMENT_OPTIONS]} className="w-[130px]" />
+                      <FilterSelect value={locationFilter} onValueChange={setLocationFilter} label="Location" options={[...LOCATION_OPTIONS]} className="w-[130px]" />
                     </div>
                     <AccessControlUsersDataTable />
                   </TabsContent>
@@ -317,7 +324,373 @@ export default function AdministrationPage({
               <DeviceMigrationPage />
             )}
 
-            {activeSection !== 'access-control' && activeSection !== 'fault-management' && activeSection !== 'label-management' && activeSection !== 'file-management' && activeSection !== 'device-migration' && (
+            {activeSection === 'performance' && (() => {
+              const filteredProfiles = perfProfileSearch.trim()
+                ? PERF_PROFILES.filter((p) => p.name.toLowerCase().includes(perfProfileSearch.toLowerCase().trim()))
+                : PERF_PROFILES;
+
+              return (
+                <div className="flex gap-6">
+                  {/* Profiles sidebar */}
+                  <aside className="w-52 shrink-0 rounded-lg border bg-muted/30 border-border/80 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)] self-start">
+                    <div className="p-3 border-b border-border/80 bg-muted/20">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-sm font-semibold text-foreground truncate">Profiles</h3>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 rounded-md" aria-label="Add profile">
+                              <Icon name="add" size={16} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Add profile</TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div className="relative mt-3">
+                        <Icon name="search" size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Input
+                          placeholder="Search profiles..."
+                          value={perfProfileSearch}
+                          onChange={(e) => setPerfProfileSearch(e.target.value)}
+                          className="h-8 pl-8 pr-2 w-full text-sm rounded-md bg-background border-border/80"
+                        />
+                      </div>
+                    </div>
+                    <nav className="p-2 flex-1 min-h-0 overflow-y-auto">
+                      {filteredProfiles.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-4 text-center">No profiles match</p>
+                      ) : (
+                        filteredProfiles.map((profile) => {
+                          const isSelected = selectedPerfProfile === profile.name;
+                          return (
+                            <button
+                              key={profile.name}
+                              type="button"
+                              onClick={() => { setSelectedPerfProfile(profile.name); setPerfName(profile.name); setPerfNameEditing(false); setPerfDescEditing(false); }}
+                              className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-md text-left text-sm transition-colors ${
+                                isSelected
+                                  ? 'bg-accent text-accent-foreground font-medium'
+                                  : 'hover:bg-muted/60 text-foreground'
+                              }`}
+                            >
+                              <span className="truncate min-w-0">{profile.name}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </nav>
+                  </aside>
+
+                  {/* Main content */}
+                  <div className="flex-1 min-w-0 space-y-4">
+                    {/* Profile-specific pill tabs */}
+                    {(() => {
+                      const currentProfile = PERF_PROFILES.find((p) => p.name === selectedPerfProfile);
+                      const deviceCount = currentProfile?.devices ?? 0;
+                      return (
+                        <Tabs value={perfTab} onValueChange={(v) => setPerfTab(v as 'thresholds' | 'devices')}>
+                          <TabsList>
+                            <TabsTrigger value="thresholds">Threshold crossing settings</TabsTrigger>
+                            <TabsTrigger value="devices" className="gap-1.5">
+                              Devices
+                              <Badge variant="secondary" className="ml-0.5 px-1.5 min-w-[20px] justify-center text-xs">{deviceCount}</Badge>
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      );
+                    })()}
+
+                    {perfTab === 'thresholds' && (
+                      <Card>
+                        <CardContent className="pt-6 space-y-6">
+                          {/* Name */}
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                              <h4 className="text-sm font-medium text-muted-foreground">Name</h4>
+                              {perfNameEditing ? (
+                                <Input
+                                  autoFocus
+                                  value={perfName}
+                                  onChange={(e) => setPerfName(e.target.value)}
+                                  onBlur={() => setPerfNameEditing(false)}
+                                  onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') setPerfNameEditing(false); }}
+                                  className="h-8 text-sm w-64"
+                                />
+                              ) : (
+                                <div
+                                  className="group/name relative inline-flex items-center gap-1.5 rounded-md px-2 py-1 -mx-2 -my-1 cursor-pointer transition-colors hover:bg-muted/60"
+                                  onClick={() => setPerfNameEditing(true)}
+                                >
+                                  <p className="text-sm">{perfName}</p>
+                                  <Icon name="edit" size={14} className="text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <div className="flex items-center gap-2">
+                                <Switch id="perf-enabled" defaultChecked />
+                                <Label htmlFor="perf-enabled" className="cursor-pointer select-none text-sm">Enabled</Label>
+                              </div>
+                              <Button variant="outline" size="sm">
+                                <Icon name="edit" size={16} className="mr-1.5" />
+                                Edit profile
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                <Icon name="delete" size={18} />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                            {perfDescEditing ? (
+                              <textarea
+                                autoFocus
+                                value={perfDescription}
+                                onChange={(e) => setPerfDescription(e.target.value)}
+                                onBlur={() => setPerfDescEditing(false)}
+                                onKeyDown={(e) => { if (e.key === 'Escape') setPerfDescEditing(false); }}
+                                className="w-full text-sm text-foreground bg-background border border-input rounded-md px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                                rows={3}
+                              />
+                            ) : (
+                              <div
+                                className="group/desc inline-flex items-start gap-1.5 rounded-md px-2 py-1.5 -mx-2 -my-1.5 cursor-pointer transition-colors hover:bg-muted/60"
+                                onClick={() => setPerfDescEditing(true)}
+                              >
+                                <p className="text-sm text-foreground">{perfDescription}</p>
+                                <Icon name="edit" size={14} className="shrink-0 mt-0.5 text-muted-foreground opacity-0 group-hover/desc:opacity-100 transition-opacity" />
+                              </div>
+                            )}
+                          </div>
+
+                          <Separator />
+
+                          {/* Actions */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-4">
+                              <h4 className="text-sm font-semibold text-foreground">Actions</h4>
+                              <Button variant="outline" size="sm">
+                                <Icon name="add" size={16} className="mr-1.5" />
+                                Add action
+                              </Button>
+                            </div>
+                            <p className="text-sm text-muted-foreground">What actions should this profile take when triggered?</p>
+                            <div className="rounded-lg border">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="px-4">Action</TableHead>
+                                    <TableHead className="px-4">Details</TableHead>
+                                    <TableHead className="w-10"></TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  <TableRow>
+                                    <TableCell className="px-4">Send email</TableCell>
+                                    <TableCell className="px-4 text-muted-foreground truncate max-w-[300px]">lkrug@acme.com, dkoons@acme.com, gsalaslzquiel...</TableCell>
+                                    <TableCell className="px-2 text-right">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-7 w-7"><Icon name="more_vert" size={16} /></Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem><Icon name="edit" size={16} className="mr-2" />Edit</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-destructive"><Icon name="delete" size={16} className="mr-2" />Delete</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell className="px-4">Send SNMP notifications</TableCell>
+                                    <TableCell className="px-4">
+                                      <Badge variant="secondary">Notification group</Badge>
+                                    </TableCell>
+                                    <TableCell className="px-2 text-right">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-7 w-7"><Icon name="more_vert" size={16} /></Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem><Icon name="edit" size={16} className="mr-2" />Edit</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-destructive"><Icon name="delete" size={16} className="mr-2" />Delete</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+
+                          <Separator />
+
+                          {/* Schedule */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-4">
+                              <h4 className="text-sm font-semibold text-foreground">Schedule</h4>
+                              <Button variant="outline" size="sm">
+                                <Icon name="add" size={16} className="mr-1.5" />
+                                Add schedule
+                              </Button>
+                            </div>
+                            <p className="text-sm text-muted-foreground">Set when alerts should be active for this profile. (Create up to 3)</p>
+                            <Tabs value={perfScheduleTab} onValueChange={setPerfScheduleTab}>
+                              <TabsList>
+                                <TabsTrigger value="1">1</TabsTrigger>
+                                <TabsTrigger value="2">2</TabsTrigger>
+                              </TabsList>
+                            </Tabs>
+                            <div className="space-y-2">
+                              <p className="text-sm">{perfScheduleTab === '1' ? 'Weekdays, All day' : 'Weekends, 8:00 AM – 6:00 PM'}</p>
+                              <Button variant="outline" size="sm">
+                                <Icon name="edit" size={16} className="mr-1.5" />
+                                Edit
+                              </Button>
+                            </div>
+                          </div>
+
+                          <Separator />
+
+                          {/* Alert when... */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-4">
+                              <h4 className="text-sm font-semibold text-foreground">Alert when...</h4>
+                              <Button variant="outline" size="sm">
+                                <Icon name="add" size={16} className="mr-1.5" />
+                                Add rule
+                              </Button>
+                            </div>
+                            <div className="rounded-lg border">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="px-4">KPI</TableHead>
+                                    <TableHead className="px-4">KPI type</TableHead>
+                                    <TableHead className="px-4">Alert when...</TableHead>
+                                    <TableHead className="px-4">Consecutive samples</TableHead>
+                                    <TableHead className="w-10"></TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {[
+                                    { kpi: 'CS_RCESR', type: 'LTE', condition: '< 1000', samples: 5 },
+                                    { kpi: 'CS_RCESR', type: 'LTE', condition: '> 500', samples: 5 },
+                                    { kpi: 'CS_RCESR', type: 'LTE', condition: '> 5000', samples: 5 },
+                                    { kpi: 'DL_THRP', type: 'LTE', condition: '< 2000', samples: 3 },
+                                    { kpi: 'UL_THRP', type: 'LTE', condition: '< 1000', samples: 3 },
+                                  ].map((rule, idx) => (
+                                    <TableRow key={idx}>
+                                      <TableCell className="px-4">{rule.kpi}</TableCell>
+                                      <TableCell className="px-4 text-muted-foreground">{rule.type}</TableCell>
+                                      <TableCell className="px-4 text-muted-foreground">{rule.condition}</TableCell>
+                                      <TableCell className="px-4 text-muted-foreground">{rule.samples}</TableCell>
+                                      <TableCell className="px-2 text-right">
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7"><Icon name="more_vert" size={16} /></Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem><Icon name="edit" size={16} className="mr-2" />Edit</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive"><Icon name="delete" size={16} className="mr-2" />Delete</DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {perfTab === 'devices' && (
+                      <div className="space-y-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
+                            <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                              placeholder="Search devices..."
+                              value={perfSearch}
+                              onChange={(e) => setPerfSearch(e.target.value)}
+                              className="pl-9 w-full"
+                            />
+                          </div>
+                          <div className="ml-auto flex items-center gap-2">
+                            <Button variant="outline" size="sm">
+                              <Icon name="add" size={16} className="mr-1.5" />
+                              Add device
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="rounded-lg border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="px-4">Device</TableHead>
+                                <TableHead className="px-4">Type</TableHead>
+                                <TableHead className="px-4">Region</TableHead>
+                                <TableHead className="px-4">Status</TableHead>
+                                <TableHead className="w-14"></TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {(() => {
+                                const currentProfile = PERF_PROFILES.find((p) => p.name === selectedPerfProfile);
+                                const count = currentProfile?.devices ?? 0;
+                                const DEVICE_NAMES = ['SEA-SN-4012','PDX-CU-2201','VAN-RCP-1180','SEA-SN-4055','PDX-SN-3312','VAN-SN-1022','SEA-CU-4088','PDX-RCP-2150','VAN-SN-1045','SEA-SN-4101','PDX-SN-3400','VAN-CU-1090','SEA-RCP-4200','PDX-SN-3201','VAN-SN-1067'];
+                                const DEVICE_TYPES = ['SN','CU','RCP','SN','SN','SN','CU','RCP','SN','SN','SN','CU','RCP','SN','SN'];
+                                const DEVICE_REGIONS = ['Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest'];
+                                const DEVICE_STATUSES = ['Connected','Connected','Connected','Connected','Disconnected','Connected','Connected','Connected','Connected','Connected','Connected','In maintenance','Connected','Connected','Connected'];
+                                const rows = Array.from({ length: Math.min(count, 15) }, (_, i) => ({
+                                  name: DEVICE_NAMES[i % DEVICE_NAMES.length],
+                                  type: DEVICE_TYPES[i % DEVICE_TYPES.length],
+                                  region: DEVICE_REGIONS[i % DEVICE_REGIONS.length],
+                                  status: DEVICE_STATUSES[i % DEVICE_STATUSES.length],
+                                }));
+                                return rows.map((row, idx) => (
+                                  <TableRow key={idx}>
+                                    <TableCell className="px-4 font-medium">{row.name}</TableCell>
+                                    <TableCell className="px-4 text-muted-foreground">{row.type}</TableCell>
+                                    <TableCell className="px-4 text-muted-foreground">{row.region}</TableCell>
+                                    <TableCell className="px-4">
+                                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                                        row.status === 'Connected' ? 'text-emerald-600 dark:text-emerald-400' :
+                                        row.status === 'Disconnected' ? 'text-red-600 dark:text-red-400' :
+                                        'text-amber-600 dark:text-amber-400'
+                                      }`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${
+                                          row.status === 'Connected' ? 'bg-emerald-500' :
+                                          row.status === 'Disconnected' ? 'bg-red-500' :
+                                          'bg-amber-500'
+                                        }`} />
+                                        {row.status}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="px-4 text-right">
+                                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                                        <Icon name="delete" size={16} className="text-muted-foreground" />
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ));
+                              })()}
+                            </TableBody>
+                          </Table>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Showing {Math.min(PERF_PROFILES.find((p) => p.name === selectedPerfProfile)?.devices ?? 0, 15)} of {PERF_PROFILES.find((p) => p.name === selectedPerfProfile)?.devices ?? 0} devices assigned to this profile
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {activeSection !== 'access-control' && activeSection !== 'fault-management' && activeSection !== 'label-management' && activeSection !== 'file-management' && activeSection !== 'device-migration' && activeSection !== 'performance' && (
               <div className="flex items-center justify-center py-12">
                 <p className="text-muted-foreground">
                   {activeLabel} content will be displayed here.

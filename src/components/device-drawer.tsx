@@ -475,7 +475,7 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Model #</span>
-                          <span className="font-medium">SN-LTE-2000</span>
+                          <span className="font-medium">SN-2000</span>
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">

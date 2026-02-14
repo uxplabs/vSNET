@@ -336,7 +336,7 @@ export function getFilteredEventCount(filters: EventTableFilters): number {
 
 function filterEvents(events: EventRow[], filters: EventTableFilters): EventRow[] {
   let result = events;
-  if (filters.regionFilter && filters.regionFilter !== 'Region') {
+  if (filters.regionFilter && filters.regionFilter !== 'All') {
     result = result.filter((e) => e.region === filters.regionFilter);
   }
   if (filters.search?.trim()) {
@@ -349,13 +349,13 @@ function filterEvents(events: EventRow[], filters: EventTableFilters): EventRow[
         e.managedObject.toLowerCase().includes(q)
     );
   }
-  if (filters.typeFilter && filters.typeFilter !== 'Type') {
+  if (filters.typeFilter && filters.typeFilter !== 'All') {
     result = result.filter((e) => e.type === filters.typeFilter);
   }
-  if (filters.severityFilter && filters.severityFilter !== 'Severity') {
+  if (filters.severityFilter && filters.severityFilter !== 'All') {
     result = result.filter((e) => e.severity === filters.severityFilter);
   }
-  if (filters.sourceFilter && filters.sourceFilter !== 'Source') {
+  if (filters.sourceFilter && filters.sourceFilter !== 'All') {
     const want = filters.sourceFilter === 'All sources' ? '' : filters.sourceFilter;
     if (want) result = result.filter((e) => e.source.startsWith(want) || e.source.includes(want));
   }
@@ -381,11 +381,11 @@ export interface EventsDataTableProps {
 export function EventsDataTable({
   pageSize: pageSizeProp,
   search = '',
-  typeFilter = 'Type',
-  severityFilter = 'Severity',
-  sourceFilter = 'Source',
+  typeFilter = 'All',
+  severityFilter = 'All',
+  sourceFilter = 'All',
   selectedRegions = [],
-  regionFilter = 'Region',
+  regionFilter = 'All',
   onSelectionChange,
   clearSelectionTrigger,
 }: EventsDataTableProps = {}) {

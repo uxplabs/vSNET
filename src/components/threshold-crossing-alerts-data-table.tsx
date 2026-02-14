@@ -36,18 +36,59 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 export interface ThresholdCrossingAlertRow {
   id: string;
   device: string;
-  triggered: string;
+  region: string;
+  profileName: string;
+  kpi: string;
   lastTriggered: string;
-  lastReset: string;
-  umtsMonitoredCells: number;
-  lteMonitoredCells: number;
 }
 
 const DEVICE_IDS = ['eNB-SEA-001', 'eNB-PDX-002', 'RN-PHX-003', 'eNB-SFO-001', 'RN-LAS-001', 'eNB-NYC-001', 'RN-DEN-002', 'eNB-CHI-002', 'RN-ATL-005', 'eNB-MIA-002', 'RN-SEA-001', 'eNB-PHX-001', 'RN-SFO-003'];
 
+const REGIONS = ['Pacific Northwest', 'Pacific Northwest', 'Desert Southwest', 'Northern California', 'Desert Southwest', 'Northeast', 'Mountain West', 'Great Lakes', 'Southeast', 'Florida', 'Pacific Northwest', 'Desert Southwest', 'Northern California'];
+
+const PROFILE_NAMES = [
+  'LTE Throughput Baseline',
+  'NR Cell Availability',
+  'ERAB Drop Rate',
+  'RRC Setup Success',
+  'Handover Success Rate',
+  'VoLTE Call Drop',
+  'Latency SLA',
+  'CPU Utilization',
+  'Packet Loss',
+  'UL/DL Throughput',
+];
+
+const KPI_NAMES = [
+  'DL throughput (Mbps)',
+  'UL throughput (Mbps)',
+  'Cell availability (%)',
+  'ERAB drop rate (%)',
+  'RRC setup SR (%)',
+  'HO success rate (%)',
+  'VoLTE drop rate (%)',
+  'Avg latency (ms)',
+  'CPU utilization (%)',
+  'Packet loss (%)',
+];
+
 const THRESHOLD_ALERTS_DATA: ThresholdCrossingAlertRow[] = DEVICE_IDS.flatMap((device, i) => [
-  { id: `${device}-1`, device, triggered: i % 2 === 0 ? 'Yes' : 'No', lastTriggered: i % 2 === 0 ? '2025-01-27 09:12' : '—', lastReset: '2025-01-27 08:45', umtsMonitoredCells: 6 + (i % 6), lteMonitoredCells: 12 + (i % 12) },
-  { id: `${device}-2`, device, triggered: i % 3 === 0 ? 'Yes' : 'No', lastTriggered: i % 3 === 0 ? '2025-01-27 08:30' : '—', lastReset: '2025-01-27 08:10', umtsMonitoredCells: 4 + (i % 4), lteMonitoredCells: 8 + (i % 8) },
+  {
+    id: `${device}-1`,
+    device,
+    region: REGIONS[i % REGIONS.length],
+    profileName: PROFILE_NAMES[i % PROFILE_NAMES.length],
+    kpi: KPI_NAMES[i % KPI_NAMES.length],
+    lastTriggered: i % 2 === 0 ? 'Feb 10, 2026 at 9:12 AM' : 'Feb 9, 2026 at 4:45 PM',
+  },
+  {
+    id: `${device}-2`,
+    device,
+    region: REGIONS[i % REGIONS.length],
+    profileName: PROFILE_NAMES[(i + 3) % PROFILE_NAMES.length],
+    kpi: KPI_NAMES[(i + 5) % KPI_NAMES.length],
+    lastTriggered: i % 3 === 0 ? 'Feb 11, 2026 at 8:30 AM' : 'Feb 8, 2026 at 11:22 AM',
+  },
 ]);
 
 const getColumns = (hideDeviceColumn?: boolean): ColumnDef<ThresholdCrossingAlertRow>[] => {
@@ -63,11 +104,27 @@ const getColumns = (hideDeviceColumn?: boolean): ColumnDef<ThresholdCrossingAler
   }
   cols.push(
   {
-    accessorKey: 'triggered',
+    accessorKey: 'region',
     header: ({ column }) => (
-      <SortableHeader column={column}>Triggered</SortableHeader>
+      <SortableHeader column={column}>Region</SortableHeader>
     ),
-    cell: ({ row }) => row.getValue('triggered') as string,
+    cell: ({ row }) => row.getValue('region') as string,
+  },
+  {
+    accessorKey: 'profileName',
+    header: ({ column }) => (
+      <SortableHeader column={column}>Profile name</SortableHeader>
+    ),
+    cell: ({ row }) => (
+      <span className="font-medium">{row.getValue('profileName') as string}</span>
+    ),
+  },
+  {
+    accessorKey: 'kpi',
+    header: ({ column }) => (
+      <SortableHeader column={column}>KPI</SortableHeader>
+    ),
+    cell: ({ row }) => row.getValue('kpi') as string,
   },
   {
     accessorKey: 'lastTriggered',
@@ -75,34 +132,7 @@ const getColumns = (hideDeviceColumn?: boolean): ColumnDef<ThresholdCrossingAler
       <SortableHeader column={column}>Last triggered</SortableHeader>
     ),
     cell: ({ row }) => (
-      <span className="tabular-nums">{row.getValue('lastTriggered') as string}</span>
-    ),
-  },
-  {
-    accessorKey: 'lastReset',
-    header: ({ column }) => (
-      <SortableHeader column={column}>Last reset</SortableHeader>
-    ),
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.getValue('lastReset') as string}</span>
-    ),
-  },
-  {
-    accessorKey: 'umtsMonitoredCells',
-    header: ({ column }) => (
-      <SortableHeader column={column}>UMTS monitored cells</SortableHeader>
-    ),
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.getValue('umtsMonitoredCells') as number}</span>
-    ),
-  },
-  {
-    accessorKey: 'lteMonitoredCells',
-    header: ({ column }) => (
-      <SortableHeader column={column}>LTE monitored cells</SortableHeader>
-    ),
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.getValue('lteMonitoredCells') as number}</span>
+      <span className="tabular-nums text-muted-foreground">{row.getValue('lastTriggered') as string}</span>
     ),
   },
   {
@@ -124,14 +154,14 @@ const getColumns = (hideDeviceColumn?: boolean): ColumnDef<ThresholdCrossingAler
     ),
     enableSorting: false,
     meta: {
-      className: 'sticky right-0 w-14 text-right pr-4 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+      className: 'sticky right-0 w-14 text-right pr-4 bg-card group-hover:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]',
     },
   });
   return cols;
 };
 
 export function getFilteredThresholdCount(filters: { actSessFilter?: string }): number {
-  if (!filters.actSessFilter || filters.actSessFilter === 'ACT_SESS' || filters.actSessFilter === 'All') {
+  if (!filters.actSessFilter || filters.actSessFilter === 'All') {
     return THRESHOLD_ALERTS_DATA.length;
   }
   return THRESHOLD_ALERTS_DATA.filter((row) => {
@@ -165,7 +195,7 @@ export function ThresholdCrossingAlertsDataTable({ deviceId, hideDeviceColumn, a
   const filteredData = React.useMemo(() => {
     let data = THRESHOLD_ALERTS_DATA;
     if (deviceId) data = data.filter((row) => row.device === deviceId);
-    if (actSessFilter && actSessFilter !== 'ACT_SESS' && actSessFilter !== 'All') {
+    if (actSessFilter && actSessFilter !== 'All') {
       data = data.filter((row) => {
         const idx = DEVICE_IDS.indexOf(row.device);
         if (actSessFilter === 'ACT_SESS_1') return idx % 3 === 0;
@@ -218,7 +248,7 @@ export function ThresholdCrossingAlertsDataTable({ deviceId, hideDeviceColumn, a
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className="group">
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}

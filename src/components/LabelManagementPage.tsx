@@ -4,13 +4,7 @@ import React, { useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
+import { FilterSelect } from './ui/filter-select';
 import {
   Tooltip,
   TooltipContent,
@@ -41,8 +35,8 @@ import {
 import { AddDeviceToLabelSheet } from './add-device-to-label-sheet';
 import type { AddableDeviceRow } from './add-device-to-label-sheet';
 
-const REGION_OPTIONS = ['Region', 'Seattle', 'Portland', 'San Francisco', 'Phoenix', 'New York', 'All'] as const;
-const GROUP_OPTIONS = ['Group', 'Production', 'Staging', 'Testing', 'Development', 'All'] as const;
+const REGION_OPTIONS = ['All', 'Seattle', 'Portland', 'San Francisco', 'Phoenix', 'New York'] as const;
+const GROUP_OPTIONS = ['All', 'Production', 'Staging', 'Testing', 'Development'] as const;
 
 function getLabelGroupsWithCounts(data: LabelManagementRow[]): { name: string; count: number }[] {
   const counts: Record<string, number> = {};
@@ -65,8 +59,8 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
   const [addDeviceSheetOpen, setAddDeviceSheetOpen] = useState(false);
   const labelGroups = useMemo(() => getLabelGroupsWithCounts(labelData), [labelData]);
   const [selectedGroup, setSelectedGroup] = useState(() => getLabelGroupsWithCounts(LABEL_MANAGEMENT_DATA)[0]?.name ?? '');
-  const [regionFilter, setRegionFilter] = useState<string>('Region');
-  const [groupFilter, setGroupFilter] = useState<string>('Group');
+  const [regionFilter, setRegionFilter] = useState<string>('All');
+  const [groupFilter, setGroupFilter] = useState<string>('All');
   const [selectedCount, setSelectedCount] = useState(0);
   const [clearSelectionTrigger, setClearSelectionTrigger] = useState(0);
   const [addLabelDialogOpen, setAddLabelDialogOpen] = useState(false);
@@ -127,9 +121,9 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
   return (
     <TooltipProvider delayDuration={300}>
     <div className="space-y-6">
-      <div className="flex gap-6 items-start">
+      <div className="flex gap-6">
             {/* Labels sidebar */}
-            <aside className="w-52 shrink-0 rounded-lg border bg-muted/30 border-border/80 overflow-hidden">
+            <aside className="w-52 shrink-0 rounded-lg border bg-muted/30 border-border/80 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)] self-start">
               <div className="p-3 border-b border-border/80 bg-muted/20">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-foreground truncate">Labels</h3>
@@ -152,7 +146,7 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
                   />
                 </div>
               </div>
-              <nav className="p-2 max-h-[min(400px,60vh)] overflow-y-auto">
+              <nav className="p-2 flex-1 min-h-0 overflow-y-auto">
                 {filteredGroups.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-4 text-center">No labels match</p>
                 ) : (
@@ -250,26 +244,8 @@ export default function LabelManagementPage({ onBack }: LabelManagementPageProps
                             />
                           </div>
                           <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                            <Select value={regionFilter} onValueChange={setRegionFilter}>
-                              <SelectTrigger className="w-[120px] shrink-0">
-                                <SelectValue placeholder="Region" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {REGION_OPTIONS.map((opt) => (
-                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Select value={groupFilter} onValueChange={setGroupFilter}>
-                              <SelectTrigger className="w-[120px] shrink-0">
-                                <SelectValue placeholder="Group" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {GROUP_OPTIONS.map((opt) => (
-                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={[...REGION_OPTIONS]} className="w-[120px] shrink-0" />
+                            <FilterSelect value={groupFilter} onValueChange={setGroupFilter} label="Group" options={[...GROUP_OPTIONS]} className="w-[120px] shrink-0" />
                           </div>
                           <div className="ml-auto flex items-center gap-2">
                             <Button variant="outline" size="default" className="gap-1" onClick={() => setAddDeviceSheetOpen(true)}>

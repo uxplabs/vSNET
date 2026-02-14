@@ -13,13 +13,7 @@ import {
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
+import { FilterSelect } from './ui/filter-select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from './ui/sheet';
 import {
   Table,
@@ -36,8 +30,8 @@ import { toast } from 'sonner';
 import { DEVICES_DATA } from './devices-data-table';
 import type { DeviceRow } from './devices-data-table';
 
-const REGION_OPTIONS = ['Region', 'Seattle', 'Portland', 'San Francisco', 'Phoenix', 'New York', 'All'] as const;
-const GROUP_OPTIONS = ['Group', 'Production', 'Staging', 'Testing', 'Development', 'All'] as const;
+const REGION_OPTIONS = ['All', 'Seattle', 'Portland', 'San Francisco', 'Phoenix', 'New York'] as const;
+const GROUP_OPTIONS = ['All', 'Production', 'Staging', 'Testing', 'Development'] as const;
 
 /** Map device name prefix to region for filter. */
 const PREFIX_TO_REGION: Record<string, string> = {
@@ -148,8 +142,8 @@ export function AddDeviceToLabelSheet({
   onAdd,
 }: AddDeviceToLabelSheetProps) {
   const [search, setSearch] = React.useState('');
-  const [regionFilter, setRegionFilter] = React.useState<string>('Region');
-  const [groupFilter, setGroupFilter] = React.useState<string>('Group');
+  const [regionFilter, setRegionFilter] = React.useState<string>('All');
+  const [groupFilter, setGroupFilter] = React.useState<string>('All');
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [pageSize, setPageSize] = React.useState(10);
   const [pageIndex, setPageIndex] = React.useState(0);
@@ -209,10 +203,10 @@ export function AddDeviceToLabelSheet({
           r.labelGroup.toLowerCase().includes(q)
       );
     }
-    if (regionFilter && regionFilter !== 'Region' && regionFilter !== 'All') {
+    if (regionFilter && regionFilter !== 'All') {
       list = list.filter((r) => r.region === regionFilter);
     }
-    if (groupFilter && groupFilter !== 'Group' && groupFilter !== 'All') {
+    if (groupFilter && groupFilter !== 'All') {
       list = list.filter((r) => r.labelGroup === groupFilter);
     }
     return list;
@@ -268,8 +262,8 @@ export function AddDeviceToLabelSheet({
       if (!next) {
         setRowSelection({});
         setSearch('');
-        setRegionFilter('Region');
-        setGroupFilter('Group');
+        setRegionFilter('All');
+        setGroupFilter('All');
       }
       onOpenChange(next);
     },
@@ -298,30 +292,8 @@ export function AddDeviceToLabelSheet({
                 className="pl-9"
               />
             </div>
-            <Select value={regionFilter} onValueChange={setRegionFilter}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Region" />
-              </SelectTrigger>
-              <SelectContent>
-                {REGION_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={groupFilter} onValueChange={setGroupFilter}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Group" />
-              </SelectTrigger>
-              <SelectContent>
-                {GROUP_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={[...REGION_OPTIONS]} className="w-[120px]" />
+            <FilterSelect value={groupFilter} onValueChange={setGroupFilter} label="Group" options={[...GROUP_OPTIONS]} className="w-[120px]" />
           </div>
 
           <div

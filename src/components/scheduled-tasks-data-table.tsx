@@ -228,13 +228,13 @@ function filterTasks(tasks: ScheduledTaskRow[], filters: TaskTableFilters): Sche
         t.domain.toLowerCase().includes(q)
     );
   }
-  if (filters.typeFilter && filters.typeFilter !== 'Type') {
+  if (filters.typeFilter && filters.typeFilter !== 'All') {
     result = result.filter((t) => t.type === filters.typeFilter);
   }
-  if (filters.statusFilter && filters.statusFilter !== 'Status') {
+  if (filters.statusFilter && filters.statusFilter !== 'All') {
     result = result.filter((t) => t.status === filters.statusFilter);
   }
-  if (filters.domainFilter && filters.domainFilter !== 'Domain') {
+  if (filters.domainFilter && filters.domainFilter !== 'All') {
     result = result.filter((t) => t.domain === filters.domainFilter);
   }
   return result;
@@ -254,9 +254,9 @@ export interface ScheduledTasksDataTableProps {
 
 export function ScheduledTasksDataTable({
   search = '',
-  typeFilter = 'Type',
-  statusFilter = 'Status',
-  domainFilter = 'Domain',
+  typeFilter = 'All',
+  statusFilter = 'All',
+  domainFilter = 'All',
   onTaskClick,
 }: ScheduledTasksDataTableProps = {}) {
   const pageSize = useResponsivePageSize();

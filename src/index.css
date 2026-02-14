@@ -114,6 +114,20 @@ body {
   --leading-7: var(--leading-7);
   --leading-relaxed: var(--leading-relaxed);
   --leading-loose: var(--leading-loose);
+  /* Chart palette */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+  --color-chart-9: var(--chart-9);
+  --color-chart-10: var(--chart-10);
+  --color-chart-positive: var(--chart-positive);
+  --color-chart-negative: var(--chart-negative);
+  --color-chart-neutral: var(--chart-neutral);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -200,6 +214,21 @@ body {
     --warning: #EAB308;
     --destructive: #D13C59;
     --destructive-foreground: #FAFAFA;
+    /* Chart palette – 10 sequential colors for data visualization */
+    --chart-1: #004F69;
+    --chart-2: #2A9D8F;
+    --chart-3: #E9C46A;
+    --chart-4: #F4A261;
+    --chart-5: #E76F51;
+    --chart-6: #7C3AED;
+    --chart-7: #0EA5E9;
+    --chart-8: #10B981;
+    --chart-9: #F43F5E;
+    --chart-10: #8B5CF6;
+    /* Categorical (semantic aliases for common chart use cases) */
+    --chart-positive: #009B3A;
+    --chart-negative: #D13C59;
+    --chart-neutral: #64748B;
     /* Radius */
     --radius: 0.5rem;
     /* Typography – Segoe UI (Microsoft). */
@@ -279,6 +308,21 @@ body {
     --warning: #FACC15;
     --destructive: #F87171;
     --destructive-foreground: #1E293B;
+    /* Chart palette – brighter variants for dark backgrounds */
+    --chart-1: #38BDF8;
+    --chart-2: #2DD4BF;
+    --chart-3: #FBBF24;
+    --chart-4: #FB923C;
+    --chart-5: #F87171;
+    --chart-6: #A78BFA;
+    --chart-7: #22D3EE;
+    --chart-8: #34D399;
+    --chart-9: #FB7185;
+    --chart-10: #C4B5FD;
+    /* Categorical (semantic aliases) */
+    --chart-positive: #4ADE80;
+    --chart-negative: #F87171;
+    --chart-neutral: #94A3B8;
   }
 
   /* Light-mode content zone — resets dark tokens to light values
@@ -316,6 +360,19 @@ body {
     --warning: #EAB308;
     --destructive: #D13C59;
     --destructive-foreground: #FAFAFA;
+    --chart-1: #004F69;
+    --chart-2: #2A9D8F;
+    --chart-3: #E9C46A;
+    --chart-4: #F4A261;
+    --chart-5: #E76F51;
+    --chart-6: #7C3AED;
+    --chart-7: #0EA5E9;
+    --chart-8: #10B981;
+    --chart-9: #F43F5E;
+    --chart-10: #8B5CF6;
+    --chart-positive: #009B3A;
+    --chart-negative: #D13C59;
+    --chart-neutral: #64748B;
   }
 }
 

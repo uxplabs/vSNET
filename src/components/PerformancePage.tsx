@@ -5,19 +5,13 @@ import { Navbar01 } from './navbar-01';
 import { Card, CardContent } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Input } from './ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
+import { FilterSelect } from './ui/filter-select';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { PerformanceDataTable } from './performance-data-table';
 
-const CARRIER_OPTIONS = ['Carrier', 'Verizon', 'AT&T', 'T-Mobile'] as const;
-const TIME_OPTIONS = ['Last hour', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
+const CARRIER_OPTIONS = ['All', 'Verizon', 'AT&T', 'T-Mobile'] as const;
+const TIME_OPTIONS = ['All', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
 
 export interface PerformancePageProps {
   appName?: string;
@@ -42,15 +36,15 @@ export default function PerformancePage({
 }: PerformancePageProps) {
   const [performanceTab, setPerformanceTab] = useState<'lte' | 'nr'>('lte');
   const [search, setSearch] = useState('');
-  const [timeFilter, setTimeFilter] = useState<string>('Last hour');
-  const [carrierFilter, setCarrierFilter] = useState<string>('Carrier');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'good' | 'bad'>('all');
+  const [timeFilter, setTimeFilter] = useState<string>('All');
+  const [carrierFilter, setCarrierFilter] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'degraded' | 'optimal'>('all');
 
-  const filtersActive = search !== '' || timeFilter !== 'Last hour' || carrierFilter !== 'Carrier' || statusFilter !== 'all';
+  const filtersActive = search !== '' || timeFilter !== 'All' || carrierFilter !== 'All' || statusFilter !== 'all';
   const clearFilters = () => {
     setSearch('');
-    setTimeFilter('Last hour');
-    setCarrierFilter('Carrier');
+    setTimeFilter('All');
+    setCarrierFilter('All');
     setStatusFilter('all');
   };
 
@@ -96,36 +90,18 @@ export default function PerformancePage({
                       className="pl-9 w-full"
                     />
                   </div>
-                  <Select value={timeFilter} onValueChange={setTimeFilter}>
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue placeholder="Last hour" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIME_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={carrierFilter} onValueChange={setCarrierFilter}>
-                    <SelectTrigger className="w-[130px]">
-                      <SelectValue placeholder="Carrier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CARRIER_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FilterSelect value={timeFilter} onValueChange={setTimeFilter} label="Time" options={[...TIME_OPTIONS]} className="w-[140px]" />
+                  <FilterSelect value={carrierFilter} onValueChange={setCarrierFilter} label="Carrier" options={[...CARRIER_OPTIONS]} className="w-[130px]" />
                   <div className="inline-flex items-center rounded-md border border-input shadow-sm shrink-0">
                     {([
                       { value: 'all', label: 'All' },
-                      { value: 'good', label: 'Good' },
-                      { value: 'bad', label: 'Bad' },
+                      { value: 'degraded', label: 'Degraded' },
+                      { value: 'optimal', label: 'Optimal' },
                     ] as const).map((opt, i, arr) => (
                       <button
                         key={opt.value}
                         type="button"
-                        onClick={() => setStatusFilter(opt.value as 'all' | 'good' | 'bad')}
+                        onClick={() => setStatusFilter(opt.value as 'all' | 'degraded' | 'optimal')}
                         className={`h-9 px-3 text-sm font-medium transition-colors ${
                           statusFilter === opt.value
                             ? 'bg-primary text-primary-foreground'

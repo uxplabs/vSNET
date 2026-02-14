@@ -4,13 +4,7 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
+import { FilterSelect } from './ui/filter-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
@@ -18,7 +12,7 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { FileManagementUsersDataTable, FILE_MANAGEMENT_USERS_DATA } from './file-management-users-data-table';
 
-const PERMISSIONS_OPTIONS = ['Permissions', 'Read', 'Read, Write', 'Read, Write, Delete', 'All'] as const;
+const PERMISSIONS_OPTIONS = ['All', 'Read', 'Read, Write', 'Read, Write, Delete'] as const;
 
 export interface FileManagementPageProps {
   onBack?: () => void;
@@ -27,7 +21,7 @@ export interface FileManagementPageProps {
 export default function FileManagementPage({ onBack }: FileManagementPageProps) {
   const [fileTab, setFileTab] = useState('users');
   const [search, setSearch] = useState('');
-  const [permissionsFilter, setPermissionsFilter] = useState<string>('Permissions');
+  const [permissionsFilter, setPermissionsFilter] = useState<string>('All');
   const [pmDays, setPmDays] = useState('30');
   const [cmMb, setCmMb] = useState('1024');
   const [cperDays, setCperDays] = useState('14');
@@ -70,16 +64,7 @@ export default function FileManagementPage({ onBack }: FileManagementPageProps) 
                 className="pl-9 w-full"
               />
             </div>
-            <Select value={permissionsFilter} onValueChange={setPermissionsFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Permissions" />
-              </SelectTrigger>
-              <SelectContent>
-                {PERMISSIONS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FilterSelect value={permissionsFilter} onValueChange={setPermissionsFilter} label="Permissions" options={[...PERMISSIONS_OPTIONS]} className="w-[180px]" />
             <Button variant="outline" size="default" className="ml-auto shrink-0 gap-1">
               <Icon name="add" size={18} />
               Add user

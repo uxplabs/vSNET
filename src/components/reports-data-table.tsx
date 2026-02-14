@@ -112,8 +112,8 @@ function filterReports(rows: ReportRow[], filters: ReportTableFilters): ReportRo
     const q = filters.search.trim().toLowerCase();
     result = result.filter((r) => r.report.toLowerCase().includes(q) || r.task.toLowerCase().includes(q));
   }
-  if (filters.typeFilter && filters.typeFilter !== 'Type') result = result.filter((r) => r.type === filters.typeFilter);
-  if (filters.taskFilter && filters.taskFilter !== 'Task') result = result.filter((r) => r.task === filters.taskFilter);
+  if (filters.typeFilter && filters.typeFilter !== 'All') result = result.filter((r) => r.type === filters.typeFilter);
+  if (filters.taskFilter && filters.taskFilter !== 'All') result = result.filter((r) => r.task === filters.taskFilter);
   return result;
 }
 
@@ -130,9 +130,9 @@ export interface ReportsDataTableProps {
 
 export function ReportsDataTable({
   search = '',
-  typeFilter = 'Type',
-  taskFilter = 'Task',
-  createdFilter = 'Created',
+  typeFilter = 'All',
+  taskFilter = 'All',
+  createdFilter = 'All',
 }: ReportsDataTableProps = {}) {
   const pageSize = useResponsivePageSize();
   const [sorting, setSorting] = React.useState<SortingState>([
