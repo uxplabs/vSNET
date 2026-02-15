@@ -27,13 +27,14 @@ const COLOR_TOKEN_SECTIONS: TokenSection[] = [
   {
     title: 'Base',
     tokens: [
-      { name: 'Background', dark: '#0F172A', light: '#F8FAFC' },
+      { name: 'Background', dark: '#0F172A', light: '#FFFFFF' },
       { name: 'Foreground', dark: '#F8FAFC', light: '#1E293B' },
       { name: 'Primary', dark: '#004F69', light: '#004F69' },
       { name: 'Primary-foreground', dark: '#FFFFFF', light: '#FFFFFF' },
-      { name: 'Secondary', dark: '#639BB2', light: '#CBD5E1' },
-      { name: 'Secondary-foreground', dark: '#F8FAFC', light: '#1E293B' },
-      { name: 'Transparent', dark: '#FFFFFF', light: '#FFFFFF', note: '0% opacity' },
+      { name: 'Secondary', dark: '#334155', light: '#E2E8F0' },
+      { name: 'Secondary-foreground', dark: '#E2E8F0', light: '#1E293B' },
+      { name: 'Tertiary', dark: '#5A8A5D', light: '#456647' },
+      { name: 'Tertiary-foreground', dark: '#FFFFFF', light: '#FFFFFF' },
     ],
   },
   {
@@ -61,7 +62,7 @@ const COLOR_TOKEN_SECTIONS: TokenSection[] = [
   {
     title: 'Accent',
     tokens: [
-      { name: 'Accent', dark: '#57534E', light: '#D6D3D1' },
+      { name: 'Accent', dark: '#334155', light: '#F1F5F9' },
       { name: 'Accent-foreground', dark: '#F8FAFC', light: '#0F172A' },
     ],
   },
@@ -76,17 +77,21 @@ const COLOR_TOKEN_SECTIONS: TokenSection[] = [
     title: 'Other',
     tokens: [
       { name: 'Ring', dark: '#818CF8', light: '#6366F1' },
-      { name: 'Border', dark: '#27303F', light: '#E2E8F0' },
-      { name: 'Link', dark: '#0369A1', light: '#0369A1' },
-      { name: 'Link-hover', dark: '#A5B4FC', light: '#3730A3' },
+      { name: 'Border', dark: '#3F4A5C', light: '#E2E8F0' },
+      { name: 'Link', dark: '#38BDF8', light: '#0369A1' },
+      { name: 'Link-hover', dark: '#7DD3FC', light: '#3730A3' },
     ],
   },
   {
     title: 'Sidebar',
     tokens: [
-      { name: 'Sidebar-background', dark: '#1E2433', light: '#F8FAFC' },
-      { name: 'Sidebar-foreground', dark: '#F8FAFC', light: '#0F172A' },
-      { name: 'Sidebar-accent', dark: '#3E4A66', light: '#EEF2FF' },
+      { name: 'Sidebar', dark: '#0F172A', light: '#004F69' },
+      { name: 'Sidebar-foreground', dark: '#F8FAFC', light: '#F8FAFC' },
+      { name: 'Sidebar-primary', dark: '#004F69', light: '#004F69' },
+      { name: 'Sidebar-primary-foreground', dark: '#FFFFFF', light: '#FFFFFF' },
+      { name: 'Sidebar-accent', dark: '#1E293B', light: '#005D7A' },
+      { name: 'Sidebar-accent-foreground', dark: '#F8FAFC', light: '#F8FAFC' },
+      { name: 'Sidebar-border', dark: '#334155', light: '#005D7A' },
     ],
   },
   {
@@ -99,11 +104,10 @@ const COLOR_TOKEN_SECTIONS: TokenSection[] = [
   {
     title: 'Status',
     tokens: [
-      { name: 'Success', dark: '#006C28', light: '#009B3A' },
+      { name: 'Success', dark: '#4ADE80', light: '#009B3A' },
       { name: 'Warning', dark: '#FACC15', light: '#EAB308' },
-      { name: 'Warning-foreground', dark: '#422006', light: '#422006' },
-      { name: 'Destructive', dark: '#8A0821', light: '#D13C59' },
-      { name: 'Destructive-foreground', dark: '#FAFAFA', light: '#FAFAFA' },
+      { name: 'Destructive', dark: '#DC2626', light: '#D13C59' },
+      { name: 'Destructive-foreground', dark: '#FFFFFF', light: '#FAFAFA' },
     ],
   },
 ];
@@ -122,7 +126,7 @@ const CHART_SEQUENTIAL_COLORS: ChartColorRow[] = [
   { name: 'Chart 2', variable: '--chart-2', light: '#2A9D8F', dark: '#2DD4BF', usage: 'Secondary series / comparisons' },
   { name: 'Chart 3', variable: '--chart-3', light: '#E9C46A', dark: '#FBBF24', usage: 'Tertiary series / highlights' },
   { name: 'Chart 4', variable: '--chart-4', light: '#F4A261', dark: '#FB923C', usage: 'Fourth series / warm accent' },
-  { name: 'Chart 5', variable: '--chart-5', light: '#E76F51', dark: '#F87171', usage: 'Fifth series / alert-adjacent' },
+  { name: 'Chart 5', variable: '--chart-5', light: '#E76F51', dark: '#DC2626', usage: 'Fifth series / alert-adjacent' },
   { name: 'Chart 6', variable: '--chart-6', light: '#7C3AED', dark: '#A78BFA', usage: 'Extended palette' },
   { name: 'Chart 7', variable: '--chart-7', light: '#0EA5E9', dark: '#22D3EE', usage: 'Extended palette' },
   { name: 'Chart 8', variable: '--chart-8', light: '#10B981', dark: '#34D399', usage: 'Extended palette' },
@@ -132,7 +136,7 @@ const CHART_SEQUENTIAL_COLORS: ChartColorRow[] = [
 
 const CHART_SEMANTIC_COLORS: ChartColorRow[] = [
   { name: 'Positive', variable: '--chart-positive', light: '#009B3A', dark: '#4ADE80', usage: 'Growth, success, uptrend' },
-  { name: 'Negative', variable: '--chart-negative', light: '#D13C59', dark: '#F87171', usage: 'Decline, error, downtrend' },
+  { name: 'Negative', variable: '--chart-negative', light: '#D13C59', dark: '#DC2626', usage: 'Decline, error, downtrend' },
   { name: 'Neutral', variable: '--chart-neutral', light: '#64748B', dark: '#94A3B8', usage: 'Baseline, average, inactive' },
 ];
 

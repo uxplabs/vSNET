@@ -24,31 +24,31 @@ import { SortableHeader } from '@/components/ui/sortable-header';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { DeviceLink } from '@/components/ui/device-link';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
 type AlarmSeverity = 'critical' | 'warning';
 
-const CARRIERS = ['Verizon', 'AT&T', 'T-Mobile'] as const;
 
 function MetricCell({ value, format, severity }: { value: number; format: 'pct' | 'num'; severity?: AlarmSeverity }) {
-  const display = format === 'pct' ? `${value}%` : String(value);
+  const display = format === 'pct' ? `${value}%` : value.toLocaleString();
   const icon = severity === 'critical'
     ? <Icon name="error" size={14} className="text-destructive shrink-0" aria-hidden />
     : severity === 'warning'
       ? <Icon name="warning" size={14} className="text-warning shrink-0" aria-hidden />
       : null;
   return (
-    <span className="inline-flex items-center justify-end gap-1 w-full">
+    <span className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
       {icon}
-      <span className="tabular-nums text-xs">{display}</span>
+      <span className="tabular-nums text-muted-foreground">{display}</span>
     </span>
   );
 }
 
 export interface PerformanceRow {
   id: string;
+  device: string;
   region: string;
-  carrier: string;
   dataAccessibilityPct: number;
   dataAccessSuccess: number;
   dataAccessAttempts: number;
@@ -59,52 +59,87 @@ export interface PerformanceRow {
   erabDropCount: number;
 }
 
-const PERFORMANCE_DATA: PerformanceRow[] = NORTH_AMERICAN_REGIONS.map((region, regionIdx) => {
-  const carrier = CARRIERS[regionIdx % CARRIERS.length];
-  const dataAccessibilityPct = 96 + (regionIdx % 4) + (regionIdx * 0.2);
-  const dataAccessSuccess = Math.round(dataAccessibilityPct * 100);
-  const volteAccessibilityPct = dataAccessibilityPct - 0.5 + (regionIdx * 0.05);
-  const volteAccessibilitySuccess = Math.round(volteAccessibilityPct * 100);
-  const dataRetainabilityPct = Math.min(99.9, dataAccessibilityPct + 0.5);
-  const erabDropCount = regionIdx % 12;
-  return {
-    id: `${regionIdx + 1}`,
-    region,
-    carrier,
-    dataAccessibilityPct: Math.round(dataAccessibilityPct * 10) / 10,
-    dataAccessSuccess,
-    dataAccessAttempts: 10000,
-    volteAccessibilityPct: Math.round(volteAccessibilityPct * 10) / 10,
-    volteAccessibilitySuccess,
-    volteAccessibilityAttempts: 10000,
-    dataRetainabilityPct: Math.round(dataRetainabilityPct * 10) / 10,
-    erabDropCount,
-  };
-});
+const REGION_PREFIXES: Record<string, string[]> = {
+  'Pacific Northwest': ['SEA', 'PDX', 'TAC', 'VAN', 'SPO', 'EUG'],
+  'Northern California': ['SFO', 'OAK', 'SJC', 'SAC', 'FRE'],
+  'Southern California': ['LAX', 'SAN', 'LGB', 'ONT', 'BUR', 'SNA', 'PSP'],
+  'Desert Southwest': ['PHX', 'TUS', 'ABQ', 'LAS', 'ELP'],
+  'Mountain West': ['DEN', 'SLC', 'BOI', 'COS', 'BIL'],
+  'Great Plains': ['OMA', 'DSM', 'LNK', 'FSD', 'ICT'],
+  'Texas': ['DAL', 'HOU', 'SAT', 'AUS', 'ELP', 'FTW'],
+  'Gulf Coast': ['MSY', 'MOB', 'GPT', 'PNS', 'BTR'],
+  'Southeast': ['ATL', 'CLT', 'RDU', 'BNA', 'GSP', 'CHS'],
+  'Florida': ['MIA', 'TPA', 'ORL', 'JAX', 'FLL', 'RSW'],
+  'Midwest': ['CHI', 'STL', 'IND', 'CMH', 'MKE', 'DTW'],
+  'Great Lakes': ['CLE', 'BUF', 'GRR', 'TOL', 'ERI'],
+  'Northeast': ['NYC', 'EWR', 'PHL', 'PIT', 'ALB', 'SYR', 'HPN'],
+  'New England': ['BOS', 'PVD', 'BDL', 'PWM', 'MHT'],
+  'Mid-Atlantic': ['DCA', 'BWI', 'IAD', 'RIC', 'NFK', 'ORF'],
+  'Eastern Canada': ['YYZ', 'YUL', 'YOW', 'YHZ', 'YQB'],
+};
+const DEVICE_TYPES = ['SN', 'CU', 'RCP', 'SN', 'SN', 'CU', 'RCP'];
+
+function seededRandom(seed: number) {
+  const x = Math.sin(seed * 9301 + 49297) * 49297;
+  return x - Math.floor(x);
+}
+
+const PERFORMANCE_DATA: PerformanceRow[] = (() => {
+  const rows: PerformanceRow[] = [];
+  let id = 0;
+  NORTH_AMERICAN_REGIONS.forEach((region, regionIdx) => {
+    const prefixes = REGION_PREFIXES[region] ?? ['UNK'];
+    prefixes.forEach((prefix, deviceIdx) => {
+      id++;
+      const seed = regionIdx * 100 + deviceIdx;
+      const type = DEVICE_TYPES[(regionIdx + deviceIdx) % DEVICE_TYPES.length];
+      const nodeNum = 1000 + regionIdx * 37 + deviceIdx * 13;
+      const device = `${prefix}-${type}-${nodeNum}`;
+
+      const baseAccess = 94.5 + seededRandom(seed) * 6;
+      const dataAccessibilityPct = Math.round(baseAccess * 10) / 10;
+      const attempts = 8000 + Math.round(seededRandom(seed + 1) * 4000);
+      const dataAccessSuccess = Math.round(dataAccessibilityPct * attempts / 100);
+      const volteBase = dataAccessibilityPct - 0.3 + seededRandom(seed + 2) * 0.8;
+      const volteAccessibilityPct = Math.round(volteBase * 10) / 10;
+      const volteAttempts = 7000 + Math.round(seededRandom(seed + 3) * 5000);
+      const volteAccessibilitySuccess = Math.round(volteAccessibilityPct * volteAttempts / 100);
+      const dataRetainabilityPct = Math.round(Math.min(99.9, dataAccessibilityPct + seededRandom(seed + 4) * 1.5) * 10) / 10;
+      const erabDropCount = Math.round(seededRandom(seed + 5) * 14);
+
+      rows.push({
+        id: String(id),
+        device,
+        region,
+        dataAccessibilityPct,
+        dataAccessSuccess,
+        dataAccessAttempts: attempts,
+        volteAccessibilityPct,
+        volteAccessibilitySuccess,
+        volteAccessibilityAttempts: volteAttempts,
+        dataRetainabilityPct,
+        erabDropCount,
+      });
+    });
+  });
+  return rows;
+})();
 
 const columns: ColumnDef<PerformanceRow>[] = [
   {
-    accessorKey: 'region',
-    meta: { align: 'left' },
-    header: ({ column }) => (
-      <SortableHeader column={column}>Region</SortableHeader>
-    ),
-    cell: ({ row }) => <span className="text-xs">{row.getValue('region') as string}</span>,
+    accessorKey: 'device',
+    header: ({ column }) => <SortableHeader column={column}>Device</SortableHeader>,
+    cell: ({ row }) => <DeviceLink value={row.getValue('device') as string} maxLength={20} />,
   },
   {
-    accessorKey: 'carrier',
-    meta: { align: 'left' },
-    header: ({ column }) => (
-      <SortableHeader column={column}>Carrier</SortableHeader>
-    ),
-    cell: ({ row }) => <span className="text-xs">{row.getValue('carrier') as string}</span>,
+    accessorKey: 'region',
+    header: ({ column }) => <SortableHeader column={column}>Region</SortableHeader>,
+    cell: ({ row }) => <span className="text-muted-foreground whitespace-nowrap">{row.getValue('region') as string}</span>,
   },
   {
     accessorKey: 'dataAccessibilityPct',
     meta: { align: 'right' },
-    header: ({ column }) => (
-      <SortableHeader column={column} className="w-full justify-end text-right">Data accessibility %</SortableHeader>
-    ),
+    header: ({ column }) => <SortableHeader column={column} className="ml-auto">Data accessibility %</SortableHeader>,
     cell: ({ row }) => {
       const v = row.original.dataAccessibilityPct;
       const severity: AlarmSeverity | undefined = v < 95 ? 'critical' : v < 98 ? 'warning' : undefined;
@@ -114,25 +149,19 @@ const columns: ColumnDef<PerformanceRow>[] = [
   {
     accessorKey: 'dataAccessSuccess',
     meta: { align: 'right' },
-    header: ({ column }) => (
-      <SortableHeader column={column} className="w-full justify-end text-right">Data access success</SortableHeader>
-    ),
+    header: ({ column }) => <SortableHeader column={column} className="ml-auto">Data access success</SortableHeader>,
     cell: ({ row }) => <MetricCell value={row.original.dataAccessSuccess} format="num" />,
   },
   {
     accessorKey: 'dataAccessAttempts',
     meta: { align: 'right' },
-    header: ({ column }) => (
-      <SortableHeader column={column} className="w-full justify-end text-right">Data access attempts</SortableHeader>
-    ),
+    header: ({ column }) => <SortableHeader column={column} className="ml-auto">Data access attempts</SortableHeader>,
     cell: ({ row }) => <MetricCell value={row.original.dataAccessAttempts} format="num" />,
   },
   {
     accessorKey: 'volteAccessibilityPct',
     meta: { align: 'right' },
-    header: ({ column }) => (
-      <SortableHeader column={column} className="w-full justify-end text-right">VoLTE accessibility %</SortableHeader>
-    ),
+    header: ({ column }) => <SortableHeader column={column} className="ml-auto">VoLTE accessibility %</SortableHeader>,
     cell: ({ row }) => {
       const v = row.original.volteAccessibilityPct;
       const severity: AlarmSeverity | undefined = v < 95 ? 'critical' : v < 97 ? 'warning' : undefined;
@@ -142,25 +171,19 @@ const columns: ColumnDef<PerformanceRow>[] = [
   {
     accessorKey: 'volteAccessibilitySuccess',
     meta: { align: 'right' },
-    header: ({ column }) => (
-      <SortableHeader column={column} className="w-full justify-end text-right">VoLTE accessibility success</SortableHeader>
-    ),
+    header: ({ column }) => <SortableHeader column={column} className="ml-auto">VoLTE access. success</SortableHeader>,
     cell: ({ row }) => <MetricCell value={row.original.volteAccessibilitySuccess} format="num" />,
   },
   {
     accessorKey: 'volteAccessibilityAttempts',
     meta: { align: 'right' },
-    header: ({ column }) => (
-      <SortableHeader column={column} className="w-full justify-end text-right">VoLTE accessibility attempts</SortableHeader>
-    ),
+    header: ({ column }) => <SortableHeader column={column} className="ml-auto">VoLTE access. attempts</SortableHeader>,
     cell: ({ row }) => <MetricCell value={row.original.volteAccessibilityAttempts} format="num" />,
   },
   {
     accessorKey: 'dataRetainabilityPct',
     meta: { align: 'right' },
-    header: ({ column }) => (
-      <SortableHeader column={column} className="w-full justify-end text-right">Data retainability %</SortableHeader>
-    ),
+    header: ({ column }) => <SortableHeader column={column} className="ml-auto">Data retainability %</SortableHeader>,
     cell: ({ row }) => {
       const v = row.original.dataRetainabilityPct;
       const severity: AlarmSeverity | undefined = v < 95 ? 'critical' : v < 98 ? 'warning' : undefined;
@@ -170,9 +193,7 @@ const columns: ColumnDef<PerformanceRow>[] = [
   {
     accessorKey: 'erabDropCount',
     meta: { align: 'right' },
-    header: ({ column }) => (
-      <SortableHeader column={column} className="w-full justify-end text-right">ERAB drop count</SortableHeader>
-    ),
+    header: ({ column }) => <SortableHeader column={column} className="ml-auto">ERAB drop count</SortableHeader>,
     cell: ({ row }) => {
       const v = row.original.erabDropCount;
       const severity: AlarmSeverity | undefined = v > 10 ? 'critical' : v > 5 ? 'warning' : undefined;
@@ -192,7 +213,7 @@ export function getFilteredPerformanceCount(filters: PerformanceTableFilters): n
   let result = PERFORMANCE_DATA;
   if (filters.search?.trim()) {
     const q = filters.search.trim().toLowerCase();
-    result = result.filter((r) => r.region.toLowerCase().includes(q) || r.carrier.toLowerCase().includes(q));
+    result = result.filter((r) => r.device.toLowerCase().includes(q) || r.region.toLowerCase().includes(q));
   }
   if (filters.statusFilter && filters.statusFilter !== 'all') {
     if (filters.statusFilter === 'good') result = result.filter((r) => r.dataAccessibilityPct >= 98);
@@ -205,7 +226,7 @@ function filterPerformanceData(data: PerformanceRow[], filters: PerformanceTable
   let result = data;
   if (filters.search?.trim()) {
     const q = filters.search.trim().toLowerCase();
-    result = result.filter((r) => r.region.toLowerCase().includes(q) || r.carrier.toLowerCase().includes(q));
+    result = result.filter((r) => r.device.toLowerCase().includes(q) || r.region.toLowerCase().includes(q));
   }
   if (filters.statusFilter && filters.statusFilter !== 'all') {
     if (filters.statusFilter === 'good') result = result.filter((r) => r.dataAccessibilityPct >= 98);
@@ -217,7 +238,7 @@ function filterPerformanceData(data: PerformanceRow[], filters: PerformanceTable
 export interface PerformanceDataTableProps extends PerformanceTableFilters {}
 
 export function PerformanceDataTable({ search, lteFilter, timeFilter, statusFilter }: PerformanceDataTableProps = {}) {
-  const pageSize = useResponsivePageSize();
+  const pageSize = useResponsivePageSize(540, 41);
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'dataAccessibilityPct', desc: true },
   ]);
@@ -249,7 +270,7 @@ export function PerformanceDataTable({ search, lteFilter, timeFilter, statusFilt
   return (
     <TooltipProvider delayDuration={300}>
     <div className="flex flex-col flex-1 min-h-0 gap-4 h-full">
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden rounded-lg border bg-card text-xs">
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto rounded-lg border bg-card">
         <Table className="w-full min-w-0">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -257,7 +278,7 @@ export function PerformanceDataTable({ search, lteFilter, timeFilter, statusFilt
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={`px-4 py-3 h-auto min-h-[2.25rem] whitespace-normal break-words align-bottom [&_button]:h-auto [&_button]:min-h-8 [&_button]:flex-wrap [&_button]:whitespace-normal [&_button]:!px-0 [&_button]:!-ml-0 ${(header.column.columnDef.meta as { className?: string })?.className ?? 'max-w-[6rem]'} ${((header.column.columnDef.meta as { align?: string })?.align ?? 'right') === 'left' ? 'text-left' : 'text-right'}`}
+                    className={`px-4 py-3 align-top [&_button]:h-auto [&_button]:py-1 [&_button]:whitespace-normal ${(header.column.columnDef.meta as { align?: string })?.align === 'right' ? 'text-right max-w-[7rem] [&_button]:ml-auto [&_button]:!-ml-0 [&_button]:!-mr-3 [&_button]:flex-row-reverse [&_button]:text-right [&_.material-symbols-outlined]:ml-0 [&_.material-symbols-outlined]:mr-2' : ''}`}
                   >
                     {header.isPlaceholder
                       ? null
@@ -274,7 +295,7 @@ export function PerformanceDataTable({ search, lteFilter, timeFilter, statusFilt
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={`px-4 py-3 whitespace-nowrap ${((cell.column.columnDef.meta as { align?: string })?.align ?? 'right') === 'left' ? 'text-left' : 'text-right'} ${(cell.column.columnDef.meta as { className?: string })?.className ?? ''}`}
+                      className={`px-4 ${(cell.column.columnDef.meta as { align?: string })?.align === 'right' ? 'text-right' : ''}`}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -283,7 +304,7 @@ export function PerformanceDataTable({ search, lteFilter, timeFilter, statusFilt
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-16 text-center px-4 py-3">
+                <TableCell colSpan={columns.length} className="h-16 text-center px-4">
                   No results.
                 </TableCell>
               </TableRow>

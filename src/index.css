@@ -306,14 +306,14 @@ body {
     /* Status */
     --success: #4ADE80;
     --warning: #FACC15;
-    --destructive: #F87171;
-    --destructive-foreground: #1E293B;
+    --destructive: #DC2626;
+    --destructive-foreground: #FFFFFF;
     /* Chart palette – brighter variants for dark backgrounds */
     --chart-1: #38BDF8;
     --chart-2: #2DD4BF;
     --chart-3: #FBBF24;
     --chart-4: #FB923C;
-    --chart-5: #F87171;
+    --chart-5: #DC2626;
     --chart-6: #A78BFA;
     --chart-7: #22D3EE;
     --chart-8: #34D399;
@@ -321,7 +321,7 @@ body {
     --chart-10: #C4B5FD;
     /* Categorical (semantic aliases) */
     --chart-positive: #4ADE80;
-    --chart-negative: #F87171;
+    --chart-negative: #DC2626;
     --chart-neutral: #94A3B8;
   }
 

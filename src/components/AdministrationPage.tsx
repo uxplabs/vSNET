@@ -11,6 +11,28 @@ import { Checkbox } from './ui/checkbox';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { Card, CardContent } from './ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './ui/dialog';
+import { Textarea } from './ui/textarea';
+import { toast } from 'sonner';
+import { DeviceStatus } from './ui/device-status';
+import { DeviceLink } from './ui/device-link';
+import { NodeTypeBadge } from './ui/node-type-badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import {
   Tooltip,
@@ -74,18 +96,199 @@ const LOCATION_OPTIONS = ['All', 'Seattle', 'Portland', 'San Francisco', 'Phoeni
 const PERF_LTE_OPTIONS = ['All', 'SN'] as const;
 const PERF_TIME_OPTIONS = ['All', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
 
-const PERF_PROFILES = [
-  { name: 'LTE Throughput Baseline', kpis: 6, devices: 124 },
-  { name: 'NR Cell Availability', kpis: 4, devices: 87 },
-  { name: 'ERAB Drop Rate', kpis: 3, devices: 56 },
-  { name: 'RRC Setup Success', kpis: 5, devices: 93 },
-  { name: 'Handover Success Rate', kpis: 4, devices: 71 },
-  { name: 'VoLTE Call Drop', kpis: 3, devices: 42 },
-  { name: 'Latency SLA', kpis: 2, devices: 38 },
-  { name: 'CPU Utilization', kpis: 2, devices: 65 },
-  { name: 'Packet Loss', kpis: 3, devices: 51 },
-  { name: 'UL/DL Throughput', kpis: 5, devices: 110 },
-];
+interface ProfileSchedule { days: string[]; allDay: boolean; startTime: string; endTime: string }
+interface ProfileAction { action: string; details: string; detailType?: 'badge' }
+interface ProfileRule { kpi: string; type: string; condition: string; samples: number }
+interface ProfileData {
+  name: string;
+  devices: number;
+  description: string;
+  enabled: boolean;
+  actions: ProfileAction[];
+  schedules: Record<string, ProfileSchedule>;
+  rules: ProfileRule[];
+}
+
+const PERF_PROFILES_INIT: Record<string, ProfileData> = {
+  'LTE Throughput Baseline': {
+    name: 'LTE Throughput Baseline', devices: 124,
+    description: 'Monitors key LTE performance indicators including throughput, latency, and call quality metrics. Alerts are triggered when thresholds are exceeded for the configured number of consecutive samples.',
+    enabled: true,
+    actions: [
+      { action: 'Send email', details: 'lkrug@acme.com, dkoons@acme.com, gsalaslzquiel...' },
+      { action: 'Send SNMP notifications', details: 'Notification group', detailType: 'badge' },
+    ],
+    schedules: {
+      '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri'], allDay: true, startTime: '08:00', endTime: '18:00' },
+      '2': { days: ['sat', 'sun'], allDay: false, startTime: '08:00', endTime: '18:00' },
+    },
+    rules: [
+      { kpi: 'CS_RCESR', type: 'LTE', condition: '< 1000', samples: 5 },
+      { kpi: 'CS_RCESR', type: 'LTE', condition: '> 500', samples: 5 },
+      { kpi: 'CS_RCESR', type: 'LTE', condition: '> 5000', samples: 5 },
+      { kpi: 'DL_THRP', type: 'LTE', condition: '< 2000', samples: 3 },
+      { kpi: 'UL_THRP', type: 'LTE', condition: '< 1000', samples: 3 },
+    ],
+  },
+  'NR Cell Availability': {
+    name: 'NR Cell Availability', devices: 87,
+    description: 'Tracks NR cell availability and service continuity. Monitors cell downtime events and triggers alerts when availability drops below defined thresholds.',
+    enabled: true,
+    actions: [
+      { action: 'Send email', details: 'noc-team@acme.com, rgarcia@acme.com' },
+      { action: 'Create incident ticket', details: 'ServiceNow integration', detailType: 'badge' },
+    ],
+    schedules: {
+      '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], allDay: true, startTime: '00:00', endTime: '23:59' },
+    },
+    rules: [
+      { kpi: 'CELL_AVAIL', type: 'NR', condition: '< 99.5%', samples: 4 },
+      { kpi: 'CELL_AVAIL', type: 'NR', condition: '< 95%', samples: 2 },
+      { kpi: 'CELL_DOWNTIME', type: 'NR', condition: '> 300s', samples: 1 },
+    ],
+  },
+  'ERAB Drop Rate': {
+    name: 'ERAB Drop Rate', devices: 56,
+    description: 'Monitors E-RAB (E-UTRAN Radio Access Bearer) drop rates across the network. Excessive drops indicate radio resource management issues or coverage gaps.',
+    enabled: true,
+    actions: [
+      { action: 'Send email', details: 'ran-ops@acme.com' },
+    ],
+    schedules: {
+      '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri'], allDay: false, startTime: '06:00', endTime: '22:00' },
+      '2': { days: ['sat', 'sun'], allDay: false, startTime: '09:00', endTime: '17:00' },
+    },
+    rules: [
+      { kpi: 'ERAB_DROP', type: 'LTE', condition: '> 2%', samples: 5 },
+      { kpi: 'ERAB_DROP', type: 'LTE', condition: '> 5%', samples: 3 },
+      { kpi: 'ERAB_SETUP_FAIL', type: 'LTE', condition: '> 1%', samples: 4 },
+    ],
+  },
+  'RRC Setup Success': {
+    name: 'RRC Setup Success', devices: 93,
+    description: 'Evaluates RRC (Radio Resource Control) connection setup success rates. Low success rates may indicate congestion, interference, or parameter misconfiguration.',
+    enabled: false,
+    actions: [
+      { action: 'Send email', details: 'performance@acme.com, jnelson@acme.com' },
+      { action: 'Send SNMP notifications', details: 'Critical alerts', detailType: 'badge' },
+    ],
+    schedules: {
+      '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri'], allDay: true, startTime: '08:00', endTime: '18:00' },
+    },
+    rules: [
+      { kpi: 'RRC_SETUP_SR', type: 'LTE', condition: '< 98%', samples: 4 },
+      { kpi: 'RRC_SETUP_SR', type: 'LTE', condition: '< 95%', samples: 2 },
+      { kpi: 'RRC_CONN_MAX', type: 'LTE', condition: '> 900', samples: 3 },
+      { kpi: 'RRC_SETUP_TIME', type: 'LTE', condition: '> 500ms', samples: 5 },
+      { kpi: 'RRC_REEST_SR', type: 'LTE', condition: '< 90%', samples: 3 },
+    ],
+  },
+  'Handover Success Rate': {
+    name: 'Handover Success Rate', devices: 71,
+    description: 'Tracks inter-cell and inter-RAT handover success rates. Failed handovers lead to dropped calls and degraded user experience in mobility scenarios.',
+    enabled: true,
+    actions: [
+      { action: 'Send email', details: 'mobility-team@acme.com' },
+    ],
+    schedules: {
+      '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri'], allDay: false, startTime: '07:00', endTime: '21:00' },
+    },
+    rules: [
+      { kpi: 'HO_SUCCESS', type: 'LTE', condition: '< 97%', samples: 4 },
+      { kpi: 'HO_SUCCESS', type: 'LTE', condition: '< 93%', samples: 2 },
+      { kpi: 'INTER_RAT_HO', type: 'LTE', condition: '< 90%', samples: 3 },
+      { kpi: 'HO_PING_PONG', type: 'LTE', condition: '> 5%', samples: 4 },
+    ],
+  },
+  'VoLTE Call Drop': {
+    name: 'VoLTE Call Drop', devices: 42,
+    description: 'Monitors VoLTE call drop rates and voice quality indicators. Ensures voice service quality meets operator SLA requirements.',
+    enabled: true,
+    actions: [
+      { action: 'Send email', details: 'volte-ops@acme.com, quality@acme.com' },
+      { action: 'Send SNMP notifications', details: 'VoLTE alerts', detailType: 'badge' },
+      { action: 'Create incident ticket', details: 'PagerDuty integration', detailType: 'badge' },
+    ],
+    schedules: {
+      '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], allDay: true, startTime: '00:00', endTime: '23:59' },
+    },
+    rules: [
+      { kpi: 'VOLTE_DROP', type: 'LTE', condition: '> 1%', samples: 3 },
+      { kpi: 'VOLTE_MOS', type: 'LTE', condition: '< 3.5', samples: 5 },
+      { kpi: 'VOLTE_SETUP_TIME', type: 'LTE', condition: '> 3s', samples: 4 },
+    ],
+  },
+  'Latency SLA': {
+    name: 'Latency SLA', devices: 38,
+    description: 'Ensures network latency remains within SLA-defined bounds. Monitors round-trip times and jitter for compliance reporting.',
+    enabled: false,
+    actions: [
+      { action: 'Send email', details: 'sla-mgmt@acme.com' },
+    ],
+    schedules: {
+      '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri'], allDay: false, startTime: '08:00', endTime: '20:00' },
+    },
+    rules: [
+      { kpi: 'RTT_AVG', type: 'NR', condition: '> 20ms', samples: 5 },
+      { kpi: 'RTT_P95', type: 'NR', condition: '> 50ms', samples: 3 },
+    ],
+  },
+  'CPU Utilization': {
+    name: 'CPU Utilization', devices: 65,
+    description: 'Monitors baseband and control-plane CPU utilization across network elements. High CPU usage can lead to processing delays and degraded service.',
+    enabled: true,
+    actions: [
+      { action: 'Send email', details: 'infra-team@acme.com, capacity@acme.com' },
+    ],
+    schedules: {
+      '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri'], allDay: true, startTime: '08:00', endTime: '18:00' },
+      '2': { days: ['sat', 'sun'], allDay: true, startTime: '08:00', endTime: '18:00' },
+    },
+    rules: [
+      { kpi: 'CPU_LOAD', type: 'System', condition: '> 80%', samples: 5 },
+      { kpi: 'CPU_LOAD', type: 'System', condition: '> 95%', samples: 2 },
+    ],
+  },
+  'Packet Loss': {
+    name: 'Packet Loss', devices: 51,
+    description: 'Tracks packet loss rates on user-plane and transport interfaces. Excessive packet loss degrades throughput and impacts real-time services.',
+    enabled: true,
+    actions: [
+      { action: 'Send email', details: 'transport@acme.com' },
+      { action: 'Send SNMP notifications', details: 'Transport group', detailType: 'badge' },
+    ],
+    schedules: {
+      '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], allDay: true, startTime: '00:00', endTime: '23:59' },
+    },
+    rules: [
+      { kpi: 'PKT_LOSS_DL', type: 'NR', condition: '> 0.5%', samples: 4 },
+      { kpi: 'PKT_LOSS_UL', type: 'NR', condition: '> 0.5%', samples: 4 },
+      { kpi: 'PKT_LOSS_DL', type: 'NR', condition: '> 2%', samples: 2 },
+    ],
+  },
+  'UL/DL Throughput': {
+    name: 'UL/DL Throughput', devices: 110,
+    description: 'Monitors uplink and downlink throughput per cell and per device. Ensures capacity targets are met and identifies underperforming sectors.',
+    enabled: true,
+    actions: [
+      { action: 'Send email', details: 'capacity-plan@acme.com, rops@acme.com' },
+      { action: 'Create incident ticket', details: 'ServiceNow integration', detailType: 'badge' },
+    ],
+    schedules: {
+      '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri'], allDay: false, startTime: '06:00', endTime: '23:00' },
+      '2': { days: ['sat', 'sun'], allDay: false, startTime: '08:00', endTime: '22:00' },
+    },
+    rules: [
+      { kpi: 'DL_THRP', type: 'NR', condition: '< 100 Mbps', samples: 4 },
+      { kpi: 'UL_THRP', type: 'NR', condition: '< 20 Mbps', samples: 4 },
+      { kpi: 'DL_THRP', type: 'NR', condition: '< 50 Mbps', samples: 2 },
+      { kpi: 'UL_THRP', type: 'NR', condition: '< 10 Mbps', samples: 2 },
+      { kpi: 'DL_PRB_UTIL', type: 'NR', condition: '> 85%', samples: 5 },
+    ],
+  },
+};
+
+const PERF_PROFILE_NAMES = Object.keys(PERF_PROFILES_INIT);
 
 export interface AdministrationPageProps {
   appName?: string;
@@ -126,10 +329,40 @@ export default function AdministrationPage({
   const [selectedPerfProfile, setSelectedPerfProfile] = useState('LTE Throughput Baseline');
   const [perfTab, setPerfTab] = useState<'thresholds' | 'devices'>('thresholds');
   const [perfScheduleTab, setPerfScheduleTab] = useState('1');
-  const [perfName, setPerfName] = useState(selectedPerfProfile);
   const [perfNameEditing, setPerfNameEditing] = useState(false);
-  const [perfDescription, setPerfDescription] = useState('Monitors key LTE performance indicators including throughput, latency, and call quality metrics. Alerts are triggered when thresholds are exceeded for the configured number of consecutive samples.');
   const [perfDescEditing, setPerfDescEditing] = useState(false);
+  const [deleteProfileOpen, setDeleteProfileOpen] = useState(false);
+  const [editScheduleOpen, setEditScheduleOpen] = useState(false);
+  const [addScheduleOpen, setAddScheduleOpen] = useState(false);
+  const [newSchedule, setNewSchedule] = useState<ProfileSchedule>({ days: [], allDay: true, startTime: '08:00', endTime: '18:00' });
+  const [addProfileOpen, setAddProfileOpen] = useState(false);
+  const [newProfileName, setNewProfileName] = useState('');
+  const [newProfileDesc, setNewProfileDesc] = useState('');
+  const [profileData, setProfileData] = useState<Record<string, ProfileData>>(() => structuredClone(PERF_PROFILES_INIT));
+
+  // Derived helpers for the currently selected profile
+  const currentProfileData = profileData[selectedPerfProfile] ?? PERF_PROFILES_INIT['LTE Throughput Baseline'];
+  const perfName = currentProfileData.name;
+  const perfDescription = currentProfileData.description;
+  const schedules = currentProfileData.schedules;
+  const scheduleKeys = Object.keys(schedules).sort((a, b) => Number(a) - Number(b));
+  const currentSchedule = schedules[perfScheduleTab] ?? { days: [], allDay: true, startTime: '08:00', endTime: '18:00' };
+
+  const updateProfile = (patch: Partial<ProfileData>) => {
+    setProfileData((prev) => ({ ...prev, [selectedPerfProfile]: { ...prev[selectedPerfProfile], ...patch } }));
+  };
+  const setPerfName = (name: string) => updateProfile({ name });
+  const setPerfDescription = (description: string) => updateProfile({ description });
+  const setSchedules = (updater: Record<string, ProfileSchedule> | ((prev: Record<string, ProfileSchedule>) => Record<string, ProfileSchedule>)) => {
+    setProfileData((prev) => {
+      const curr = prev[selectedPerfProfile];
+      const newSchedules = typeof updater === 'function' ? updater(curr.schedules) : updater;
+      return { ...prev, [selectedPerfProfile]: { ...curr, schedules: newSchedules } };
+    });
+  };
+  const updateCurrentSchedule = (patch: Partial<ProfileSchedule>) => {
+    setSchedules((prev) => ({ ...prev, [perfScheduleTab]: { ...prev[perfScheduleTab], ...patch } }));
+  };
 
   const activeLabel = SIDEBAR_ITEMS.find((item) => toKey(item.label) === activeSection)?.label ?? activeSection;
 
@@ -325,9 +558,10 @@ export default function AdministrationPage({
             )}
 
             {activeSection === 'performance' && (() => {
+              const allProfiles = Object.values(profileData);
               const filteredProfiles = perfProfileSearch.trim()
-                ? PERF_PROFILES.filter((p) => p.name.toLowerCase().includes(perfProfileSearch.toLowerCase().trim()))
-                : PERF_PROFILES;
+                ? allProfiles.filter((p) => p.name.toLowerCase().includes(perfProfileSearch.toLowerCase().trim()))
+                : allProfiles;
 
               return (
                 <div className="flex gap-6">
@@ -338,7 +572,7 @@ export default function AdministrationPage({
                         <h3 className="text-sm font-semibold text-foreground truncate">Profiles</h3>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 rounded-md" aria-label="Add profile">
+                            <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 rounded-md" aria-label="Add profile" onClick={() => { setNewProfileName(''); setNewProfileDesc(''); setAddProfileOpen(true); }}>
                               <Icon name="add" size={16} />
                             </Button>
                           </TooltipTrigger>
@@ -365,7 +599,7 @@ export default function AdministrationPage({
                             <button
                               key={profile.name}
                               type="button"
-                              onClick={() => { setSelectedPerfProfile(profile.name); setPerfName(profile.name); setPerfNameEditing(false); setPerfDescEditing(false); }}
+                              onClick={() => { setSelectedPerfProfile(profile.name); setPerfNameEditing(false); setPerfDescEditing(false); setPerfScheduleTab('1'); }}
                               className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-md text-left text-sm transition-colors ${
                                 isSelected
                                   ? 'bg-accent text-accent-foreground font-medium'
@@ -384,8 +618,7 @@ export default function AdministrationPage({
                   <div className="flex-1 min-w-0 space-y-4">
                     {/* Profile-specific pill tabs */}
                     {(() => {
-                      const currentProfile = PERF_PROFILES.find((p) => p.name === selectedPerfProfile);
-                      const deviceCount = currentProfile?.devices ?? 0;
+                      const deviceCount = currentProfileData.devices;
                       return (
                         <Tabs value={perfTab} onValueChange={(v) => setPerfTab(v as 'thresholds' | 'devices')}>
                           <TabsList>
@@ -427,18 +660,125 @@ export default function AdministrationPage({
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
                               <div className="flex items-center gap-2">
-                                <Switch id="perf-enabled" defaultChecked />
+                                <Switch id="perf-enabled" checked={currentProfileData.enabled} onCheckedChange={(v) => updateProfile({ enabled: v })} />
                                 <Label htmlFor="perf-enabled" className="cursor-pointer select-none text-sm">Enabled</Label>
                               </div>
-                              <Button variant="outline" size="sm">
-                                <Icon name="edit" size={16} className="mr-1.5" />
-                                Edit profile
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={Object.keys(profileData).length <= 1} onClick={() => setDeleteProfileOpen(true)}>
                                 <Icon name="delete" size={18} />
                               </Button>
                             </div>
                           </div>
+
+                          {/* Delete profile confirmation */}
+                          <AlertDialog open={deleteProfileOpen} onOpenChange={setDeleteProfileOpen}>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete profile</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete <span className="font-medium text-foreground">{perfName}</span>? This action will remove all threshold crossing settings, actions, schedules, and alert rules associated with this profile.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  onClick={() => {
+                                    const deletedKey = selectedPerfProfile;
+                                    const deletedData = structuredClone(profileData[deletedKey]);
+                                    // Remove from state
+                                    setProfileData((prev) => {
+                                      const next = { ...prev };
+                                      delete next[deletedKey];
+                                      return next;
+                                    });
+                                    // Select next available profile
+                                    const remaining = Object.keys(profileData).filter((k) => k !== deletedKey);
+                                    if (remaining.length > 0) {
+                                      setSelectedPerfProfile(remaining[0]);
+                                      setPerfScheduleTab('1');
+                                    }
+                                    toast(`"${deletedData.name}" has been deleted`, {
+                                      action: {
+                                        label: 'Undo',
+                                        onClick: () => {
+                                          setProfileData((prev) => ({ ...prev, [deletedKey]: deletedData }));
+                                          setSelectedPerfProfile(deletedKey);
+                                          setPerfScheduleTab('1');
+                                          toast.success(`"${deletedData.name}" has been restored`);
+                                        },
+                                      },
+                                    });
+                                  }}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                          {/* Add profile dialog */}
+                          <Dialog open={addProfileOpen} onOpenChange={setAddProfileOpen}>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Add profile</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 py-2">
+                                <div className="space-y-2">
+                                  <Label htmlFor="new-profile-name" className="text-sm font-medium">Name</Label>
+                                  <Input
+                                    id="new-profile-name"
+                                    autoFocus
+                                    placeholder="e.g. DL Throughput SLA"
+                                    value={newProfileName}
+                                    onChange={(e) => setNewProfileName(e.target.value)}
+                                    className="h-9"
+                                  />
+                                  {newProfileName.trim() && profileData[newProfileName.trim()] && (
+                                    <p className="text-xs text-destructive">A profile with this name already exists.</p>
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="new-profile-desc" className="text-sm font-medium">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                                  <Textarea
+                                    id="new-profile-desc"
+                                    placeholder="Describe the purpose of this profile..."
+                                    value={newProfileDesc}
+                                    onChange={(e) => setNewProfileDesc(e.target.value)}
+                                    rows={3}
+                                  />
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button variant="outline" onClick={() => setAddProfileOpen(false)}>Cancel</Button>
+                                <Button
+                                  disabled={!newProfileName.trim() || !!profileData[newProfileName.trim()]}
+                                  onClick={() => {
+                                    const name = newProfileName.trim();
+                                    const newProfile: ProfileData = {
+                                      name,
+                                      devices: 0,
+                                      description: newProfileDesc.trim(),
+                                      enabled: true,
+                                      actions: [],
+                                      schedules: {
+                                        '1': { days: ['mon', 'tue', 'wed', 'thu', 'fri'], allDay: true, startTime: '08:00', endTime: '18:00' },
+                                      },
+                                      rules: [],
+                                    };
+                                    setProfileData((prev) => ({ ...prev, [name]: newProfile }));
+                                    setSelectedPerfProfile(name);
+                                    setPerfScheduleTab('1');
+                                    setPerfNameEditing(false);
+                                    setPerfDescEditing(false);
+                                    setAddProfileOpen(false);
+                                    toast.success(`"${name}" has been created`);
+                                  }}
+                                >
+                                  Add
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
 
                           {/* Description */}
                           <div className="space-y-1">
@@ -486,38 +826,25 @@ export default function AdministrationPage({
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  <TableRow>
-                                    <TableCell className="px-4">Send email</TableCell>
-                                    <TableCell className="px-4 text-muted-foreground truncate max-w-[300px]">lkrug@acme.com, dkoons@acme.com, gsalaslzquiel...</TableCell>
-                                    <TableCell className="px-2 text-right">
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="h-7 w-7"><Icon name="more_vert" size={16} /></Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          <DropdownMenuItem><Icon name="edit" size={16} className="mr-2" />Edit</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-destructive"><Icon name="delete" size={16} className="mr-2" />Delete</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell className="px-4">Send SNMP notifications</TableCell>
-                                    <TableCell className="px-4">
-                                      <Badge variant="secondary">Notification group</Badge>
-                                    </TableCell>
-                                    <TableCell className="px-2 text-right">
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="h-7 w-7"><Icon name="more_vert" size={16} /></Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          <DropdownMenuItem><Icon name="edit" size={16} className="mr-2" />Edit</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-destructive"><Icon name="delete" size={16} className="mr-2" />Delete</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </TableCell>
-                                  </TableRow>
+                                  {currentProfileData.actions.map((act, idx) => (
+                                    <TableRow key={idx}>
+                                      <TableCell className="px-4">{act.action}</TableCell>
+                                      <TableCell className="px-4 text-muted-foreground truncate max-w-[300px]">
+                                        {act.detailType === 'badge' ? <Badge variant="secondary">{act.details}</Badge> : act.details}
+                                      </TableCell>
+                                      <TableCell className="px-2 text-right">
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7"><Icon name="more_vert" size={16} /></Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem><Icon name="edit" size={16} className="mr-2" />Edit</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive"><Icon name="delete" size={16} className="mr-2" />Delete</DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
                                 </TableBody>
                               </Table>
                             </div>
@@ -529,7 +856,7 @@ export default function AdministrationPage({
                           <div className="space-y-3">
                             <div className="flex items-center justify-between gap-4">
                               <h4 className="text-sm font-semibold text-foreground">Schedule</h4>
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" disabled={scheduleKeys.length >= 3} onClick={() => { setNewSchedule({ days: [], allDay: true, startTime: '08:00', endTime: '18:00' }); setAddScheduleOpen(true); }}>
                                 <Icon name="add" size={16} className="mr-1.5" />
                                 Add schedule
                               </Button>
@@ -537,17 +864,218 @@ export default function AdministrationPage({
                             <p className="text-sm text-muted-foreground">Set when alerts should be active for this profile. (Create up to 3)</p>
                             <Tabs value={perfScheduleTab} onValueChange={setPerfScheduleTab}>
                               <TabsList>
-                                <TabsTrigger value="1">1</TabsTrigger>
-                                <TabsTrigger value="2">2</TabsTrigger>
+                                {scheduleKeys.map((k) => (
+                                  <TabsTrigger key={k} value={k}>{k}</TabsTrigger>
+                                ))}
                               </TabsList>
                             </Tabs>
-                            <div className="space-y-2">
-                              <p className="text-sm">{perfScheduleTab === '1' ? 'Weekdays, All day' : 'Weekends, 8:00 AM – 6:00 PM'}</p>
-                              <Button variant="outline" size="sm">
-                                <Icon name="edit" size={16} className="mr-1.5" />
-                                Edit
-                              </Button>
-                            </div>
+                            {(() => {
+                              const DAY_LABELS: Record<string, string> = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+                              const weekdays = ['mon', 'tue', 'wed', 'thu', 'fri'];
+                              const weekend = ['sat', 'sun'];
+                              const allDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+                              const sorted = allDays.filter((d) => currentSchedule.days.includes(d));
+                              let daysLabel: string;
+                              if (sorted.length === 7) daysLabel = 'Every day';
+                              else if (sorted.length === 5 && weekdays.every((d) => sorted.includes(d))) daysLabel = 'Weekdays';
+                              else if (sorted.length === 2 && weekend.every((d) => sorted.includes(d))) daysLabel = 'Weekends';
+                              else daysLabel = sorted.map((d) => DAY_LABELS[d]).join(', ');
+                              const daysShort = sorted.map((d) => DAY_LABELS[d]).join(', ');
+
+                              const formatTime = (t: string) => {
+                                const [h, m] = t.split(':').map(Number);
+                                const ampm = h >= 12 ? 'PM' : 'AM';
+                                const hr = h % 12 || 12;
+                                return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
+                              };
+                              const timeLabel = currentSchedule.allDay ? 'All day' : `${formatTime(currentSchedule.startTime)} – ${formatTime(currentSchedule.endTime)}`;
+
+                              return (
+                                <div className="mt-3 rounded-lg border bg-muted/30 p-4 flex items-center justify-between gap-4">
+                                  <div className="flex items-center gap-6">
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Icon name="calendar_today" size={16} className="text-muted-foreground" />
+                                      <span className="font-medium">{daysLabel}</span>
+                                      {daysLabel !== daysShort && <span className="text-muted-foreground">{daysShort}</span>}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Icon name="schedule" size={16} className="text-muted-foreground" />
+                                      <span className="font-medium">{timeLabel}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditScheduleOpen(true)}>
+                                      <Icon name="edit" size={16} className="text-muted-foreground" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      disabled={scheduleKeys.length <= 1}
+                                      onClick={() => {
+                                        const keyToDelete = perfScheduleTab;
+                                        const remaining = scheduleKeys.filter((k) => k !== keyToDelete);
+                                        setSchedules((prev) => {
+                                          const next = { ...prev };
+                                          delete next[keyToDelete];
+                                          return next;
+                                        });
+                                        setPerfScheduleTab(remaining[0]);
+                                        toast.success(`Schedule ${keyToDelete} deleted`);
+                                      }}
+                                    >
+                                      <Icon name="delete" size={16} className="text-muted-foreground" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Edit schedule dialog */}
+                            <Dialog open={editScheduleOpen} onOpenChange={setEditScheduleOpen}>
+                              <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Edit schedule {perfScheduleTab}</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-5 py-2">
+                                  {/* Days */}
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Days</Label>
+                                    <div className="flex gap-1.5">
+                                      {([
+                                        { value: 'mon', label: 'M' },
+                                        { value: 'tue', label: 'T' },
+                                        { value: 'wed', label: 'W' },
+                                        { value: 'thu', label: 'T' },
+                                        { value: 'fri', label: 'F' },
+                                        { value: 'sat', label: 'S' },
+                                        { value: 'sun', label: 'S' },
+                                      ]).map((day) => {
+                                        const isActive = currentSchedule.days.includes(day.value);
+                                        return (
+                                          <button
+                                            key={day.value}
+                                            type="button"
+                                            onClick={() => updateCurrentSchedule({
+                                              days: isActive ? currentSchedule.days.filter((d) => d !== day.value) : [...currentSchedule.days, day.value]
+                                            })}
+                                            className={`h-9 w-9 rounded-full text-sm font-medium transition-colors ${
+                                              isActive
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                            }`}
+                                          >
+                                            {day.label}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                  {/* All day toggle */}
+                                  <div className="flex items-center justify-between">
+                                    <Label htmlFor="schedule-all-day" className="text-sm font-medium cursor-pointer">All day</Label>
+                                    <Switch id="schedule-all-day" checked={currentSchedule.allDay} onCheckedChange={(v) => updateCurrentSchedule({ allDay: v })} />
+                                  </div>
+                                  {/* Time range */}
+                                  {!currentSchedule.allDay && (
+                                    <div className="flex items-center gap-3">
+                                      <div className="space-y-1.5 flex-1">
+                                        <Label className="text-xs text-muted-foreground">Start time</Label>
+                                        <Input type="time" value={currentSchedule.startTime} onChange={(e) => updateCurrentSchedule({ startTime: e.target.value })} className="h-9" />
+                                      </div>
+                                      <span className="text-muted-foreground mt-5">–</span>
+                                      <div className="space-y-1.5 flex-1">
+                                        <Label className="text-xs text-muted-foreground">End time</Label>
+                                        <Input type="time" value={currentSchedule.endTime} onChange={(e) => updateCurrentSchedule({ endTime: e.target.value })} className="h-9" />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => setEditScheduleOpen(false)}>Cancel</Button>
+                                  <Button onClick={() => { setEditScheduleOpen(false); toast.success('Schedule updated'); }}>Save</Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+
+                            {/* Add schedule dialog */}
+                            <Dialog open={addScheduleOpen} onOpenChange={setAddScheduleOpen}>
+                              <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Add schedule</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-5 py-2">
+                                  {/* Days */}
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Days</Label>
+                                    <div className="flex gap-1.5">
+                                      {([
+                                        { value: 'mon', label: 'M' },
+                                        { value: 'tue', label: 'T' },
+                                        { value: 'wed', label: 'W' },
+                                        { value: 'thu', label: 'T' },
+                                        { value: 'fri', label: 'F' },
+                                        { value: 'sat', label: 'S' },
+                                        { value: 'sun', label: 'S' },
+                                      ]).map((day) => {
+                                        const isActive = newSchedule.days.includes(day.value);
+                                        return (
+                                          <button
+                                            key={day.value}
+                                            type="button"
+                                            onClick={() => setNewSchedule((prev) => ({
+                                              ...prev,
+                                              days: isActive ? prev.days.filter((d) => d !== day.value) : [...prev.days, day.value]
+                                            }))}
+                                            className={`h-9 w-9 rounded-full text-sm font-medium transition-colors ${
+                                              isActive
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                            }`}
+                                          >
+                                            {day.label}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                  {/* All day toggle */}
+                                  <div className="flex items-center justify-between">
+                                    <Label htmlFor="new-schedule-all-day" className="text-sm font-medium cursor-pointer">All day</Label>
+                                    <Switch id="new-schedule-all-day" checked={newSchedule.allDay} onCheckedChange={(v) => setNewSchedule((prev) => ({ ...prev, allDay: v }))} />
+                                  </div>
+                                  {/* Time range */}
+                                  {!newSchedule.allDay && (
+                                    <div className="flex items-center gap-3">
+                                      <div className="space-y-1.5 flex-1">
+                                        <Label className="text-xs text-muted-foreground">Start time</Label>
+                                        <Input type="time" value={newSchedule.startTime} onChange={(e) => setNewSchedule((prev) => ({ ...prev, startTime: e.target.value }))} className="h-9" />
+                                      </div>
+                                      <span className="text-muted-foreground mt-5">–</span>
+                                      <div className="space-y-1.5 flex-1">
+                                        <Label className="text-xs text-muted-foreground">End time</Label>
+                                        <Input type="time" value={newSchedule.endTime} onChange={(e) => setNewSchedule((prev) => ({ ...prev, endTime: e.target.value }))} className="h-9" />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => setAddScheduleOpen(false)}>Cancel</Button>
+                                  <Button
+                                    disabled={newSchedule.days.length === 0}
+                                    onClick={() => {
+                                      const nextKey = String(Math.max(...scheduleKeys.map(Number)) + 1);
+                                      setSchedules((prev) => ({ ...prev, [nextKey]: newSchedule }));
+                                      setPerfScheduleTab(nextKey);
+                                      setAddScheduleOpen(false);
+                                      toast.success(`Schedule ${nextKey} added`);
+                                    }}
+                                  >
+                                    Add
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
                           </div>
 
                           <Separator />
@@ -573,13 +1101,7 @@ export default function AdministrationPage({
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {[
-                                    { kpi: 'CS_RCESR', type: 'LTE', condition: '< 1000', samples: 5 },
-                                    { kpi: 'CS_RCESR', type: 'LTE', condition: '> 500', samples: 5 },
-                                    { kpi: 'CS_RCESR', type: 'LTE', condition: '> 5000', samples: 5 },
-                                    { kpi: 'DL_THRP', type: 'LTE', condition: '< 2000', samples: 3 },
-                                    { kpi: 'UL_THRP', type: 'LTE', condition: '< 1000', samples: 3 },
-                                  ].map((rule, idx) => (
+                                  {currentProfileData.rules.map((rule, idx) => (
                                     <TableRow key={idx}>
                                       <TableCell className="px-4">{rule.kpi}</TableCell>
                                       <TableCell className="px-4 text-muted-foreground">{rule.type}</TableCell>
@@ -638,8 +1160,7 @@ export default function AdministrationPage({
                             </TableHeader>
                             <TableBody>
                               {(() => {
-                                const currentProfile = PERF_PROFILES.find((p) => p.name === selectedPerfProfile);
-                                const count = currentProfile?.devices ?? 0;
+                                const count = currentProfileData.devices;
                                 const DEVICE_NAMES = ['SEA-SN-4012','PDX-CU-2201','VAN-RCP-1180','SEA-SN-4055','PDX-SN-3312','VAN-SN-1022','SEA-CU-4088','PDX-RCP-2150','VAN-SN-1045','SEA-SN-4101','PDX-SN-3400','VAN-CU-1090','SEA-RCP-4200','PDX-SN-3201','VAN-SN-1067'];
                                 const DEVICE_TYPES = ['SN','CU','RCP','SN','SN','SN','CU','RCP','SN','SN','SN','CU','RCP','SN','SN'];
                                 const DEVICE_REGIONS = ['Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest'];
@@ -652,22 +1173,11 @@ export default function AdministrationPage({
                                 }));
                                 return rows.map((row, idx) => (
                                   <TableRow key={idx}>
-                                    <TableCell className="px-4 font-medium">{row.name}</TableCell>
-                                    <TableCell className="px-4 text-muted-foreground">{row.type}</TableCell>
+                                    <TableCell className="px-4"><DeviceLink value={row.name} maxLength={24} /></TableCell>
+                                    <TableCell className="px-4"><NodeTypeBadge type={row.type} /></TableCell>
                                     <TableCell className="px-4 text-muted-foreground">{row.region}</TableCell>
                                     <TableCell className="px-4">
-                                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                                        row.status === 'Connected' ? 'text-emerald-600 dark:text-emerald-400' :
-                                        row.status === 'Disconnected' ? 'text-red-600 dark:text-red-400' :
-                                        'text-amber-600 dark:text-amber-400'
-                                      }`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${
-                                          row.status === 'Connected' ? 'bg-emerald-500' :
-                                          row.status === 'Disconnected' ? 'bg-red-500' :
-                                          'bg-amber-500'
-                                        }`} />
-                                        {row.status}
-                                      </span>
+                                      <DeviceStatus status={row.status} />
                                     </TableCell>
                                     <TableCell className="px-4 text-right">
                                       <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -680,9 +1190,6 @@ export default function AdministrationPage({
                             </TableBody>
                           </Table>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Showing {Math.min(PERF_PROFILES.find((p) => p.name === selectedPerfProfile)?.devices ?? 0, 15)} of {PERF_PROFILES.find((p) => p.name === selectedPerfProfile)?.devices ?? 0} devices assigned to this profile
-                        </p>
                       </div>
                     )}
                   </div>
