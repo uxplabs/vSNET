@@ -96,10 +96,10 @@ const LOCATION_OPTIONS = ['All', 'Seattle', 'Portland', 'San Francisco', 'Phoeni
 const PERF_LTE_OPTIONS = ['All', 'SN'] as const;
 const PERF_TIME_OPTIONS = ['All', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
 
-interface ProfileSchedule { days: string[]; allDay: boolean; startTime: string; endTime: string }
-interface ProfileAction { action: string; details: string; detailType?: 'badge' }
-interface ProfileRule { kpi: string; type: string; condition: string; samples: number }
-interface ProfileData {
+export interface ProfileSchedule { days: string[]; allDay: boolean; startTime: string; endTime: string }
+export interface ProfileAction { action: string; details: string; detailType?: 'badge' }
+export interface ProfileRule { kpi: string; type: string; condition: string; samples: number }
+export interface ProfileData {
   name: string;
   devices: number;
   description: string;
@@ -109,7 +109,7 @@ interface ProfileData {
   rules: ProfileRule[];
 }
 
-const PERF_PROFILES_INIT: Record<string, ProfileData> = {
+export const PERF_PROFILES_INIT: Record<string, ProfileData> = {
   'LTE Throughput Baseline': {
     name: 'LTE Throughput Baseline', devices: 124,
     description: 'Monitors key LTE performance indicators including throughput, latency, and call quality metrics. Alerts are triggered when thresholds are exceeded for the configured number of consecutive samples.',

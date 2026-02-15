@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
@@ -10,6 +10,7 @@ import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { FileManagementUsersDataTable, FILE_MANAGEMENT_USERS_DATA } from './file-management-users-data-table';
 
 const PERMISSIONS_OPTIONS = ['All', 'Read', 'Read, Write', 'Read, Write, Delete'] as const;
@@ -18,7 +19,7 @@ export interface FileManagementPageProps {
   onBack?: () => void;
 }
 
-export default function FileManagementPage({ onBack }: FileManagementPageProps) {
+export default function FileManagementPage(_props: FileManagementPageProps) {
   const [fileTab, setFileTab] = useState('users');
   const [search, setSearch] = useState('');
   const [permissionsFilter, setPermissionsFilter] = useState<string>('All');

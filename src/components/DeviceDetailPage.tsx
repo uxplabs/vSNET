@@ -40,6 +40,26 @@ import {
   TooltipTrigger,
 } from './ui/tooltip';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from './ui/sheet';
+import { Separator } from './ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Label } from './ui/label';
+import { PERF_PROFILES_INIT, type ProfileData } from './AdministrationPage';
 import type { DeviceRow } from './devices-data-table';
 import { AlarmsDataTable } from './alarms-data-table';
 import { EventsDataTable } from './events-data-table';
@@ -728,6 +748,13 @@ function DeviceDetailPage({
   });
   const [snmpEditDrawerOpen, setSnmpEditDrawerOpen] = useState(false);
   const [snmpEditDraft, setSnmpEditDraft] = useState(snmpValues);
+
+  // Threshold crossing profile state
+  const [tcProfile, setTcProfile] = useState<ProfileData | null>(PERF_PROFILES_INIT['LTE Throughput Baseline']);
+  const [tcProfileScheduleTab, setTcProfileScheduleTab] = useState('1');
+  const [removeTcProfileOpen, setRemoveTcProfileOpen] = useState(false);
+  const [addTcProfileOpen, setAddTcProfileOpen] = useState(false);
+  const [addTcProfileSelection, setAddTcProfileSelection] = useState('');
 
   const handleOpenSnmpEdit = React.useCallback(() => {
     setSnmpEditDraft(snmpValues);
@@ -1562,7 +1589,7 @@ function DeviceDetailPage({
               <CardHeader className="flex flex-row items-center justify-end space-y-0 pb-4">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1">
+                    <Button variant="outline" className="gap-1">
                       <Icon name="add" size={18} />
                       Add LAN device
                     </Button>
@@ -1594,7 +1621,7 @@ function DeviceDetailPage({
                 </div>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" className="shrink-0 gap-1" onClick={() => setAddRadioNodeSheetOpen(true)}>
+                    <Button variant="outline" className="shrink-0 gap-1" onClick={() => setAddRadioNodeSheetOpen(true)}>
                       <Icon name="add" size={18} />
                       Add radio node
                     </Button>
@@ -1941,7 +1968,281 @@ function DeviceDetailPage({
                     </TabsContent>
 
                     <TabsContent value="threshold-profiles" className="mt-6">
-                      <p className="text-muted-foreground">Threshold crossing profiles will be displayed here.</p>
+                      {!tcProfile ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                          <div className="rounded-full bg-muted p-4 mb-4">
+                            <Icon name="monitoring" size={32} className="text-muted-foreground" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-foreground mb-1">No profile assigned</h4>
+                          <p className="text-sm text-muted-foreground max-w-sm mb-6">This device does not have a threshold crossing profile. Assign a profile to enable threshold-based alerting.</p>
+                          <Button variant="outline" onClick={() => { setAddTcProfileSelection(''); setAddTcProfileOpen(true); }}>
+                            <Icon name="add" size={16} className="mr-1.5" />
+                            Add profile
+                          </Button>
+
+                          {/* Add profile dialog */}
+                          <Dialog open={addTcProfileOpen} onOpenChange={setAddTcProfileOpen}>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Add profile</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 py-2">
+                                <div className="space-y-2">
+                                  <Label htmlFor="tc-profile-select" className="text-sm font-medium">Profile</Label>
+                                  <Select value={addTcProfileSelection} onValueChange={setAddTcProfileSelection}>
+                                    <SelectTrigger id="tc-profile-select" className="w-full">
+                                      <SelectValue placeholder="Select a profile..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Object.values(PERF_PROFILES_INIT).map((p) => (
+                                        <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                {addTcProfileSelection && PERF_PROFILES_INIT[addTcProfileSelection] && (() => {
+                                  const p = PERF_PROFILES_INIT[addTcProfileSelection];
+                                  return (
+                                    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                                      <p className="text-sm text-muted-foreground">{p.description}</p>
+                                      {p.rules.length > 0 && (
+                                        <>
+                                          <Separator />
+                                          <div className="space-y-1.5">
+                                            <h4 className="text-sm font-semibold text-foreground">Alert rules</h4>
+                                            <div className="flex flex-wrap gap-1">
+                                              {p.rules.map((r, i) => (
+                                                <Badge key={i} variant="secondary" className="text-xs">{r.kpi} {r.condition}</Badge>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        </>
+                                      )}
+                                      {p.actions.length > 0 && (
+                                        <>
+                                          <Separator />
+                                          <div className="space-y-1.5">
+                                            <h4 className="text-sm font-semibold text-foreground">Actions</h4>
+                                            <div className="flex flex-wrap gap-1">
+                                              {p.actions.map((a) => (
+                                                <Badge key={a.action} variant="secondary" className="text-xs">{a.action}</Badge>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        </>
+                                      )}
+                                      <Separator />
+                                      <div className="space-y-2">
+                                        <h4 className="text-sm font-semibold text-foreground">Schedules</h4>
+                                        {Object.entries(p.schedules).map(([key, s]) => {
+                                          const DAY_MAP: Record<string, string> = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+                                          const allDaysArr = ['mon','tue','wed','thu','fri','sat','sun'];
+                                          const wk = ['mon','tue','wed','thu','fri'];
+                                          const we = ['sat','sun'];
+                                          const sorted = allDaysArr.filter((d) => s.days.includes(d));
+                                          let daysLabel: string;
+                                          if (sorted.length === 7) daysLabel = 'Every day';
+                                          else if (sorted.length === 5 && wk.every((d) => sorted.includes(d))) daysLabel = 'Weekdays';
+                                          else if (sorted.length === 2 && we.every((d) => sorted.includes(d))) daysLabel = 'Weekends';
+                                          else daysLabel = sorted.map((d) => DAY_MAP[d]).join(', ');
+                                          const fmtTime = (t: string) => { const [h, m] = t.split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`; };
+                                          const timeLabel = s.allDay ? 'All day' : `${fmtTime(s.startTime)} – ${fmtTime(s.endTime)}`;
+                                          return (
+                                            <div key={key} className="flex items-center gap-4 text-sm">
+                                              <div className="flex items-center gap-1.5">
+                                                <Icon name="calendar_today" size={14} className="text-muted-foreground" />
+                                                <span>{daysLabel}</span>
+                                              </div>
+                                              <div className="flex items-center gap-1.5">
+                                                <Icon name="schedule" size={14} className="text-muted-foreground" />
+                                                <span>{timeLabel}</span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                              <DialogFooter>
+                                <Button variant="outline" onClick={() => setAddTcProfileOpen(false)}>Cancel</Button>
+                                <Button
+                                  disabled={!addTcProfileSelection}
+                                  onClick={() => {
+                                    const selected = PERF_PROFILES_INIT[addTcProfileSelection];
+                                    if (selected) {
+                                      setTcProfile(structuredClone(selected));
+                                      setTcProfileScheduleTab('1');
+                                      setAddTcProfileOpen(false);
+                                      toast.success(`"${selected.name}" has been assigned`);
+                                    }
+                                  }}
+                                >
+                                  Assign
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      ) : (() => {
+                        const profile = tcProfile;
+
+                        const scheduleKeys = Object.keys(profile.schedules).sort((a, b) => Number(a) - Number(b));
+                        const currentSchedule = profile.schedules[tcProfileScheduleTab] ?? profile.schedules[scheduleKeys[0]];
+
+                        const DAY_LABELS: Record<string, string> = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+                        const weekdays = ['mon','tue','wed','thu','fri'];
+                        const weekend = ['sat','sun'];
+                        const allDays = ['mon','tue','wed','thu','fri','sat','sun'];
+
+                        const formatDays = (days: string[]) => {
+                          const sorted = allDays.filter((d) => days.includes(d));
+                          if (sorted.length === 7) return 'Every day';
+                          if (sorted.length === 5 && weekdays.every((d) => sorted.includes(d))) return 'Weekdays';
+                          if (sorted.length === 2 && weekend.every((d) => sorted.includes(d))) return 'Weekends';
+                          return sorted.map((d) => DAY_LABELS[d]).join(', ');
+                        };
+                        const formatTime = (t: string) => {
+                          const [h, m] = t.split(':').map(Number);
+                          const ampm = h >= 12 ? 'PM' : 'AM';
+                          const hr = h % 12 || 12;
+                          return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
+                        };
+
+                        return (
+                          <Card>
+                            <CardContent className="pt-6 space-y-6">
+                              {/* Profile + enabled status + remove */}
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="space-y-1">
+                                  <h4 className="text-sm font-medium text-muted-foreground">Profile</h4>
+                                  <p className="text-sm">{profile.name}</p>
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <Badge variant={profile.enabled ? 'default' : 'secondary'}>
+                                    {profile.enabled ? 'Enabled' : 'Disabled'}
+                                  </Badge>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setRemoveTcProfileOpen(true)}>
+                                    <Icon name="delete" size={18} />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Remove profile confirmation */}
+                              <AlertDialog open={removeTcProfileOpen} onOpenChange={setRemoveTcProfileOpen}>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Remove profile</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to remove <span className="font-medium text-foreground">{profile.name}</span> from this device? Threshold-based alerting will be disabled until a new profile is assigned.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => setTcProfile(null)}
+                                    >
+                                      Remove
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+
+                              {/* Description */}
+                              <div className="space-y-1">
+                                <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                                <p className="text-sm text-foreground">{profile.description}</p>
+                              </div>
+
+                              <Separator />
+
+                              {/* Actions */}
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-semibold text-foreground">Actions</h4>
+                                <div className="rounded-lg border">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="px-4">Action</TableHead>
+                                        <TableHead className="px-4">Details</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {profile.actions.map((act, idx) => (
+                                        <TableRow key={idx}>
+                                          <TableCell className="px-4">{act.action}</TableCell>
+                                          <TableCell className="px-4 text-muted-foreground truncate max-w-[300px]">
+                                            {act.detailType === 'badge' ? <Badge variant="secondary">{act.details}</Badge> : act.details}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              {/* Schedule */}
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-semibold text-foreground">Schedule</h4>
+                                {scheduleKeys.length > 1 && (
+                                  <Tabs value={tcProfileScheduleTab} onValueChange={setTcProfileScheduleTab}>
+                                    <TabsList>
+                                      {scheduleKeys.map((k) => (
+                                        <TabsTrigger key={k} value={k}>{k}</TabsTrigger>
+                                      ))}
+                                    </TabsList>
+                                  </Tabs>
+                                )}
+                                {currentSchedule && (
+                                  <div className="rounded-lg border bg-muted/30 p-4 flex items-center gap-6">
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Icon name="calendar_today" size={16} className="text-muted-foreground" />
+                                      <span className="font-medium">{formatDays(currentSchedule.days)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Icon name="schedule" size={16} className="text-muted-foreground" />
+                                      <span className="font-medium">{currentSchedule.allDay ? 'All day' : `${formatTime(currentSchedule.startTime)} – ${formatTime(currentSchedule.endTime)}`}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              <Separator />
+
+                              {/* Alert rules */}
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-semibold text-foreground">Alert when...</h4>
+                                <div className="rounded-lg border">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="px-4">KPI</TableHead>
+                                        <TableHead className="px-4">KPI type</TableHead>
+                                        <TableHead className="px-4">Alert when...</TableHead>
+                                        <TableHead className="px-4">Consecutive samples</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {profile.rules.map((rule, idx) => (
+                                        <TableRow key={idx}>
+                                          <TableCell className="px-4">{rule.kpi}</TableCell>
+                                          <TableCell className="px-4 text-muted-foreground">{rule.type}</TableCell>
+                                          <TableCell className="px-4 text-muted-foreground">{rule.condition}</TableCell>
+                                          <TableCell className="px-4 text-muted-foreground">{rule.samples}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })()}
                     </TabsContent>
 
                     <TabsContent value="threshold-history" className="mt-6">
@@ -2000,10 +2301,10 @@ function DeviceDetailPage({
                             </TableHeader>
                             <TableBody>
                               {[
-                                { rule: 'CPU spike', timestamp: '2025-01-27 09:12', actions: 'Investigate', cleared: '—' },
-                                { rule: 'Memory saturation', timestamp: '2025-01-27 08:45', actions: 'Acknowledge', cleared: '2025-01-27 09:10' },
-                                { rule: 'ERAB drop rate', timestamp: '2025-01-27 07:58', actions: 'Escalate', cleared: '—' },
-                                { rule: 'RRC failures', timestamp: '2025-01-27 06:30', actions: 'Investigate', cleared: '2025-01-27 06:55' },
+                                { rule: 'CPU spike', timestamp: '2025-01-27 09:12', actions: ['Investigate'], cleared: '—' },
+                                { rule: 'Memory saturation', timestamp: '2025-01-27 08:45', actions: ['Acknowledge'], cleared: '2025-01-27 09:10' },
+                                { rule: 'ERAB drop rate', timestamp: '2025-01-27 07:58', actions: ['Escalate', 'Send email'], cleared: '—' },
+                                { rule: 'RRC failures', timestamp: '2025-01-27 06:30', actions: ['Investigate'], cleared: '2025-01-27 06:55' },
                               ].map((row) => (
                                 <TableRow key={`${row.rule}-${row.timestamp}`}>
                                   <TableCell className="px-4 py-3">
@@ -2011,7 +2312,13 @@ function DeviceDetailPage({
                                   </TableCell>
                                   <TableCell className="px-4 py-3 font-medium">{row.rule}</TableCell>
                                   <TableCell className="px-4 py-3 tabular-nums">{row.timestamp}</TableCell>
-                                  <TableCell className="px-4 py-3">{row.actions}</TableCell>
+                                  <TableCell className="px-4 py-3">
+                                    <div className="flex flex-wrap gap-1">
+                                      {row.actions.map((a) => (
+                                        <Badge key={a} variant="secondary" className="text-xs">{a}</Badge>
+                                      ))}
+                                    </div>
+                                  </TableCell>
                                   <TableCell className="px-4 py-3 tabular-nums">{row.cleared}</TableCell>
                                 </TableRow>
                               ))}

@@ -8,8 +8,7 @@ import { Icon } from './Icon';
 const PADDING = 24;
 const GAP = 16;
 const CORNER_RADIUS = 8;
-const LOGO_WIDTH = 100;
-const LOGO_HEIGHT = 56;
+const LOGO_HEIGHT = 48;
 const AUTH_CREDENTIALS = [
   { username: 'udoe@acme.com', password: '2PVWyHwYA6fv-7dKZ' },
   { username: 'acooper@acme.com', password: '*Jh@s_*CdHbFrUNoxY9s' },
@@ -67,9 +66,8 @@ function LoginPage({ onLogin, onLoginWithSSO, appName = 'AMS' }: LoginPageProps)
               <img
                 src="/airspan_logo.svg"
                 alt="Airspan"
-                width={LOGO_WIDTH}
-                height={LOGO_HEIGHT}
-                className="max-w-full h-auto object-contain dark:brightness-0 dark:invert"
+                className="object-contain dark:brightness-0 dark:invert"
+                style={{ height: LOGO_HEIGHT }}
               />
             </div>
             <div className="space-y-1">
