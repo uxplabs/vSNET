@@ -192,9 +192,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const clearSoftwareFilters = () => {
     setSoftwareSearch(''); setSoftwareTypeFilter('All'); setSoftwareStatusFilter('All'); setSoftwareVersionFilter('All');
   };
-  const inventoryFiltersActive = inventorySearch !== '' || inventoryViewFilter !== 'radio-nodes' || inventoryStatusFilter !== 'All' || inventoryTypeFilter !== 'All' || inventoryVersionFilter !== 'All' || inventoryAlarmFilter !== 'All';
+  const inventoryFiltersActive = inventorySearch !== '' || inventoryStatusFilter !== 'All' || inventoryTypeFilter !== 'All' || inventoryVersionFilter !== 'All' || inventoryAlarmFilter !== 'All';
   const clearInventoryFilters = () => {
-    setInventorySearch(''); setInventoryViewFilter('radio-nodes'); setInventoryStatusFilter('All'); setInventoryTypeFilter('All'); setInventoryVersionFilter('All'); setInventoryAlarmFilter('All');
+    setInventorySearch(''); setInventoryStatusFilter('All'); setInventoryTypeFilter('All'); setInventoryVersionFilter('All'); setInventoryAlarmFilter('All');
   };
   const reportsFiltersActive = reportsSearch !== '' || reportsTypeFilter !== 'All' || reportsTaskFilter !== 'All' || reportsCreatedFilter !== 'All';
   const clearReportsFilters = () => {
@@ -888,7 +888,14 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 <p className="text-muted-foreground">Conditions content</p>
               </TabsContent>
               <TabsContent value="inventory" className="mt-6 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
-                {/* Search + Button Group + Filters + Export */}
+                {/* View tabs */}
+                <Tabs value={inventoryViewFilter} onValueChange={setInventoryViewFilter} className="shrink-0 mb-4">
+                  <TabsList>
+                    <TabsTrigger value="radio-nodes">Radio nodes</TabsTrigger>
+                    <TabsTrigger value="nr-cells">NR cells</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                {/* Search + Filters + Export */}
                 <div className="flex flex-wrap items-center gap-3 shrink-0 mb-3">
                   <div className="relative">
                     <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -900,27 +907,6 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       className="h-9 w-64 rounded-md border border-input bg-background pl-9 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     />
                   </div>
-                  {/* Button group: view filter */}
-                  <div className="inline-flex items-center rounded-md border border-input shadow-sm">
-                    {([
-                      { value: 'radio-nodes', label: 'Radio nodes' },
-                      { value: 'nr-cells', label: 'NR cells' },
-                    ] as const).map((opt, i, arr) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setInventoryViewFilter(opt.value)}
-                        className={`h-9 px-3 text-sm font-medium transition-colors ${
-                          inventoryViewFilter === opt.value
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-background text-foreground hover:bg-muted'
-                        } ${i === 0 ? 'rounded-l-md' : ''} ${i === arr.length - 1 ? 'rounded-r-md' : ''} ${i > 0 ? 'border-l border-input' : ''}`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Filters */}
                   <FilterSelect value={inventoryStatusFilter} onValueChange={setInventoryStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-[110px] shrink-0" />
                   <FilterSelect value={inventoryTypeFilter} onValueChange={setInventoryTypeFilter} label="Type" options={INVENTORY_TYPE_OPTIONS} className="w-[130px] shrink-0" />
                   <FilterSelect value={inventoryVersionFilter} onValueChange={setInventoryVersionFilter} label="Version" options={INVENTORY_VERSION_OPTIONS} className="w-[120px] shrink-0" />
@@ -941,9 +927,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     typeFilter: inventoryTypeFilter,
                     versionFilter: inventoryVersionFilter,
                     alarmFilter: inventoryAlarmFilter,
+                    selectedRegions: effectiveRegions,
                   });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                  if (inventoryViewFilter !== 'radio-nodes') activeFilters.push({ key: 'view', label: `View: NR cells`, onClear: () => setInventoryViewFilter('radio-nodes') });
                   if (inventoryStatusFilter !== 'All') activeFilters.push({ key: 'status', label: `Status: ${inventoryStatusFilter}`, onClear: () => setInventoryStatusFilter('All') });
                   if (inventoryTypeFilter !== 'All') activeFilters.push({ key: 'type', label: `Type: ${inventoryTypeFilter}`, onClear: () => setInventoryTypeFilter('All') });
                   if (inventoryVersionFilter !== 'All') activeFilters.push({ key: 'version', label: `Version: ${inventoryVersionFilter}`, onClear: () => setInventoryVersionFilter('All') });
@@ -981,6 +967,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     typeFilter={inventoryTypeFilter}
                     versionFilter={inventoryVersionFilter}
                     alarmFilter={inventoryAlarmFilter}
+                    selectedRegions={effectiveRegions}
                   />
                 </div>
               </TabsContent>
