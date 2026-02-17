@@ -42,6 +42,9 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
@@ -384,102 +387,65 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Device groups – collapsible flat list */}
-          <Collapsible defaultOpen className="group/collapsible">
-            <SidebarGroup>
-              <CollapsibleTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-8 w-full shrink-0 items-center gap-2 rounded-md px-2 text-left text-xs font-medium text-sidebar-foreground/70 outline-none ring-sidebar-ring transition-[margin,opacity] duration-200 ease-linear hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0"
-                >
-                  <span className="flex flex-1">Device groups</span>
-                  <ChevronDown className="size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  {isAllRegions || (effectiveRegions && effectiveRegions.length > 1) ? (
-                    <>
-                      {sidebarRegionList.map((reg) => {
-                        const counts = deviceCountsByRegion[reg];
-                        if (!counts) return null;
-                        return (
-                          <Collapsible key={reg} className="group/region-collapsible">
-                            <SidebarGroup className="pt-1">
-                              <CollapsibleTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="flex h-8 w-full shrink-0 items-center gap-2 rounded-md px-2 text-left text-xs font-medium text-sidebar-foreground/70 outline-none ring-sidebar-ring transition-[margin,opacity] duration-200 ease-linear hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0"
-                                >
-                                  <span className="flex flex-1">{reg}</span>
-                                  <ChevronDown className="size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/region-collapsible:rotate-180" />
-                                </button>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                <SidebarGroupContent>
-                                  <SidebarMenu>
-                                    {(['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
-                                      <SidebarMenuItem key={`${reg}-${groupName}`}>
-                                        <SidebarMenuButton asChild isActive={selectedGroup === groupName}>
-                                          <button
-                                            type="button"
-                                            className="flex w-full items-center gap-2"
-                                            onClick={() => setSelectedGroup(groupName)}
-                                          >
-                                            <Icon name="folder" size={18} />
-                                            <span>{groupName}</span>
-                                            <SidebarMenuBadge>{counts.groups[groupName] ?? 0}</SidebarMenuBadge>
-                                          </button>
-                                        </SidebarMenuButton>
-                                      </SidebarMenuItem>
-                                    ))}
-                                    <SidebarMenuItem>
-                                      <SidebarMenuButton asChild>
-                                        <button type="button" className="flex w-full items-center gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground">
-                                          <Icon name="add" size={18} />
-                                          <span>Add group</span>
-                                        </button>
-                                      </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                  </SidebarMenu>
-                                </SidebarGroupContent>
-                              </CollapsibleContent>
-                            </SidebarGroup>
-                          </Collapsible>
-                        );
-                      })}
-                    </>
-                  ) : (
-                    <SidebarMenu>
-                      {(['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
-                        <SidebarMenuItem key={groupName}>
-                          <SidebarMenuButton asChild isActive={selectedGroup === groupName}>
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2"
-                              onClick={() => setSelectedGroup(groupName)}
-                            >
-                              <Icon name="folder" size={18} />
-                              <span>{groupName}</span>
-                              <SidebarMenuBadge>{deviceCounts.groups[groupName] ?? 0}</SidebarMenuBadge>
-                            </button>
-                          </SidebarMenuButton>
+          {/* Device groups – nested sidebar menu */}
+          <SidebarGroup>
+            <SidebarGroupLabel>Device groups</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {isAllRegions || (effectiveRegions && effectiveRegions.length > 1) ? (
+                  sidebarRegionList.map((reg) => {
+                    const counts = deviceCountsByRegion[reg];
+                    if (!counts) return null;
+                    return (
+                      <Collapsible key={reg} asChild className="group/collapsible">
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton tooltip={reg}>
+                              <Icon name="lan" size={18} />
+                              <span>{reg}</span>
+                              <ChevronDown className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub>
+                              {(['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
+                                <SidebarMenuSubItem key={`${reg}-${groupName}`}>
+                                  <SidebarMenuSubButton asChild isActive={selectedGroup === groupName}>
+                                    <button type="button" onClick={() => setSelectedGroup(groupName)}>
+                                      <span>{groupName}</span>
+                                    </button>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                              <SidebarMenuSubItem>
+                                <SidebarMenuSubButton asChild>
+                                  <button type="button" className="text-sidebar-foreground/50 hover:text-sidebar-foreground">
+                                    <Icon name="add" size={16} />
+                                    <span>Add group</span>
+                                  </button>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
                         </SidebarMenuItem>
-                      ))}
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild>
-                          <button type="button" className="flex w-full items-center gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground">
-                            <Icon name="add" size={18} />
-                            <span>Add group</span>
-                          </button>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    </SidebarMenu>
-                  )}
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
+                      </Collapsible>
+                    );
+                  })
+                ) : (
+                  (['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
+                    <SidebarMenuItem key={groupName}>
+                      <SidebarMenuButton asChild isActive={selectedGroup === groupName}>
+                        <button type="button" onClick={() => setSelectedGroup(groupName)}>
+                          <Icon name="folder" size={18} />
+                          <span>{groupName}</span>
+                        </button>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         </SidebarContent>
         <SidebarRail />
       </Sidebar>

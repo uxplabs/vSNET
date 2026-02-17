@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Icon } from '@/components/Icon';
+import { Button } from '@/components/ui/button';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
@@ -29,6 +30,25 @@ import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
 type AlarmSeverity = 'critical' | 'warning';
 
+function RightAlignedHeader({ column, children }: { column: { getIsSorted: () => false | 'asc' | 'desc'; toggleSorting: (desc?: boolean) => void }; children: React.ReactNode }) {
+  const isSorted = column.getIsSorted();
+  const sortIcon = isSorted === 'asc' ? 'arrow_upward' : isSorted === 'desc' ? 'arrow_downward' : 'swap_vert';
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="group ml-auto !-mr-3 h-auto py-1 flex-col items-end gap-0.5 whitespace-normal text-right"
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+    >
+      <span className="leading-tight">{children}</span>
+      <Icon
+        name={sortIcon}
+        size={14}
+        className={`transition-opacity ${isSorted ? 'opacity-70' : 'opacity-0 group-hover:opacity-70'}`}
+      />
+    </Button>
+  );
+}
 
 function MetricCell({ value, format, severity }: { value: number; format: 'pct' | 'num'; severity?: AlarmSeverity }) {
   const display = format === 'pct' ? `${value}%` : value.toLocaleString();
@@ -139,7 +159,7 @@ const columns: ColumnDef<PerformanceRow>[] = [
   {
     accessorKey: 'dataAccessibilityPct',
     meta: { align: 'right' },
-    header: ({ column }) => <SortableHeader column={column} className="ml-auto">Data accessibility %</SortableHeader>,
+    header: ({ column }) => <RightAlignedHeader column={column}>Data accessibility %</RightAlignedHeader>,
     cell: ({ row }) => {
       const v = row.original.dataAccessibilityPct;
       const severity: AlarmSeverity | undefined = v < 95 ? 'critical' : v < 98 ? 'warning' : undefined;
@@ -149,19 +169,19 @@ const columns: ColumnDef<PerformanceRow>[] = [
   {
     accessorKey: 'dataAccessSuccess',
     meta: { align: 'right' },
-    header: ({ column }) => <SortableHeader column={column} className="ml-auto">Data access success</SortableHeader>,
+    header: ({ column }) => <RightAlignedHeader column={column}>Data access success</RightAlignedHeader>,
     cell: ({ row }) => <MetricCell value={row.original.dataAccessSuccess} format="num" />,
   },
   {
     accessorKey: 'dataAccessAttempts',
     meta: { align: 'right' },
-    header: ({ column }) => <SortableHeader column={column} className="ml-auto">Data access attempts</SortableHeader>,
+    header: ({ column }) => <RightAlignedHeader column={column}>Data access attempts</RightAlignedHeader>,
     cell: ({ row }) => <MetricCell value={row.original.dataAccessAttempts} format="num" />,
   },
   {
     accessorKey: 'volteAccessibilityPct',
     meta: { align: 'right' },
-    header: ({ column }) => <SortableHeader column={column} className="ml-auto">VoLTE accessibility %</SortableHeader>,
+    header: ({ column }) => <RightAlignedHeader column={column}>VoLTE accessibility %</RightAlignedHeader>,
     cell: ({ row }) => {
       const v = row.original.volteAccessibilityPct;
       const severity: AlarmSeverity | undefined = v < 95 ? 'critical' : v < 97 ? 'warning' : undefined;
@@ -171,19 +191,19 @@ const columns: ColumnDef<PerformanceRow>[] = [
   {
     accessorKey: 'volteAccessibilitySuccess',
     meta: { align: 'right' },
-    header: ({ column }) => <SortableHeader column={column} className="ml-auto">VoLTE access. success</SortableHeader>,
+    header: ({ column }) => <RightAlignedHeader column={column}>VoLTE access. success</RightAlignedHeader>,
     cell: ({ row }) => <MetricCell value={row.original.volteAccessibilitySuccess} format="num" />,
   },
   {
     accessorKey: 'volteAccessibilityAttempts',
     meta: { align: 'right' },
-    header: ({ column }) => <SortableHeader column={column} className="ml-auto">VoLTE access. attempts</SortableHeader>,
+    header: ({ column }) => <RightAlignedHeader column={column}>VoLTE access. attempts</RightAlignedHeader>,
     cell: ({ row }) => <MetricCell value={row.original.volteAccessibilityAttempts} format="num" />,
   },
   {
     accessorKey: 'dataRetainabilityPct',
     meta: { align: 'right' },
-    header: ({ column }) => <SortableHeader column={column} className="ml-auto">Data retainability %</SortableHeader>,
+    header: ({ column }) => <RightAlignedHeader column={column}>Data retainability %</RightAlignedHeader>,
     cell: ({ row }) => {
       const v = row.original.dataRetainabilityPct;
       const severity: AlarmSeverity | undefined = v < 95 ? 'critical' : v < 98 ? 'warning' : undefined;
@@ -193,7 +213,7 @@ const columns: ColumnDef<PerformanceRow>[] = [
   {
     accessorKey: 'erabDropCount',
     meta: { align: 'right' },
-    header: ({ column }) => <SortableHeader column={column} className="ml-auto">ERAB drop count</SortableHeader>,
+    header: ({ column }) => <RightAlignedHeader column={column}>ERAB drop count</RightAlignedHeader>,
     cell: ({ row }) => {
       const v = row.original.erabDropCount;
       const severity: AlarmSeverity | undefined = v > 10 ? 'critical' : v > 5 ? 'warning' : undefined;
@@ -278,7 +298,7 @@ export function PerformanceDataTable({ search, lteFilter, timeFilter, statusFilt
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={`px-4 py-3 align-top [&_button]:h-auto [&_button]:py-1 [&_button]:whitespace-normal ${(header.column.columnDef.meta as { align?: string })?.align === 'right' ? 'text-right max-w-[7rem] [&_button]:ml-auto [&_button]:!-ml-0 [&_button]:!-mr-3 [&_button]:flex-row-reverse [&_button]:text-right [&_.material-symbols-outlined]:ml-0 [&_.material-symbols-outlined]:mr-2' : ''}`}
+                    className={`px-4 py-3 align-top [&_button]:h-auto [&_button]:py-1 [&_button]:whitespace-normal ${(header.column.columnDef.meta as { align?: string })?.align === 'right' ? 'text-right' : ''}`}
                   >
                     {header.isPlaceholder
                       ? null

@@ -84,7 +84,7 @@ const Navbar01 = ({
   fixedRegion,
   hideRegionSelector,
 }: Navbar01Props) => {
-  const [internalRegions, setInternalRegions] = useState<string[]>(['All']);
+  const [internalRegions, setInternalRegions] = useState<string[]>([...NORTH_AMERICAN_REGIONS]);
   const regions = regionsProp ?? (regionProp != null ? [regionProp] : internalRegions);
   const setRegions = React.useCallback(
     (next: string[] | ((prev: string[]) => string[])) => {
@@ -106,26 +106,30 @@ const Navbar01 = ({
     [regions, internalRegions, onRegionsChange, onRegionChange]
   );
 
+  const allRegionNames = NORTH_AMERICAN_REGIONS as readonly string[];
+
   const toggleRegion = (r: string) => {
     setRegions((prev) => {
       if (r === 'All') {
-        return prev.includes('All') ? [] : ['All'];
+        // If all are already selected, deselect everything
+        const allSelected = allRegionNames.every((reg) => prev.includes(reg));
+        return allSelected ? [] : [...allRegionNames];
       }
-      const next = prev.filter((x) => x !== 'All');
-      const has = next.includes(r);
+      const has = prev.includes(r);
       if (has) {
-        const filtered = next.filter((x) => x !== r);
-        return filtered.length === 0 ? ['All'] : filtered;
+        const filtered = prev.filter((x) => x !== r && x !== 'All');
+        return filtered;
       }
-      return [...next, r];
+      const next = [...prev.filter((x) => x !== 'All'), r];
+      return next;
     });
   };
 
-  const isAll = regions.length === 0 || (regions.length === 1 && regions[0] === 'All');
+  const isAll = regions.length > 0 && allRegionNames.every((r) => regions.includes(r));
   const regionDisplayList = isAll ? ['All'] : regions;
   const regionTriggerLabel =
     regionDisplayList.length === 0
-      ? 'All'
+      ? 'No regions'
       : regionDisplayList.length === 1
         ? regionDisplayList[0]
         : regionDisplayList.join(', ');
@@ -471,7 +475,7 @@ const Navbar01 = ({
                       {REGION_OPTIONS.map((r) => (
                         <label key={r} className="flex cursor-pointer items-center gap-2 py-1.5 text-sm">
                           <Checkbox
-                            checked={r === 'All' ? regions.includes('All') || regions.length === 0 : regions.includes(r)}
+                            checked={r === 'All' ? isAll : regions.includes(r)}
                             onCheckedChange={() => toggleRegion(r)}
                           />
                           <span>{r}</span>

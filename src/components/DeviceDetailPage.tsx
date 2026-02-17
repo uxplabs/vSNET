@@ -951,7 +951,7 @@ function DeviceDetailPage({
                 <div>
                   <p className="text-gray-400 mb-0.5">Critical</p>
                   <div className="flex items-center gap-1.5">
-                    <Icon name="error" size={14} className="text-red-400" />
+                    <Icon name="error" size={14} className="text-destructive" />
                     <span className="font-semibold tabular-nums text-white">{Math.ceil(device.alarms * 0.4)}</span>
                   </div>
                 </div>
