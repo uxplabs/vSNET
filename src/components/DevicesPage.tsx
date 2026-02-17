@@ -26,7 +26,7 @@ import { ActivityLogDataTable } from './activity-log-data-table';
 import { ReportsDataTable, getFilteredReportCount } from './reports-data-table';
 import { PerformanceDataTable, getFilteredPerformanceCount } from './performance-data-table';
 import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount } from './threshold-crossing-alerts-data-table';
-import { InventoryDataTable, getFilteredInventoryCount, INVENTORY_STATUS_OPTIONS, INVENTORY_TYPE_OPTIONS, INVENTORY_VERSION_OPTIONS, INVENTORY_ALARM_OPTIONS } from './inventory-data-table';
+import { InventoryDataTable, getFilteredInventoryCount, INVENTORY_STATUS_OPTIONS, INVENTORY_TECHNOLOGY_OPTIONS, INVENTORY_MODEL_OPTIONS, INVENTORY_VERSION_OPTIONS, INVENTORY_ALARM_OPTIONS } from './inventory-data-table';
 import { ChevronDown } from 'lucide-react';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ErrorBoundary } from './error-boundary';
@@ -164,10 +164,16 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [thresholdActSessFilter, setThresholdActSessFilter] = useState<string>('All');
   const [inventorySearch, setInventorySearch] = useState('');
   const [inventoryViewFilter, setInventoryViewFilter] = useState('radio-nodes');
-  const [inventoryStatusFilter, setInventoryStatusFilter] = useState<string>('All');
-  const [inventoryTypeFilter, setInventoryTypeFilter] = useState<string>('All');
-  const [inventoryVersionFilter, setInventoryVersionFilter] = useState<string>('All');
-  const [inventoryAlarmFilter, setInventoryAlarmFilter] = useState<string>('All');
+  // Radio nodes filters
+  const [rnStatusFilter, setRnStatusFilter] = useState<string>('All');
+  const [rnModelFilter, setRnModelFilter] = useState<string>('All');
+  const [rnVersionFilter, setRnVersionFilter] = useState<string>('All');
+  const [rnAlarmFilter, setRnAlarmFilter] = useState<string>('All');
+  // Cells filters
+  const [cellsStatusFilter, setCellsStatusFilter] = useState<string>('All');
+  const [cellsTechnologyFilter, setCellsTechnologyFilter] = useState<string>('All');
+  const [cellsVersionFilter, setCellsVersionFilter] = useState<string>('All');
+  const [cellsAlarmFilter, setCellsAlarmFilter] = useState<string>('All');
   const [softwareManagementTab, setSoftwareManagementTab] = useState('tasks');
   const [performanceTab, setPerformanceTab] = useState('activity');
   const [selectedTask, setSelectedTask] = useState<ScheduledTaskRow | null>(null);
@@ -195,9 +201,14 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const clearSoftwareFilters = () => {
     setSoftwareSearch(''); setSoftwareTypeFilter('All'); setSoftwareStatusFilter('All'); setSoftwareVersionFilter('All');
   };
-  const inventoryFiltersActive = inventorySearch !== '' || inventoryStatusFilter !== 'All' || inventoryTypeFilter !== 'All' || inventoryVersionFilter !== 'All' || inventoryAlarmFilter !== 'All';
+  const isRadioNodes = inventoryViewFilter === 'radio-nodes';
+  const inventoryFiltersActive = inventorySearch !== '' ||
+    (isRadioNodes ? (rnStatusFilter !== 'All' || rnModelFilter !== 'All' || rnVersionFilter !== 'All' || rnAlarmFilter !== 'All')
+                  : (cellsStatusFilter !== 'All' || cellsTechnologyFilter !== 'All' || cellsVersionFilter !== 'All' || cellsAlarmFilter !== 'All'));
   const clearInventoryFilters = () => {
-    setInventorySearch(''); setInventoryStatusFilter('All'); setInventoryTypeFilter('All'); setInventoryVersionFilter('All'); setInventoryAlarmFilter('All');
+    setInventorySearch('');
+    if (isRadioNodes) { setRnStatusFilter('All'); setRnModelFilter('All'); setRnVersionFilter('All'); setRnAlarmFilter('All'); }
+    else { setCellsStatusFilter('All'); setCellsTechnologyFilter('All'); setCellsVersionFilter('All'); setCellsAlarmFilter('All'); }
   };
   const reportsFiltersActive = reportsSearch !== '' || reportsTypeFilter !== 'All' || reportsTaskFilter !== 'All' || reportsCreatedFilter !== 'All';
   const clearReportsFilters = () => {
@@ -858,7 +869,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 <Tabs value={inventoryViewFilter} onValueChange={setInventoryViewFilter} className="shrink-0 mb-4">
                   <TabsList>
                     <TabsTrigger value="radio-nodes">Radio nodes</TabsTrigger>
-                    <TabsTrigger value="nr-cells">NR cells</TabsTrigger>
+                    <TabsTrigger value="cells">Cells</TabsTrigger>
                   </TabsList>
                 </Tabs>
                 {/* Search + Filters + Export */}
@@ -873,10 +884,21 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       className="h-9 w-64 rounded-md border border-input bg-background pl-9 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     />
                   </div>
-                  <FilterSelect value={inventoryStatusFilter} onValueChange={setInventoryStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-[110px] shrink-0" />
-                  <FilterSelect value={inventoryTypeFilter} onValueChange={setInventoryTypeFilter} label="Type" options={INVENTORY_TYPE_OPTIONS} className="w-[130px] shrink-0" />
-                  <FilterSelect value={inventoryVersionFilter} onValueChange={setInventoryVersionFilter} label="Version" options={INVENTORY_VERSION_OPTIONS} className="w-[120px] shrink-0" />
-                  <FilterSelect value={inventoryAlarmFilter} onValueChange={setInventoryAlarmFilter} label="Alarms" options={INVENTORY_ALARM_OPTIONS} className="w-[120px] shrink-0" />
+                  {isRadioNodes ? (
+                    <>
+                      <FilterSelect value={rnStatusFilter} onValueChange={setRnStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-[110px] shrink-0" />
+                      <FilterSelect value={rnModelFilter} onValueChange={setRnModelFilter} label="Model" options={INVENTORY_MODEL_OPTIONS} className="w-[130px] shrink-0" />
+                      <FilterSelect value={rnVersionFilter} onValueChange={setRnVersionFilter} label="Version" options={INVENTORY_VERSION_OPTIONS} className="w-[120px] shrink-0" />
+                      <FilterSelect value={rnAlarmFilter} onValueChange={setRnAlarmFilter} label="Alarms" options={INVENTORY_ALARM_OPTIONS} className="w-[120px] shrink-0" />
+                    </>
+                  ) : (
+                    <>
+                      <FilterSelect value={cellsStatusFilter} onValueChange={setCellsStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-[110px] shrink-0" />
+                      <FilterSelect value={cellsTechnologyFilter} onValueChange={setCellsTechnologyFilter} label="Technology" options={INVENTORY_TECHNOLOGY_OPTIONS} className="w-[130px] shrink-0" />
+                      <FilterSelect value={cellsVersionFilter} onValueChange={setCellsVersionFilter} label="Version" options={INVENTORY_VERSION_OPTIONS} className="w-[120px] shrink-0" />
+                      <FilterSelect value={cellsAlarmFilter} onValueChange={setCellsAlarmFilter} label="Alarms" options={INVENTORY_ALARM_OPTIONS} className="w-[120px] shrink-0" />
+                    </>
+                  )}
                   <div className="ml-auto">
                     <Button variant="outline" size="default" className="gap-1.5">
                       <Icon name="download" size={16} />
@@ -886,20 +908,25 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 </div>
                 {/* Active filters + result count */}
                 {(() => {
+                  const statusF = isRadioNodes ? rnStatusFilter : cellsStatusFilter;
+                  const versionF = isRadioNodes ? rnVersionFilter : cellsVersionFilter;
+                  const alarmF = isRadioNodes ? rnAlarmFilter : cellsAlarmFilter;
                   const count = getFilteredInventoryCount({
                     search: inventorySearch,
                     viewFilter: inventoryViewFilter,
-                    statusFilter: inventoryStatusFilter,
-                    typeFilter: inventoryTypeFilter,
-                    versionFilter: inventoryVersionFilter,
-                    alarmFilter: inventoryAlarmFilter,
+                    statusFilter: statusF,
+                    technologyFilter: isRadioNodes ? 'All' : cellsTechnologyFilter,
+                    modelFilter: isRadioNodes ? rnModelFilter : 'All',
+                    versionFilter: versionF,
+                    alarmFilter: alarmF,
                     selectedRegions: effectiveRegions,
                   });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                  if (inventoryStatusFilter !== 'All') activeFilters.push({ key: 'status', label: `Status: ${inventoryStatusFilter}`, onClear: () => setInventoryStatusFilter('All') });
-                  if (inventoryTypeFilter !== 'All') activeFilters.push({ key: 'type', label: `Type: ${inventoryTypeFilter}`, onClear: () => setInventoryTypeFilter('All') });
-                  if (inventoryVersionFilter !== 'All') activeFilters.push({ key: 'version', label: `Version: ${inventoryVersionFilter}`, onClear: () => setInventoryVersionFilter('All') });
-                  if (inventoryAlarmFilter !== 'All') activeFilters.push({ key: 'alarm', label: `Alarms: ${inventoryAlarmFilter}`, onClear: () => setInventoryAlarmFilter('All') });
+                  if (statusF !== 'All') activeFilters.push({ key: 'status', label: `Status: ${statusF}`, onClear: () => isRadioNodes ? setRnStatusFilter('All') : setCellsStatusFilter('All') });
+                  if (isRadioNodes && rnModelFilter !== 'All') activeFilters.push({ key: 'model', label: `Model: ${rnModelFilter}`, onClear: () => setRnModelFilter('All') });
+                  if (!isRadioNodes && cellsTechnologyFilter !== 'All') activeFilters.push({ key: 'technology', label: `Technology: ${cellsTechnologyFilter}`, onClear: () => setCellsTechnologyFilter('All') });
+                  if (versionF !== 'All') activeFilters.push({ key: 'version', label: `Version: ${versionF}`, onClear: () => isRadioNodes ? setRnVersionFilter('All') : setCellsVersionFilter('All') });
+                  if (alarmF !== 'All') activeFilters.push({ key: 'alarm', label: `Alarms: ${alarmF}`, onClear: () => isRadioNodes ? setRnAlarmFilter('All') : setCellsAlarmFilter('All') });
                   if (inventorySearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${inventorySearch.trim()}"`, onClear: () => setInventorySearch('') });
                   const hasActive = activeFilters.length > 0;
                   return (
@@ -929,10 +956,11 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                   <InventoryDataTable
                     search={inventorySearch}
                     viewFilter={inventoryViewFilter}
-                    statusFilter={inventoryStatusFilter}
-                    typeFilter={inventoryTypeFilter}
-                    versionFilter={inventoryVersionFilter}
-                    alarmFilter={inventoryAlarmFilter}
+                    statusFilter={isRadioNodes ? rnStatusFilter : cellsStatusFilter}
+                    technologyFilter={isRadioNodes ? 'All' : cellsTechnologyFilter}
+                    modelFilter={isRadioNodes ? rnModelFilter : 'All'}
+                    versionFilter={isRadioNodes ? rnVersionFilter : cellsVersionFilter}
+                    alarmFilter={isRadioNodes ? rnAlarmFilter : cellsAlarmFilter}
                     selectedRegions={effectiveRegions}
                   />
                 </div>

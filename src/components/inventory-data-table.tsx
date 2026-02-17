@@ -57,6 +57,7 @@ export interface InventoryRow {
   zones: string[];
   dlBandwidth: string;
   type: 'Radio node' | 'NR cell';
+  technology: 'LTE' | 'NR';
   version: string;
 }
 
@@ -128,6 +129,7 @@ function generateInventoryData(): InventoryRow[] {
       zones,
       dlBandwidth: DL_BANDWIDTHS[i % DL_BANDWIDTHS.length],
       type: i % 5 === 0 ? 'NR cell' : 'Radio node',
+      technology: i % 3 === 0 ? 'NR' : 'LTE',
       version: VERSIONS[i % VERSIONS.length],
     });
   }
@@ -139,7 +141,8 @@ export const INVENTORY_DATA: InventoryRow[] = generateInventoryData();
 // ── Filter options ─────────────────────────────────────────────
 
 export const INVENTORY_STATUS_OPTIONS = ['All', 'Up', 'Down'] as const;
-export const INVENTORY_TYPE_OPTIONS = ['All', 'Radio node', 'NR cell'] as const;
+export const INVENTORY_TECHNOLOGY_OPTIONS = ['All', 'LTE', 'NR'] as const;
+export const INVENTORY_MODEL_OPTIONS = ['All', ...MODELS] as const;
 export const INVENTORY_VERSION_OPTIONS = ['All', ...VERSIONS] as const;
 export const INVENTORY_ALARM_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'None'] as const;
 
@@ -149,7 +152,8 @@ export function getFilteredInventoryCount(opts: {
   search: string;
   viewFilter: string;
   statusFilter: string;
-  typeFilter: string;
+  technologyFilter: string;
+  modelFilter: string;
   versionFilter: string;
   alarmFilter: string;
   selectedRegions?: string[];
@@ -157,9 +161,10 @@ export function getFilteredInventoryCount(opts: {
   return INVENTORY_DATA.filter((row) => {
     if (opts.selectedRegions && opts.selectedRegions.length > 0 && !opts.selectedRegions.includes('All') && !opts.selectedRegions.includes(row.region)) return false;
     if (opts.viewFilter === 'radio-nodes' && row.type !== 'Radio node') return false;
-    if (opts.viewFilter === 'nr-cells' && row.type !== 'NR cell') return false;
+    if (opts.viewFilter === 'cells' && row.type !== 'NR cell') return false;
     if (opts.statusFilter !== 'All' && row.status !== opts.statusFilter) return false;
-    if (opts.typeFilter !== 'All' && row.type !== opts.typeFilter) return false;
+    if (opts.technologyFilter !== 'All' && row.technology !== opts.technologyFilter) return false;
+    if (opts.modelFilter !== 'All' && row.model !== opts.modelFilter) return false;
     if (opts.versionFilter !== 'All' && row.version !== opts.versionFilter) return false;
     if (opts.alarmFilter !== 'All' && row.alarmType !== opts.alarmFilter) return false;
     if (opts.search.trim()) {
@@ -263,13 +268,18 @@ const actionsColumn: ColumnDef<InventoryRow> = {
 // ── Columns ────────────────────────────────────────────────────
 
 function getColumns(viewFilter: string): ColumnDef<InventoryRow>[] {
-  if (viewFilter === 'nr-cells') {
+  if (viewFilter === 'cells') {
     return [
       selectColumn,
       {
         accessorKey: 'nrCell',
-        header: ({ column }) => <SortableHeader column={column}>NR cell</SortableHeader>,
+        header: ({ column }) => <SortableHeader column={column}>Cell</SortableHeader>,
         cell: ({ row }) => <DeviceLink value={row.getValue('nrCell') as string} maxLength={20} />,
+      },
+      {
+        accessorKey: 'technology',
+        header: ({ column }) => <SortableHeader column={column}>Technology</SortableHeader>,
+        cell: ({ row }) => <span className="text-sm">{row.getValue('technology') as string}</span>,
       },
       {
         accessorKey: 'region',
@@ -488,7 +498,8 @@ export interface InventoryDataTableProps {
   search?: string;
   viewFilter?: string;
   statusFilter?: string;
-  typeFilter?: string;
+  technologyFilter?: string;
+  modelFilter?: string;
   versionFilter?: string;
   alarmFilter?: string;
   selectedRegions?: string[];
@@ -498,7 +509,8 @@ export function InventoryDataTable({
   search = '',
   viewFilter = 'all',
   statusFilter = 'All',
-  typeFilter = 'All',
+  technologyFilter = 'All',
+  modelFilter = 'All',
   versionFilter = 'All',
   alarmFilter = 'All',
   selectedRegions,
@@ -509,9 +521,10 @@ export function InventoryDataTable({
     return INVENTORY_DATA.filter((row) => {
       if (selectedRegions && selectedRegions.length > 0 && !selectedRegions.includes('All') && !selectedRegions.includes(row.region)) return false;
       if (viewFilter === 'radio-nodes' && row.type !== 'Radio node') return false;
-      if (viewFilter === 'nr-cells' && row.type !== 'NR cell') return false;
+      if (viewFilter === 'cells' && row.type !== 'NR cell') return false;
       if (statusFilter !== 'All' && row.status !== statusFilter) return false;
-      if (typeFilter !== 'All' && row.type !== typeFilter) return false;
+      if (technologyFilter !== 'All' && row.technology !== technologyFilter) return false;
+      if (modelFilter !== 'All' && row.model !== modelFilter) return false;
       if (versionFilter !== 'All' && row.version !== versionFilter) return false;
       if (alarmFilter !== 'All' && row.alarmType !== alarmFilter) return false;
       if (search.trim()) {
@@ -528,7 +541,7 @@ export function InventoryDataTable({
       }
       return true;
     });
-  }, [search, viewFilter, statusFilter, typeFilter, versionFilter, alarmFilter, selectedRegions]);
+  }, [search, viewFilter, statusFilter, technologyFilter, modelFilter, versionFilter, alarmFilter, selectedRegions]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);

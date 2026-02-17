@@ -39,6 +39,8 @@ export interface ThresholdCrossingAlertRow {
   region: string;
   profileName: string;
   kpi: string;
+  triggeredThreshold: string;
+  triggeredValue: string;
   lastTriggered: string;
 }
 
@@ -72,24 +74,60 @@ const KPI_NAMES = [
   'Packet loss (%)',
 ];
 
-const THRESHOLD_ALERTS_DATA: ThresholdCrossingAlertRow[] = DEVICE_IDS.flatMap((device, i) => [
-  {
-    id: `${device}-1`,
-    device,
-    region: REGIONS[i % REGIONS.length],
-    profileName: PROFILE_NAMES[i % PROFILE_NAMES.length],
-    kpi: KPI_NAMES[i % KPI_NAMES.length],
-    lastTriggered: i % 2 === 0 ? 'Feb 10, 2026 at 9:12 AM' : 'Feb 9, 2026 at 4:45 PM',
-  },
-  {
-    id: `${device}-2`,
-    device,
-    region: REGIONS[i % REGIONS.length],
-    profileName: PROFILE_NAMES[(i + 3) % PROFILE_NAMES.length],
-    kpi: KPI_NAMES[(i + 5) % KPI_NAMES.length],
-    lastTriggered: i % 3 === 0 ? 'Feb 11, 2026 at 8:30 AM' : 'Feb 8, 2026 at 11:22 AM',
-  },
-]);
+// Threshold / triggered-value pairs keyed by KPI index
+const KPI_THRESHOLDS: [string, string][] = [
+  /* DL throughput (Mbps)   */ ['≥ 50', '34.2'],
+  /* UL throughput (Mbps)   */ ['≥ 20', '12.7'],
+  /* Cell availability (%)  */ ['≥ 99.5', '98.1'],
+  /* ERAB drop rate (%)     */ ['≤ 1.0', '2.4'],
+  /* RRC setup SR (%)       */ ['≥ 99.0', '96.8'],
+  /* HO success rate (%)    */ ['≥ 98.0', '94.3'],
+  /* VoLTE drop rate (%)    */ ['≤ 0.5', '1.1'],
+  /* Avg latency (ms)       */ ['≤ 20', '37'],
+  /* CPU utilization (%)    */ ['≤ 85', '92.4'],
+  /* Packet loss (%)        */ ['≤ 0.1', '0.38'],
+];
+
+// Alternate triggered values for the second alert per device
+const KPI_THRESHOLDS_ALT: [string, string][] = [
+  /* DL throughput (Mbps)   */ ['≥ 50', '41.5'],
+  /* UL throughput (Mbps)   */ ['≥ 20', '15.3'],
+  /* Cell availability (%)  */ ['≥ 99.5', '97.6'],
+  /* ERAB drop rate (%)     */ ['≤ 1.0', '1.8'],
+  /* RRC setup SR (%)       */ ['≥ 99.0', '98.2'],
+  /* HO success rate (%)    */ ['≥ 98.0', '95.7'],
+  /* VoLTE drop rate (%)    */ ['≤ 0.5', '0.9'],
+  /* Avg latency (ms)       */ ['≤ 20', '28'],
+  /* CPU utilization (%)    */ ['≤ 85', '88.1'],
+  /* Packet loss (%)        */ ['≤ 0.1', '0.24'],
+];
+
+const THRESHOLD_ALERTS_DATA: ThresholdCrossingAlertRow[] = DEVICE_IDS.flatMap((device, i) => {
+  const kpiIdx1 = i % KPI_NAMES.length;
+  const kpiIdx2 = (i + 5) % KPI_NAMES.length;
+  return [
+    {
+      id: `${device}-1`,
+      device,
+      region: REGIONS[i % REGIONS.length],
+      profileName: PROFILE_NAMES[i % PROFILE_NAMES.length],
+      kpi: KPI_NAMES[kpiIdx1],
+      triggeredThreshold: KPI_THRESHOLDS[kpiIdx1][0],
+      triggeredValue: KPI_THRESHOLDS[kpiIdx1][1],
+      lastTriggered: i % 2 === 0 ? 'Feb 10, 2026 at 9:12 AM' : 'Feb 9, 2026 at 4:45 PM',
+    },
+    {
+      id: `${device}-2`,
+      device,
+      region: REGIONS[i % REGIONS.length],
+      profileName: PROFILE_NAMES[(i + 3) % PROFILE_NAMES.length],
+      kpi: KPI_NAMES[kpiIdx2],
+      triggeredThreshold: KPI_THRESHOLDS_ALT[kpiIdx2][0],
+      triggeredValue: KPI_THRESHOLDS_ALT[kpiIdx2][1],
+      lastTriggered: i % 3 === 0 ? 'Feb 11, 2026 at 8:30 AM' : 'Feb 8, 2026 at 11:22 AM',
+    },
+  ];
+});
 
 const getColumns = (hideDeviceColumn?: boolean): ColumnDef<ThresholdCrossingAlertRow>[] => {
   const cols: ColumnDef<ThresholdCrossingAlertRow>[] = [];
@@ -125,6 +163,26 @@ const getColumns = (hideDeviceColumn?: boolean): ColumnDef<ThresholdCrossingAler
       <SortableHeader column={column}>KPI</SortableHeader>
     ),
     cell: ({ row }) => row.getValue('kpi') as string,
+  },
+  {
+    accessorKey: 'triggeredThreshold',
+    header: ({ column }) => (
+      <SortableHeader column={column}>Triggered threshold</SortableHeader>
+    ),
+    cell: ({ row }) => (
+      <code className="text-sm tabular-nums text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+        {row.getValue('triggeredThreshold') as string}
+      </code>
+    ),
+  },
+  {
+    accessorKey: 'triggeredValue',
+    header: ({ column }) => (
+      <SortableHeader column={column}>Triggered value</SortableHeader>
+    ),
+    cell: ({ row }) => (
+      <span className="tabular-nums font-medium">{row.getValue('triggeredValue') as string}</span>
+    ),
   },
   {
     accessorKey: 'lastTriggered',

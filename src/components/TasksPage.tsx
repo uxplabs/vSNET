@@ -31,7 +31,6 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Label } from './ui/label';
-import { Switch } from './ui/switch';
 import { ScheduledTasksDataTable, SCHEDULED_TASKS_DATA } from './scheduled-tasks-data-table';
 import type { ScheduledTaskRow } from './scheduled-tasks-data-table';
 import { ScheduledTaskDrawer } from './scheduled-task-drawer';
@@ -91,7 +90,6 @@ export default function TasksPage({
   const [configNodeType, setConfigNodeType] = useState<string>('');
   const [configTechnology, setConfigTechnology] = useState<string>('');
   const [configTemplate, setConfigTemplate] = useState<string>('');
-  const [configChecksEnabled, setConfigChecksEnabled] = useState(false);
   const [configHour, setConfigHour] = useState<string>('');
   const [configMinute, setConfigMinute] = useState<string>('');
   const [configAmPm, setConfigAmPm] = useState<string>('AM');
@@ -102,7 +100,6 @@ export default function TasksPage({
     setConfigNodeType('');
     setConfigTechnology('');
     setConfigTemplate('');
-    setConfigChecksEnabled(false);
     setConfigHour('');
     setConfigMinute('');
     setConfigAmPm('AM');
@@ -314,65 +311,57 @@ export default function TasksPage({
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-3">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="config-checks-enabled" className="cursor-pointer">Enable daily checks</Label>
-              <Switch id="config-checks-enabled" checked={configChecksEnabled} onCheckedChange={setConfigChecksEnabled} />
+          <div className="grid gap-2">
+            <Label>Check daily at</Label>
+            <div className="flex items-center gap-2">
+              <Select value={configHour} onValueChange={setConfigHour}>
+                <SelectTrigger className="w-[80px]">
+                  <SelectValue placeholder="HH" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                    <SelectItem key={h} value={String(h)}>{String(h).padStart(2, '0')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-muted-foreground font-medium">:</span>
+              <Select value={configMinute} onValueChange={setConfigMinute}>
+                <SelectTrigger className="w-[80px]">
+                  <SelectValue placeholder="MM" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                    <SelectItem key={m} value={String(m)}>{String(m).padStart(2, '0')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={configAmPm} onValueChange={setConfigAmPm}>
+                <SelectTrigger className="w-[76px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="AM">AM</SelectItem>
+                  <SelectItem value="PM">PM</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={configTimezone} onValueChange={setConfigTimezone}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PST">PST</SelectItem>
+                  <SelectItem value="MST">MST</SelectItem>
+                  <SelectItem value="CST">CST</SelectItem>
+                  <SelectItem value="EST">EST</SelectItem>
+                  <SelectItem value="UTC">UTC</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            {configChecksEnabled && (
-              <div className="grid gap-2">
-                <Label className="text-muted-foreground text-xs">Check daily at</Label>
-                <div className="flex items-center gap-2">
-                  <Select value={configHour} onValueChange={setConfigHour}>
-                    <SelectTrigger className="w-[80px]">
-                      <SelectValue placeholder="HH" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-                        <SelectItem key={h} value={String(h)}>{String(h).padStart(2, '0')}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-muted-foreground font-medium">:</span>
-                  <Select value={configMinute} onValueChange={setConfigMinute}>
-                    <SelectTrigger className="w-[80px]">
-                      <SelectValue placeholder="MM" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
-                        <SelectItem key={m} value={String(m)}>{String(m).padStart(2, '0')}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={configAmPm} onValueChange={setConfigAmPm}>
-                    <SelectTrigger className="w-[76px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="AM">AM</SelectItem>
-                      <SelectItem value="PM">PM</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={configTimezone} onValueChange={setConfigTimezone}>
-                    <SelectTrigger className="w-[100px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PST">PST</SelectItem>
-                      <SelectItem value="MST">MST</SelectItem>
-                      <SelectItem value="CST">CST</SelectItem>
-                      <SelectItem value="EST">EST</SelectItem>
-                      <SelectItem value="UTC">UTC</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setAddConfigDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleAddConfig} disabled={!configNodeType || !configTechnology || !configTemplate || (configChecksEnabled && (!configHour || !configMinute))}>Create</Button>
+          <Button onClick={handleAddConfig} disabled={!configNodeType || !configTechnology || !configTemplate || !configHour || !configMinute}>Create</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -184,6 +184,7 @@ function getColumns(onToggleDisabled: (id: string) => void, disabledRows: Set<st
       accessorFn: (row) => row.passCount + row.failCount,
       cell: ({ row }) => {
         const { passCount, failCount } = row.original;
+        if (disabledRows.has(row.original.id)) return null;
         return (
           <div className="flex items-center gap-3">
             <Tooltip>

@@ -650,6 +650,61 @@ function SshTerminal({ device }: { device: DeviceRow }) {
   );
 }
 
+const REGION_ADDRESSES: Record<string, string[]> = {
+  'Pacific Northwest':    ['1201 3rd Ave, Seattle, WA 98101', '700 SW 5th Ave, Portland, OR 97204', '818 Stewart St, Seattle, WA 98101', '421 SW 6th Ave, Portland, OR 97204'],
+  'Northern California':  ['100 Montgomery St, San Francisco, CA 94104', '500 Terry A Francois Blvd, San Francisco, CA 94158', '1 Hacker Way, Menlo Park, CA 94025', '350 Mission St, San Francisco, CA 94105'],
+  'Southern California':  ['633 W 5th St, Los Angeles, CA 90071', '402 W Broadway, San Diego, CA 92101', '1 World Way, Los Angeles, CA 90045', '100 Universal City Plz, Universal City, CA 91608'],
+  'Desert Southwest':     ['2 N Central Ave, Phoenix, AZ 85004', '400 E Van Buren St, Phoenix, AZ 85004', '150 N Stone Ave, Tucson, AZ 85701', '1 E Washington St, Phoenix, AZ 85004'],
+  'Mountain West':        ['1700 Lincoln St, Denver, CO 80203', '201 S Main St, Salt Lake City, UT 84111', '555 17th St, Denver, CO 80202', '15 W South Temple, Salt Lake City, UT 84101'],
+  'Great Plains':         ['1500 Farnam St, Omaha, NE 68102', '200 S 6th St, Minneapolis, MN 55402', '401 S 2nd Ave, Minneapolis, MN 55401', '1000 Walnut St, Kansas City, MO 64106'],
+  'Texas':                ['600 Congress Ave, Austin, TX 78701', '1401 Elm St, Dallas, TX 75202', '1000 Main St, Houston, TX 77002', '100 W Houston St, San Antonio, TX 78205'],
+  'Gulf Coast':           ['1250 Poydras St, New Orleans, LA 70113', '1 Canal St, New Orleans, LA 70130', '1515 Poydras St, New Orleans, LA 70112', '400 Poydras St, New Orleans, LA 70130'],
+  'Southeast':            ['191 Peachtree St NE, Atlanta, GA 30303', '301 N Tryon St, Charlotte, NC 28202', '414 Union St, Nashville, TN 37219', '600 Peachtree St NE, Atlanta, GA 30308'],
+  'Florida':              ['100 SE 2nd St, Miami, FL 33131', '201 N Franklin St, Tampa, FL 33602', '400 S Orange Ave, Orlando, FL 32801', '1 SE 3rd Ave, Miami, FL 33131'],
+  'Midwest':              ['1 N Capitol Ave, Indianapolis, IN 46204', '1 S Wacker Dr, Chicago, IL 60606', '200 Public Sq, Cleveland, OH 44114', '600 Superior Ave E, Cleveland, OH 44114'],
+  'Great Lakes':          ['233 S Wacker Dr, Chicago, IL 60606', '1 Campus Martius, Detroit, MI 48226', '1 AT&T Plaza, Chicago, IL 60601', '150 W Jefferson Ave, Detroit, MI 48226'],
+  'Northeast':            ['200 Park Ave, New York, NY 10166', '1 Penn Plaza, New York, NY 10119', '30 Hudson Yards, New York, NY 10001', '1 World Trade Center, New York, NY 10007'],
+  'New England':          ['1 Federal St, Boston, MA 02110', '100 Summer St, Boston, MA 02110', '200 Clarendon St, Boston, MA 02116', '99 High St, Boston, MA 02110'],
+  'Mid-Atlantic':         ['1300 I St NW, Washington, DC 20005', '1 N Charles St, Baltimore, MD 21201', '1500 Market St, Philadelphia, PA 19102', '101 Constitution Ave NW, Washington, DC 20001'],
+  'Eastern Canada':       ['100 King St W, Toronto, ON M5X 1A9', '1000 De La Gauchetière W, Montreal, QC H3B 4W5', '181 Bay St, Toronto, ON M5J 2T3', '800 René-Lévesque Blvd W, Montreal, QC H3B 1X9'],
+};
+
+function getDeviceAddress(region: string, deviceId: string) {
+  const addresses = REGION_ADDRESSES[region] ?? REGION_ADDRESSES['Pacific Northwest'];
+  const hash = deviceId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return addresses[hash % addresses.length];
+}
+
+const REGION_COORDINATES: Record<string, { lat: number; lng: number; latDir: string; lngDir: string }> = {
+  'Pacific Northwest':    { lat: 47.6062, lng: 122.3321, latDir: 'N', lngDir: 'W' },
+  'Northern California':  { lat: 37.7749, lng: 122.4194, latDir: 'N', lngDir: 'W' },
+  'Southern California':  { lat: 34.0522, lng: 118.2437, latDir: 'N', lngDir: 'W' },
+  'Desert Southwest':     { lat: 33.4484, lng: 112.0740, latDir: 'N', lngDir: 'W' },
+  'Mountain West':        { lat: 39.7392, lng: 104.9903, latDir: 'N', lngDir: 'W' },
+  'Great Plains':         { lat: 41.2565, lng: 95.9345,  latDir: 'N', lngDir: 'W' },
+  'Texas':                { lat: 30.2672, lng: 97.7431,  latDir: 'N', lngDir: 'W' },
+  'Gulf Coast':           { lat: 29.9511, lng: 90.0715,  latDir: 'N', lngDir: 'W' },
+  'Southeast':            { lat: 33.7490, lng: 84.3880,  latDir: 'N', lngDir: 'W' },
+  'Florida':              { lat: 25.7617, lng: 80.1918,  latDir: 'N', lngDir: 'W' },
+  'Midwest':              { lat: 39.7684, lng: 86.1581,  latDir: 'N', lngDir: 'W' },
+  'Great Lakes':          { lat: 41.8781, lng: 87.6298,  latDir: 'N', lngDir: 'W' },
+  'Northeast':            { lat: 40.7128, lng: 74.0060,  latDir: 'N', lngDir: 'W' },
+  'New England':          { lat: 42.3601, lng: 71.0589,  latDir: 'N', lngDir: 'W' },
+  'Mid-Atlantic':         { lat: 38.9072, lng: 77.0369,  latDir: 'N', lngDir: 'W' },
+  'Eastern Canada':       { lat: 43.6532, lng: 79.3832,  latDir: 'N', lngDir: 'W' },
+};
+
+function getDeviceCoordinates(region: string, deviceId: string) {
+  const base = REGION_COORDINATES[region] ?? REGION_COORDINATES['Pacific Northwest'];
+  const hash = deviceId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const latOffset = ((hash * 7) % 100 - 50) / 500;
+  const lngOffset = ((hash * 13) % 100 - 50) / 500;
+  return {
+    lat: `${(base.lat + latOffset).toFixed(4)}° ${base.latDir}`,
+    lng: `${(base.lng + lngOffset).toFixed(4)}° ${base.lngDir}`,
+  };
+}
+
 function DeviceDetailPage({
   device,
   appName = 'AMS',
@@ -671,7 +726,7 @@ function DeviceDetailPage({
 }: DeviceDetailPageProps) {
   const isDas = device.type === 'DAS';
   const SIDEBAR_ITEMS = isDas
-    ? (['Summary', 'Radio nodes', 'Web terminal', 'SNMP details'] as const)
+    ? (['Summary', 'Radio nodes', 'Inventory', 'SNMP details', 'Web terminal'] as const)
     : ([
         'Summary',
         'Commissioning',
@@ -793,9 +848,21 @@ function DeviceDetailPage({
     return () => clearTimeout(t);
   }, [scrollToNotes, onScrollToNotesDone]);
 
+  const summaryGridRef = React.useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const update = () => {
+      const cols = getComputedStyle(node).gridTemplateColumns.split(' ').length;
+      const remaining = cols - (7 % cols);
+      node.style.setProperty('--labels-col', `span ${remaining}`);
+    };
+    update();
+    const obs = new ResizeObserver(update);
+    obs.observe(node);
+  }, []);
+
   const [summaryValues, setSummaryValues] = useState({
     hostname: device.device,
-    location: device.deviceGroup,
+    location: getDeviceAddress(device.region || 'Pacific Northwest', device.id),
     description: device.notes || '',
     deploymentType: 'Standalone',
     clusterId: device.id.padStart(3, '0'),
@@ -808,13 +875,13 @@ function DeviceDetailPage({
     setSummaryValues((prev) => ({
       ...prev,
       hostname: device.device,
-      location: device.deviceGroup,
+      location: getDeviceAddress(device.region || 'Pacific Northwest', device.id),
       description: device.notes || '',
       clusterId: device.id.padStart(3, '0'),
       groupName: device.deviceGroup,
       labels: device.labels ?? [],
     }));
-  }, [device.device, device.deviceGroup, device.notes, device.id, device.labels]);
+  }, [device.device, device.deviceGroup, device.notes, device.id, device.labels, device.region]);
 
   const formatNoteDatetime = () => {
     const d = new Date();
@@ -1045,7 +1112,7 @@ function DeviceDetailPage({
               <CardContent className="pt-6 space-y-8">
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-foreground">Summary</h4>
-                  <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+                  <div ref={summaryGridRef} className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
                     <NameValueField
                       label="Hostname"
                       value={summaryValues.hostname}
@@ -1094,6 +1161,7 @@ function DeviceDetailPage({
                       value={summaryValues.labels}
                       onSave={(v) => setSummaryValues((s) => ({ ...s, labels: v }))}
                       placeholder="—"
+                      style={{ gridColumn: 'var(--labels-col, span 1)' }}
                     />
                   </div>
                 </div>
@@ -1137,11 +1205,11 @@ function DeviceDetailPage({
                       <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Latitude</span>
-                          <span className="font-medium">47.6062° N</span>
+                          <span className="font-medium">{getDeviceCoordinates(device.region || 'Pacific Northwest', device.id).lat}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Longitude</span>
-                          <span className="font-medium">122.3321° W</span>
+                          <span className="font-medium">{getDeviceCoordinates(device.region || 'Pacific Northwest', device.id).lng}</span>
                         </div>
                       </div>
                     </div>
@@ -1214,6 +1282,7 @@ function DeviceDetailPage({
                   onClick={() => setDetailsExpanded(!detailsExpanded)}
                 >
                   {detailsExpanded ? 'Show less' : 'See more'}
+                  <Icon name={detailsExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'} size={16} className="ml-1" />
                 </Button>
               </CardContent>
             </Card>
@@ -2369,6 +2438,47 @@ function DeviceDetailPage({
 
           {activeSection === 'ssh-terminal' && (
             <SshTerminal device={device} />
+          )}
+
+          {activeSection === 'inventory' && (
+            <div className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="overflow-hidden rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Name</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Type</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Status</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Serial number</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[
+                          { name: 'HEU-400-A', type: 'Head-end unit', status: 'Connected', serial: 'HEU-2024-00147' },
+                          { name: 'RU-200-01', type: 'Remote unit', status: 'Connected', serial: 'RU-2024-03281' },
+                          { name: 'RU-200-02', type: 'Remote unit', status: 'Connected', serial: 'RU-2024-03282' },
+                          { name: 'RU-200-03', type: 'Remote unit', status: 'Disconnected', serial: 'RU-2024-03290' },
+                          { name: 'EH-100-A', type: 'Expansion hub', status: 'Connected', serial: 'EH-2024-00512' },
+                          { name: 'PS-48V-R-01', type: 'Power supply', status: 'Connected', serial: 'PS-2024-10044' },
+                          { name: 'SFP-10G-SR-01', type: 'Optical transceiver', status: 'In maintenance', serial: 'OT-2024-44210' },
+                        ].map((item) => (
+                          <TableRow key={item.serial}>
+                            <TableCell className="px-4 py-3 font-medium">{item.name}</TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.type}</TableCell>
+                            <TableCell className="px-4 py-3">
+                              <DeviceStatus status={item.status} iconSize={14} />
+                            </TableCell>
+                            <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.serial}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {activeSection === 'snmp-details' && (

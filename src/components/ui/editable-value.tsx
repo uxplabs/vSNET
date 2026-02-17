@@ -121,7 +121,7 @@ export function EditableValue({
         type="button"
         onClick={() => setIsEditing(true)}
         className={cn(
-          'text-left font-medium rounded px-1.5 -mx-1.5 py-0.5 -my-0.5 min-w-0 transition-colors',
+          'flex-1 text-left font-medium rounded px-1.5 -mx-1.5 py-0.5 -my-0.5 min-w-0 transition-colors',
           isEmpty && 'text-muted-foreground',
           'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:rounded',
           valueClassName
@@ -173,6 +173,7 @@ export interface EditableLabelsFieldProps {
   visibleCount?: number;
   editable?: boolean;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -187,6 +188,7 @@ export function EditableLabelsField({
   visibleCount,
   editable = true,
   className,
+  style,
 }: EditableLabelsFieldProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editValue, setEditValue] = React.useState(value.join(', '));
@@ -239,7 +241,7 @@ export function EditableLabelsField({
 
   if (!editable) {
     return (
-      <div className={cn('flex flex-col gap-1 col-span-2', className)}>
+      <div className={cn('flex flex-col gap-1', className)} style={style}>
         <span className="text-muted-foreground text-sm">{label}</span>
         {hasLabels ? (
           <div className={`flex gap-1.5 ${shouldTruncate && !labelsExpanded ? 'flex-nowrap' : 'flex-wrap'}`}>
@@ -249,22 +251,28 @@ export function EditableLabelsField({
               </span>
             ))}
             {shouldTruncate && !labelsExpanded && (
-              <button
+              <Button
                 type="button"
-                className="text-xs text-link hover:underline shrink-0 font-normal"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs shrink-0"
                 onClick={() => setLabelsExpanded(true)}
               >
                 {value.length - visibleCount!} more
-              </button>
+                <Icon name="keyboard_arrow_down" size={14} className="ml-0.5" />
+              </Button>
             )}
             {shouldTruncate && labelsExpanded && (
-              <button
+              <Button
                 type="button"
-                className="text-xs text-link hover:underline shrink-0 font-normal"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs shrink-0"
                 onClick={() => setLabelsExpanded(false)}
               >
                 Show less
-              </button>
+                <Icon name="keyboard_arrow_up" size={14} className="ml-0.5" />
+              </Button>
             )}
           </div>
         ) : (
@@ -276,7 +284,7 @@ export function EditableLabelsField({
 
   if (isEditing) {
     return (
-      <div className={cn('flex flex-col gap-1 col-span-2', className)}>
+      <div className={cn('flex flex-col gap-1', className)} style={style}>
         <span className="text-muted-foreground text-sm">{label}</span>
         <Input
           ref={inputRef}
@@ -292,7 +300,7 @@ export function EditableLabelsField({
   }
 
   return (
-    <div className={cn('flex flex-col gap-1 col-span-2', className)}>
+    <div className={cn('flex flex-col gap-1', className)} style={style}>
       <span className="text-muted-foreground text-sm">{label}</span>
       <div className="group/labels min-w-0">
         {hasLabels ? (
@@ -303,22 +311,28 @@ export function EditableLabelsField({
               </span>
             ))}
             {remainingCount > 0 && (
-              <button
+              <Button
                 type="button"
-                className="text-xs text-link hover:underline shrink-0 font-normal"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs shrink-0"
                 onClick={() => setLabelsExpanded(true)}
               >
                 {remainingCount} more
-              </button>
+                <Icon name="keyboard_arrow_down" size={14} className="ml-0.5" />
+              </Button>
             )}
             {shouldTruncate && labelsExpanded && (
-              <button
+              <Button
                 type="button"
-                className="text-xs text-link hover:underline shrink-0 font-normal"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs shrink-0"
                 onClick={() => setLabelsExpanded(false)}
               >
                 Show less
-              </button>
+                <Icon name="keyboard_arrow_up" size={14} className="ml-0.5" />
+              </Button>
             )}
             <Button
               type="button"
