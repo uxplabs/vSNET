@@ -1045,7 +1045,7 @@ function DeviceDetailPage({
               <CardContent className="pt-6 space-y-8">
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-foreground">Summary</h4>
-                  <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
+                  <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
                     <NameValueField
                       label="Hostname"
                       value={summaryValues.hostname}
@@ -1065,8 +1065,6 @@ function DeviceDetailPage({
                       placeholder="—"
                       multiline
                     />
-                  </div>
-                  <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                     <NameValueField
                       label="Deployment type"
                       value={summaryValues.deploymentType}
@@ -1085,8 +1083,6 @@ function DeviceDetailPage({
                       onSave={(v) => setSummaryValues((s) => ({ ...s, contact: v }))}
                       placeholder="—"
                     />
-                  </div>
-                  <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                     <NameValueField
                       label="Group name"
                       value={summaryValues.groupName}
@@ -1104,7 +1100,7 @@ function DeviceDetailPage({
                 <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-foreground">Status</h4>
-                  <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
+                  <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Node status</span>
                       <span className="font-medium">{device.status}</span>
@@ -1117,8 +1113,6 @@ function DeviceDetailPage({
                       <span className="text-muted-foreground">Status</span>
                       <span className="font-medium">{device.status}</span>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Last inform</span>
                       <span className="font-medium">Jan 27, 2025 2:34 PM</span>
@@ -1140,7 +1134,7 @@ function DeviceDetailPage({
                     <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
                       <h4 className="text-sm font-semibold text-foreground">Location</h4>
-                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
+                      <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Latitude</span>
                           <span className="font-medium">47.6062° N</span>
@@ -1154,7 +1148,7 @@ function DeviceDetailPage({
                     <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
                       <h4 className="text-sm font-semibold text-foreground">Hardware</h4>
-                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
+                      <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Management server</span>
                           <span className="font-medium">10.12.0.1</span>
@@ -1167,8 +1161,6 @@ function DeviceDetailPage({
                           <span className="text-muted-foreground">Model #</span>
                           <span className="font-medium">SN-2000</span>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Serial #</span>
                           <span className="font-medium font-mono text-xs">SN-{device.id.padStart(6, '0')}</span>
@@ -1182,7 +1174,7 @@ function DeviceDetailPage({
                     <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
                       <h4 className="text-sm font-semibold text-foreground">Settings</h4>
-                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
+                      <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Notifications</span>
                           <span className="font-medium">Enabled</span>
@@ -1195,8 +1187,6 @@ function DeviceDetailPage({
                           <span className="text-muted-foreground">Upgrades</span>
                           <span className="font-medium">Auto</span>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">PCI lock enabled</span>
                           <span className="font-medium">Yes</span>
@@ -1209,8 +1199,6 @@ function DeviceDetailPage({
                           <span className="text-muted-foreground">RCP mode</span>
                           <span className="font-medium">Active</span>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-x-3 gap-y-6 text-sm">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">DU mode</span>
                           <span className="font-medium">FDD</span>
