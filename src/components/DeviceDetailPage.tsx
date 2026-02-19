@@ -7,6 +7,8 @@ import { Icon } from './Icon';
 import { DeviceStatus } from './ui/device-status';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
+import { DasTopology } from './das-topology';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
   Table,
@@ -793,6 +795,7 @@ function DeviceDetailPage({
   const notesCardRef = React.useRef<HTMLDivElement>(null);
   const alarmsCardRef = React.useRef<HTMLDivElement>(null);
 
+  const [dasInventoryView, setDasInventoryView] = useState<'list' | 'map'>('list');
   const [snmpValues, setSnmpValues] = useState({
     ipAddress: device.ipAddress || '10.12.1.42',
     snmpPort: '161',
@@ -2440,46 +2443,73 @@ function DeviceDetailPage({
             <SshTerminal device={device} />
           )}
 
-          {activeSection === 'inventory' && (
-            <div className="space-y-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="overflow-hidden rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Name</TableHead>
-                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Type</TableHead>
-                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Status</TableHead>
-                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Serial number</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {[
-                          { name: 'HEU-400-A', type: 'Head-end unit', status: 'Connected', serial: 'HEU-2024-00147' },
-                          { name: 'RU-200-01', type: 'Remote unit', status: 'Connected', serial: 'RU-2024-03281' },
-                          { name: 'RU-200-02', type: 'Remote unit', status: 'Connected', serial: 'RU-2024-03282' },
-                          { name: 'RU-200-03', type: 'Remote unit', status: 'Disconnected', serial: 'RU-2024-03290' },
-                          { name: 'EH-100-A', type: 'Expansion hub', status: 'Connected', serial: 'EH-2024-00512' },
-                          { name: 'PS-48V-R-01', type: 'Power supply', status: 'Connected', serial: 'PS-2024-10044' },
-                          { name: 'SFP-10G-SR-01', type: 'Optical transceiver', status: 'In maintenance', serial: 'OT-2024-44210' },
-                        ].map((item) => (
-                          <TableRow key={item.serial}>
-                            <TableCell className="px-4 py-3 font-medium">{item.name}</TableCell>
-                            <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.type}</TableCell>
-                            <TableCell className="px-4 py-3">
-                              <DeviceStatus status={item.status} iconSize={14} />
-                            </TableCell>
-                            <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.serial}</TableCell>
+          {activeSection === 'inventory' && (() => {
+            const DAS_INVENTORY = [
+              { id: 'heu', name: 'HEU-400-A', type: 'Head-end unit', status: 'Connected' as const, serial: 'HEU-2024-00147' },
+              { id: 'eh', name: 'EH-100-A', type: 'Expansion hub', status: 'Connected' as const, serial: 'EH-2024-00512' },
+              { id: 'ru1', name: 'RU-200-01', type: 'Remote unit', status: 'Connected' as const, serial: 'RU-2024-03281' },
+              { id: 'ru2', name: 'RU-200-02', type: 'Remote unit', status: 'Connected' as const, serial: 'RU-2024-03282' },
+              { id: 'ru3', name: 'RU-200-03', type: 'Remote unit', status: 'Disconnected' as const, serial: 'RU-2024-03290' },
+              { id: 'ps', name: 'PS-48V-R-01', type: 'Power supply', status: 'Connected' as const, serial: 'PS-2024-10044' },
+              { id: 'sfp', name: 'SFP-10G-SR-01', type: 'Optical transceiver', status: 'In maintenance' as const, serial: 'OT-2024-44210' },
+            ];
+            const statusColor = (s: string) => s === 'Connected' ? 'var(--success)' : s === 'Disconnected' ? 'var(--destructive)' : 'var(--warning)';
+            const statusBg = (s: string) => s === 'Connected' ? 'color-mix(in srgb, var(--success) 12%, transparent)' : s === 'Disconnected' ? 'color-mix(in srgb, var(--destructive) 12%, transparent)' : 'color-mix(in srgb, var(--warning) 12%, transparent)';
+
+            return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-end">
+                <ToggleGroup type="single" value={dasInventoryView} onValueChange={(v) => v && setDasInventoryView(v as 'list' | 'map')} size="sm" variant="outline">
+                  <ToggleGroupItem value="list" aria-label="List view">
+                    <Icon name="view_list" size={16} />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="map" aria-label="Map view">
+                    <Icon name="account_tree" size={16} />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
+              {dasInventoryView === 'list' && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="overflow-hidden rounded-lg border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Name</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Type</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Status</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Serial number</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {DAS_INVENTORY.map((item) => (
+                            <TableRow key={item.serial}>
+                              <TableCell className="px-4 py-3 font-medium">{item.name}</TableCell>
+                              <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.type}</TableCell>
+                              <TableCell className="px-4 py-3">
+                                <DeviceStatus status={item.status} iconSize={14} />
+                              </TableCell>
+                              <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.serial}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {dasInventoryView === 'map' && (
+                <Card>
+                  <CardContent className="pt-4 pb-2">
+                    <DasTopology />
+                  </CardContent>
+                </Card>
+              )}
             </div>
-          )}
+            );
+          })()}
 
           {activeSection === 'snmp-details' && (
             <div className="space-y-6">
