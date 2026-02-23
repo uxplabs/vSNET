@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Navbar01 } from './navbar-01';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
 import { FilterSelect } from './ui/filter-select';
-import { Tabs, TabsContent, TabsList, TabsListUnderline, TabsTrigger, TabsTriggerUnderline } from './ui/tabs';
-import { Checkbox } from './ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { Card, CardContent } from './ui/card';
@@ -37,7 +36,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
 import {
@@ -56,7 +54,6 @@ import FaultManagementPage from './FaultManagementPage';
 import LabelManagementPage from './LabelManagementPage';
 import FileManagementPage from './FileManagementPage';
 import DeviceMigrationPage from './DeviceMigrationPage';
-import { PerformanceDataTable } from './performance-data-table';
 import {
   Sidebar,
   SidebarContent,
@@ -93,8 +90,6 @@ const SIDEBAR_ITEMS = [
 const PROFILE_OPTIONS = ['All', 'Administrator', 'Operator', 'Viewer'] as const;
 const DEPARTMENT_OPTIONS = ['All', 'Engineering', 'Operations', 'Support', 'Management'] as const;
 const LOCATION_OPTIONS = ['All', 'Seattle', 'Portland', 'San Francisco', 'Phoenix', 'New York'] as const;
-const PERF_LTE_OPTIONS = ['All', 'SN'] as const;
-const PERF_TIME_OPTIONS = ['All', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
 
 export interface ProfileSchedule { days: string[]; allDay: boolean; startTime: string; endTime: string }
 export interface ProfileAction { action: string; details: string; detailType?: 'badge' }
@@ -288,8 +283,6 @@ export const PERF_PROFILES_INIT: Record<string, ProfileData> = {
   },
 };
 
-const PERF_PROFILE_NAMES = Object.keys(PERF_PROFILES_INIT);
-
 export interface AdministrationPageProps {
   appName?: string;
   onSignOut?: () => void;
@@ -322,9 +315,9 @@ export default function AdministrationPage({
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
   const [locationFilter, setLocationFilter] = useState<string>('All');
   const [perfSearch, setPerfSearch] = useState('');
-  const [perfLteFilter, setPerfLteFilter] = useState<string>('All');
-  const [perfTimeFilter, setPerfTimeFilter] = useState<string>('All');
-  const [perfStatusFilter, setPerfStatusFilter] = useState<'all' | 'degraded' | 'optimal'>('all');
+  const [_perfLteFilter, _setPerfLteFilter] = useState<string>('All');
+  const [_perfTimeFilter, _setPerfTimeFilter] = useState<string>('All');
+  const [_perfStatusFilter, _setPerfStatusFilter] = useState<'all' | 'degraded' | 'optimal'>('all');
   const [perfProfileSearch, setPerfProfileSearch] = useState('');
   const [selectedPerfProfile, setSelectedPerfProfile] = useState('LTE Throughput Baseline');
   const [perfTab, setPerfTab] = useState<'thresholds' | 'devices'>('thresholds');
@@ -569,7 +562,7 @@ export default function AdministrationPage({
                   <aside className="w-52 shrink-0 rounded-lg border bg-muted/30 border-border/80 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)] self-start">
                     <div className="p-3 border-b border-border/80 bg-muted/20">
                       <div className="flex items-center justify-between gap-2">
-                        <h3 className="text-sm font-semibold text-foreground truncate">Profiles</h3>
+                        <h3 className="text-sm font-semibold text-foreground truncate">TCA profiles</h3>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 rounded-md" aria-label="Add profile" onClick={() => { setNewProfileName(''); setNewProfileDesc(''); setAddProfileOpen(true); }}>
@@ -856,12 +849,12 @@ export default function AdministrationPage({
                           <div className="space-y-3">
                             <div className="flex items-center justify-between gap-4">
                               <h4 className="text-sm font-semibold text-foreground">Schedule</h4>
-                              <Button variant="outline" size="sm" disabled={scheduleKeys.length >= 3} onClick={() => { setNewSchedule({ days: [], allDay: true, startTime: '08:00', endTime: '18:00' }); setAddScheduleOpen(true); }}>
+                              <Button variant="outline" size="sm" disabled={scheduleKeys.length >= 2} onClick={() => { setNewSchedule({ days: [], allDay: true, startTime: '08:00', endTime: '18:00' }); setAddScheduleOpen(true); }}>
                                 <Icon name="add" size={16} className="mr-1.5" />
                                 Add schedule
                               </Button>
                             </div>
-                            <p className="text-sm text-muted-foreground">Set when alerts should be active for this profile. (Create up to 3)</p>
+                            <p className="text-sm text-muted-foreground">Set when alerts should be active for this profile. (Create up to 2)</p>
                             <Tabs value={perfScheduleTab} onValueChange={setPerfScheduleTab}>
                               <TabsList>
                                 {scheduleKeys.map((k) => (

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Navbar01 } from './navbar-01';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
@@ -181,7 +181,7 @@ export default function TasksPage({
                   open={addTaskDialogOpen}
                   onOpenChange={setAddTaskDialogOpen}
                   region={region}
-                  onAdd={(payload) => {
+                  onAdd={() => {
                     // Optional: add to list or show toast
                   }}
                 />

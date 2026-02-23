@@ -57,37 +57,6 @@ const SEVERITY_ICON: Record<EventSeverity, { name: string; className: string }> 
   Info: { name: 'info', className: 'text-muted-foreground' },
 };
 
-// Map city codes to regions
-const CITY_TO_REGION: Record<string, string> = {
-  SEA: 'Pacific Northwest',
-  PDX: 'Pacific Northwest',
-  SFO: 'Northern California',
-  LAX: 'Southern California',
-  PHX: 'Desert Southwest',
-  LAS: 'Desert Southwest',
-  DEN: 'Mountain West',
-  SLC: 'Mountain West',
-  CHI: 'Great Lakes',
-  DET: 'Great Lakes',
-  NYC: 'Northeast',
-  PHL: 'Mid-Atlantic',
-  ATL: 'Southeast',
-  MIA: 'Florida',
-  BOS: 'New England',
-  AUS: 'Texas',
-  DAL: 'Texas',
-  HOU: 'Gulf Coast',
-};
-
-function getRegionFromSource(source: string): string {
-  const parts = source.split('-');
-  if (parts.length >= 2) {
-    const cityCode = parts[1];
-    return CITY_TO_REGION[cityCode] || 'Pacific Northwest';
-  }
-  return 'Pacific Northwest';
-}
-
 const EVENT_TYPES = ['Configuration change', 'Connection', 'Performance', 'Security', 'System'];
 const EVENT_SEVERITIES: EventSeverity[] = ['Critical', 'Major', 'Minor', 'Info'];
 const EVENT_OWNERS = ['J. Smith', 'A. Jones', 'M. Lee', 'K. Brown', 'R. Davis', 'P. Wilson'];

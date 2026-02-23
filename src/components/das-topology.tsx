@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Icon } from './Icon';
 
 const TYPES = {
   SWITCH: 'switch',
@@ -208,7 +212,7 @@ export function DasTopology() {
     return () => ro.disconnect();
   }, []);
 
-  const { positions, children } = useMemo(() => computeLayout(DAS_NODES, DAS_LINKS), []);
+  const { positions } = useMemo(() => computeLayout(DAS_NODES, DAS_LINKS), []);
   const nodeMap = useMemo(() => Object.fromEntries(DAS_NODES.map((n) => [n.id, n])), []);
   const hoveredNode = hovered ? nodeMap[hovered] ?? null : null;
 
@@ -274,18 +278,15 @@ export function DasTopology() {
   return (
     <div ref={containerRef} className="relative w-full" style={{ height: 'calc(100vh - 320px)', minHeight: 260 }}>
       {/* Controls */}
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
-        <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
-          <input type="checkbox" checked={showLabels} onChange={(e) => setShowLabels(e.target.checked)} className="rounded" />
-          Labels
-        </label>
-        <button
-          type="button"
-          onClick={fitToView}
-          className="text-xs text-muted-foreground hover:text-foreground border rounded px-1.5 py-0.5"
-        >
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Switch id="das-labels" checked={showLabels} onCheckedChange={setShowLabels} className="scale-90" />
+          <Label htmlFor="das-labels" className="text-xs text-muted-foreground cursor-pointer">Labels</Label>
+        </div>
+        <Button variant="outline" size="sm" onClick={fitToView}>
+          <Icon name="fit_screen" size={14} className="mr-1" />
           Reset
-        </button>
+        </Button>
       </div>
 
       {/* SVG canvas */}
@@ -344,21 +345,19 @@ export function DasTopology() {
       <NodeTooltip node={hoveredNode} colors={colors} />
 
       {/* Legend */}
-      <div
-        className="absolute top-2 left-2 rounded border bg-card text-card-foreground shadow-sm"
-        style={{ padding: '6px 10px', fontSize: 10 }}
-      >
-        <div className="flex flex-col gap-1">
+      <div className="absolute top-3 left-3 rounded-lg border bg-card text-card-foreground shadow-sm px-3 py-2.5">
+        <p className="text-[11px] font-medium text-muted-foreground mb-2 uppercase tracking-wider">Legend</p>
+        <div className="flex flex-col gap-2">
           {[
-            { shape: <rect x={0} y={2} width={18} height={8} rx={1} fill={colors.online} stroke={colors.onlineStroke} strokeWidth={1} />, label: 'Switch / Hub' },
-            { shape: <circle cx={6} cy={6} r={5} fill={colors.online} stroke={colors.onlineStroke} strokeWidth={1} />, label: 'Remote unit' },
-            { shape: <rect x={1} y={1} width={10} height={10} fill={colors.online} stroke={colors.onlineStroke} strokeWidth={1} />, label: 'Auxiliary' },
-            { shape: <polygon points="6,0 12,6 6,12 0,6" fill={colors.bg} stroke={colors.warningStroke} strokeWidth={1} />, label: 'Alerting' },
-            { shape: <circle cx={6} cy={6} r={5} fill="none" stroke={colors.offlineStroke} strokeWidth={1} />, label: 'Offline' },
+            { shape: <rect x={1} y={2} width={20} height={10} rx={2} fill={colors.online} stroke={colors.onlineStroke} strokeWidth={1} />, label: 'Switch / Hub' },
+            { shape: <circle cx={7} cy={7} r={6} fill={colors.online} stroke={colors.onlineStroke} strokeWidth={1} />, label: 'Remote unit' },
+            { shape: <rect x={1} y={1} width={12} height={12} fill={colors.online} stroke={colors.onlineStroke} strokeWidth={1} />, label: 'Auxiliary' },
+            { shape: <polygon points="7,0 14,7 7,14 0,7" fill={colors.bg} stroke={colors.warningStroke} strokeWidth={1.5} />, label: 'Alerting' },
+            { shape: <circle cx={7} cy={7} r={6} fill="none" stroke={colors.offlineStroke} strokeWidth={1.5} strokeDasharray="3 2" />, label: 'Offline' },
           ].map(({ shape, label }, i) => (
-            <div key={i} className="flex items-center gap-1.5">
-              <svg width={18} height={12}>{shape}</svg>
-              <span className="text-muted-foreground">{label}</span>
+            <div key={i} className="flex items-center gap-2.5">
+              <svg width={22} height={14} className="shrink-0">{shape}</svg>
+              <span className="text-xs text-foreground">{label}</span>
             </div>
           ))}
         </div>

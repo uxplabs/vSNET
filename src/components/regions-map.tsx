@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import type { RegionRow } from './regions-table';
 import { REGIONS_DATA } from './regions-table';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';

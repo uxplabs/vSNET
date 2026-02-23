@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Card, CardContent } from './ui/card';
@@ -11,7 +10,7 @@ export interface DeviceMigrationPageProps {
   onBack?: () => void;
 }
 
-export default function DeviceMigrationPage({ onBack }: DeviceMigrationPageProps) {
+export default function DeviceMigrationPage({ onBack: _onBack }: DeviceMigrationPageProps) {
   const completedCount = DEVICE_MIGRATION_DATA.filter(d => d.status === 'Completed').length;
   const inProgressCount = DEVICE_MIGRATION_DATA.filter(d => d.status === 'In progress').length;
   const totalCount = DEVICE_MIGRATION_DATA.length;

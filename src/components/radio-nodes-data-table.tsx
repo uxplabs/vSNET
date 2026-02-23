@@ -171,11 +171,8 @@ export interface RadioNodesDataTableProps {
 
 export function RadioNodesDataTable({
   search,
-  onSearchChange,
   statusFilter,
-  onStatusFilterChange,
   modelFilter,
-  onModelFilterChange,
 }: RadioNodesDataTableProps) {
   const filteredData = React.useMemo(
     () => filterRadioNodes(RADIO_NODES_DATA, search, statusFilter, modelFilter),

@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
@@ -89,12 +89,8 @@ const Navbar01 = ({
   const setRegions = React.useCallback(
     (next: string[] | ((prev: string[]) => string[])) => {
       if (onRegionsChange) {
-        // Pass functional updater so parent always applies from its latest state (fixes multi-select when menu closes between clicks)
-        if (typeof next === 'function') {
-          onRegionsChange((parentPrev: string[]) => next(parentPrev));
-        } else {
-          onRegionsChange(next);
-        }
+        const value = typeof next === 'function' ? next(regions) : next;
+        onRegionsChange(value);
       } else if (onRegionChange) {
         const value = typeof next === 'function' ? next(regions) : next;
         onRegionChange(value[0] ?? 'All');
@@ -133,7 +129,6 @@ const Navbar01 = ({
       : regionDisplayList.length === 1
         ? regionDisplayList[0]
         : regionDisplayList.join(', ');
-  const region = regions[0] ?? 'All';
   const [activeSection, setActiveSection] = useState<string>(currentSection ?? '');
 
   // Current user info from localStorage

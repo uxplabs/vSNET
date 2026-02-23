@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/Icon';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
@@ -256,7 +255,7 @@ export function GoldenConfigDataTable() {
     setConfigOption('airspan');
   };
 
-  const handleConfigModalSave = (selections: Record<string, 'airspan' | 'new'>) => {
+  const handleConfigModalSave = (_selections: Record<string, 'airspan' | 'new'>) => {
     addVersionToTable();
     setConfigModalOpen(false);
     // Reset state

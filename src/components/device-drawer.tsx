@@ -34,13 +34,6 @@ import type { AlarmDrawerAlarm } from './alarm-drawer';
 import { ConfigMismatchSheet } from './config-mismatch-sheet';
 import { DeviceStatus } from '@/components/ui/device-status';
 
-const ALARM_TYPE_CONFIG: Record<string, { name: string; className: string }> = {
-  Critical: { name: 'error', className: 'text-destructive' },
-  Major: { name: 'error_outline', className: 'text-warning' },
-  Minor: { name: 'warning', className: 'text-yellow-500' },
-  None: { name: 'check_circle', className: 'text-muted-foreground' },
-};
-
 type AlarmSeverity = 'Critical' | 'Major' | 'Minor';
 
 interface DrawerAlarmRow {
@@ -138,7 +131,7 @@ interface DeviceDrawerProps {
 
 export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }: DeviceDrawerProps) {
   const notesSectionRef = React.useRef<HTMLDivElement>(null);
-  const [labelsExpanded, setLabelsExpanded] = React.useState(false);
+  const [_labelsExpanded, _setLabelsExpanded] = React.useState(false);
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
   const [alarmDrawerOpen, setAlarmDrawerOpen] = React.useState(false);
   const [selectedAlarm, setSelectedAlarm] = React.useState<AlarmDrawerAlarm | null>(null);
@@ -173,7 +166,6 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
 
   if (!device) return null;
 
-  const alarmConfig = ALARM_TYPE_CONFIG[device.alarmType] ?? ALARM_TYPE_CONFIG.None;
   const hasNotes = !!device.notes?.trim();
   const isDas = device.type === 'DAS';
 

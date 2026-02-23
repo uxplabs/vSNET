@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import { Icon } from './Icon';
 import { StatCard } from './ui/stat-card';
 import { KpiDonutCard } from './KpiDonutCard';

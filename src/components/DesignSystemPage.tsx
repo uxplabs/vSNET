@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { Navbar01 } from './navbar-01';
 import { Tabs, TabsContent, TabsListUnderline, TabsTriggerUnderline } from './ui/tabs';
 import ColorTokensPage from './ColorTokensPage';

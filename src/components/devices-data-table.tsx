@@ -35,7 +35,6 @@ import { DeviceStatus } from '@/components/ui/device-status';
 import { DeviceDrawer } from '@/components/device-drawer';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { Icon } from '@/components/Icon';
-import { Badge } from '@/components/ui/badge';
 import { NodeTypeBadge } from '@/components/ui/node-type-badge';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ConfigMismatchSheet } from './config-mismatch-sheet';
@@ -135,7 +134,6 @@ function getDeviceStatus(i: number, deviceType?: string): string {
   if (hash < 82) return 'Disconnected';
   return 'In maintenance';
 }
-const ALARM_TYPES: Array<'Critical' | 'Major' | 'Minor' | 'None'> = ['None', 'Minor', 'Critical', 'Major', 'None', 'Minor', 'Critical', 'None', 'Major', 'Critical'];
 const CONFIG_STATUSES = ['Synchronized', 'Synchronized', 'Synchronized', 'Synchronized', 'Pending', 'Synchronized', 'Out of sync', 'Synchronized', 'Synchronized', 'Out of sync'];
 const VERSIONS = ['v3.0', 'v2.2', 'v2.1', 'v3.1', 'v2.2', 'v2.1', 'v2.2', 'v3.0', 'v3.1', 'v2.1'];
 const DEVICE_GROUPS: DeviceGroup[] = ['Core network', 'Radio access', 'Edge devices', 'Test environment'];
@@ -487,13 +485,7 @@ function getColumns(
             View details
           </DropdownMenuItem>
           <DropdownMenuItem>Refresh</DropdownMenuItem>
-          <DropdownMenuItem>Reboot</DropdownMenuItem>
-          <DropdownMenuItem>Network settings</DropdownMenuItem>
-          <DropdownMenuItem>Edit event notification settings</DropdownMenuItem>
-          <DropdownMenuItem>Update firmware</DropdownMenuItem>
           <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-          <DropdownMenuItem>Connect RF feed</DropdownMenuItem>
-          <DropdownMenuItem>Create backup</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     ),

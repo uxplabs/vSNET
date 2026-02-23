@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { SortableHeader } from '@/components/ui/sortable-header';

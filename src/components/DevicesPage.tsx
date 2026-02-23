@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Navbar01 } from './navbar-01';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
@@ -25,8 +25,8 @@ import { SoftwareImagesTab } from './software-images-tab';
 import { ActivityLogDataTable } from './activity-log-data-table';
 import { ReportsDataTable, getFilteredReportCount } from './reports-data-table';
 import { PerformanceDataTable, getFilteredPerformanceCount } from './performance-data-table';
-import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount } from './threshold-crossing-alerts-data-table';
-import { InventoryDataTable, getFilteredInventoryCount, INVENTORY_STATUS_OPTIONS, INVENTORY_TECHNOLOGY_OPTIONS, INVENTORY_MODEL_OPTIONS, INVENTORY_VERSION_OPTIONS, INVENTORY_ALARM_OPTIONS } from './inventory-data-table';
+import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount, THRESHOLD_KPI_OPTIONS } from './threshold-crossing-alerts-data-table';
+import { InventoryDataTable, getFilteredInventoryCount, INVENTORY_STATUS_OPTIONS, INVENTORY_TECHNOLOGY_OPTIONS, INVENTORY_MODEL_OPTIONS } from './inventory-data-table';
 import { ChevronDown } from 'lucide-react';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ErrorBoundary } from './error-boundary';
@@ -93,7 +93,6 @@ const REPORT_TASK_OPTIONS = ['All', 'Alarm report', 'Config backup', 'KPI sync',
 const REPORT_CREATED_OPTIONS = ['All', 'Today', 'This week', 'This month', 'All time'] as const;
 const PERFORMANCE_LTE_OPTIONS = ['All', 'SN'] as const;
 const PERFORMANCE_TIME_OPTIONS = ['All', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
-const THRESHOLD_ACT_SESS_OPTIONS = ['All', 'ACT_SESS_1', 'ACT_SESS_2', 'ACT_SESS_3'] as const;
 
 const allDeviceCounts = getDeviceSidebarCounts(DEVICES_DATA);
 const allDeviceCountsByRegion = getDeviceSidebarCountsByRegion(DEVICES_DATA);
@@ -161,19 +160,19 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [performanceLteFilter, setPerformanceLteFilter] = useState<string>('All');
   const [performanceTimeFilter, setPerformanceTimeFilter] = useState<string>('All');
   const [performanceStatusFilter, setPerformanceStatusFilter] = useState<'all' | 'degraded' | 'optimal'>('all');
-  const [thresholdActSessFilter, setThresholdActSessFilter] = useState<string>('All');
+  const [thresholdSearch, setThresholdSearch] = useState('');
+  const [thresholdKpiFilter, setThresholdKpiFilter] = useState<string>('All');
+  const [thresholdStateFilter, setThresholdStateFilter] = useState<string>('All');
   const [inventorySearch, setInventorySearch] = useState('');
   const [inventoryViewFilter, setInventoryViewFilter] = useState('radio-nodes');
   // Radio nodes filters
   const [rnStatusFilter, setRnStatusFilter] = useState<string>('All');
   const [rnModelFilter, setRnModelFilter] = useState<string>('All');
-  const [rnVersionFilter, setRnVersionFilter] = useState<string>('All');
-  const [rnAlarmFilter, setRnAlarmFilter] = useState<string>('All');
+  const [rnStateFilter, setRnStateFilter] = useState<string>('All');
   // Cells filters
   const [cellsStatusFilter, setCellsStatusFilter] = useState<string>('All');
   const [cellsTechnologyFilter, setCellsTechnologyFilter] = useState<string>('All');
-  const [cellsVersionFilter, setCellsVersionFilter] = useState<string>('All');
-  const [cellsAlarmFilter, setCellsAlarmFilter] = useState<string>('All');
+  const [cellsStateFilter, setCellsStateFilter] = useState<string>('All');
   const [softwareManagementTab, setSoftwareManagementTab] = useState('tasks');
   const [performanceTab, setPerformanceTab] = useState('activity');
   const [selectedTask, setSelectedTask] = useState<ScheduledTaskRow | null>(null);
@@ -185,41 +184,31 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [alarmClearSelectionTrigger, setAlarmClearSelectionTrigger] = useState(0);
   const [eventSelectedCount, setEventSelectedCount] = useState(0);
   const [eventClearSelectionTrigger, setEventClearSelectionTrigger] = useState(0);
-  const deviceFiltersActive = search !== '' || regionFilter !== 'All' || statusFilter !== 'All' || configStatusFilter !== 'All' || typeFilter !== 'All' || versionFilter !== 'All' || alarmsFilter !== 'All' || labelsFilter !== 'All';
   const clearDeviceFilters = () => {
     setSearch(''); setRegionFilter('All'); setStatusFilter('All'); setSelectedRegion('all'); setConfigStatusFilter('All'); setTypeFilter('All'); setVersionFilter('All'); setAlarmsFilter('All'); setLabelsFilter('All');
   };
-  const eventsFiltersActive = eventsSearch !== '' || regionFilter !== 'All' || eventsTypeFilter !== 'All' || eventsSeverityFilter !== 'All' || eventsSourceFilter !== 'All';
   const clearEventsFilters = () => {
     setEventsSearch(''); setRegionFilter('All'); setEventsTypeFilter('All'); setEventsSeverityFilter('All'); setEventsSourceFilter('All');
   };
-  const tasksFiltersActive = tasksSearch !== '' || tasksTypeFilter !== 'All' || tasksStatusFilter !== 'All' || tasksDomainFilter !== 'All';
   const clearTasksFilters = () => {
     setTasksSearch(''); setTasksTypeFilter('All'); setTasksStatusFilter('All'); setTasksDomainFilter('All');
   };
-  const softwareFiltersActive = softwareSearch !== '' || softwareTypeFilter !== 'All' || softwareStatusFilter !== 'All' || softwareVersionFilter !== 'All';
   const clearSoftwareFilters = () => {
     setSoftwareSearch(''); setSoftwareTypeFilter('All'); setSoftwareStatusFilter('All'); setSoftwareVersionFilter('All');
   };
   const isRadioNodes = inventoryViewFilter === 'radio-nodes';
-  const inventoryFiltersActive = inventorySearch !== '' ||
-    (isRadioNodes ? (rnStatusFilter !== 'All' || rnModelFilter !== 'All' || rnVersionFilter !== 'All' || rnAlarmFilter !== 'All')
-                  : (cellsStatusFilter !== 'All' || cellsTechnologyFilter !== 'All' || cellsVersionFilter !== 'All' || cellsAlarmFilter !== 'All'));
   const clearInventoryFilters = () => {
     setInventorySearch('');
-    if (isRadioNodes) { setRnStatusFilter('All'); setRnModelFilter('All'); setRnVersionFilter('All'); setRnAlarmFilter('All'); }
-    else { setCellsStatusFilter('All'); setCellsTechnologyFilter('All'); setCellsVersionFilter('All'); setCellsAlarmFilter('All'); }
+    if (isRadioNodes) { setRnStatusFilter('All'); setRnModelFilter('All'); setRnStateFilter('All'); }
+    else { setCellsStatusFilter('All'); setCellsTechnologyFilter('All'); setCellsStateFilter('All'); }
   };
-  const reportsFiltersActive = reportsSearch !== '' || reportsTypeFilter !== 'All' || reportsTaskFilter !== 'All' || reportsCreatedFilter !== 'All';
   const clearReportsFilters = () => {
     setReportsSearch(''); setReportsTypeFilter('All'); setReportsTaskFilter('All'); setReportsCreatedFilter('All');
   };
-  const performanceFiltersActive = performanceSearch !== '' || performanceLteFilter !== 'All' || performanceTimeFilter !== 'All' || performanceStatusFilter !== 'all';
   const clearPerformanceFilters = () => {
     setPerformanceSearch(''); setPerformanceLteFilter('All'); setPerformanceTimeFilter('All'); setPerformanceStatusFilter('all');
   };
-  const thresholdFiltersActive = thresholdActSessFilter !== 'All';
-  const clearThresholdFilters = () => setThresholdActSessFilter('All');
+  const clearThresholdFilters = () => { setThresholdSearch(''); setThresholdKpiFilter('All'); setThresholdStateFilter('All'); };
 
   // Keep filter dropdowns in sync with sidebar selection
   useEffect(() => {
@@ -888,15 +877,35 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     <>
                       <FilterSelect value={rnStatusFilter} onValueChange={setRnStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-[110px] shrink-0" />
                       <FilterSelect value={rnModelFilter} onValueChange={setRnModelFilter} label="Model" options={INVENTORY_MODEL_OPTIONS} className="w-[130px] shrink-0" />
-                      <FilterSelect value={rnVersionFilter} onValueChange={setRnVersionFilter} label="Version" options={INVENTORY_VERSION_OPTIONS} className="w-[120px] shrink-0" />
-                      <FilterSelect value={rnAlarmFilter} onValueChange={setRnAlarmFilter} label="Alarms" options={INVENTORY_ALARM_OPTIONS} className="w-[120px] shrink-0" />
+                      <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm shrink-0">
+                        {(['All', 'Active', 'Inactive', 'Degraded'] as const).map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setRnStateFilter(s)}
+                            className={`px-3 h-9 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md ${rnStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
                     </>
                   ) : (
                     <>
                       <FilterSelect value={cellsStatusFilter} onValueChange={setCellsStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-[110px] shrink-0" />
                       <FilterSelect value={cellsTechnologyFilter} onValueChange={setCellsTechnologyFilter} label="Technology" options={INVENTORY_TECHNOLOGY_OPTIONS} className="w-[130px] shrink-0" />
-                      <FilterSelect value={cellsVersionFilter} onValueChange={setCellsVersionFilter} label="Version" options={INVENTORY_VERSION_OPTIONS} className="w-[120px] shrink-0" />
-                      <FilterSelect value={cellsAlarmFilter} onValueChange={setCellsAlarmFilter} label="Alarms" options={INVENTORY_ALARM_OPTIONS} className="w-[120px] shrink-0" />
+                      <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm shrink-0">
+                        {(['All', 'Active', 'Inactive', 'Degraded'] as const).map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setCellsStateFilter(s)}
+                            className={`px-3 h-9 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md ${cellsStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
                     </>
                   )}
                   <div className="ml-auto">
@@ -909,24 +918,23 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 {/* Active filters + result count */}
                 {(() => {
                   const statusF = isRadioNodes ? rnStatusFilter : cellsStatusFilter;
-                  const versionF = isRadioNodes ? rnVersionFilter : cellsVersionFilter;
-                  const alarmF = isRadioNodes ? rnAlarmFilter : cellsAlarmFilter;
+                  const stateF = isRadioNodes ? rnStateFilter : cellsStateFilter;
                   const count = getFilteredInventoryCount({
                     search: inventorySearch,
                     viewFilter: inventoryViewFilter,
                     statusFilter: statusF,
                     technologyFilter: isRadioNodes ? 'All' : cellsTechnologyFilter,
                     modelFilter: isRadioNodes ? rnModelFilter : 'All',
-                    versionFilter: versionF,
-                    alarmFilter: alarmF,
+                    versionFilter: 'All',
+                    alarmFilter: 'All',
+                    stateFilter: stateF,
                     selectedRegions: effectiveRegions,
                   });
                   const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
                   if (statusF !== 'All') activeFilters.push({ key: 'status', label: `Status: ${statusF}`, onClear: () => isRadioNodes ? setRnStatusFilter('All') : setCellsStatusFilter('All') });
                   if (isRadioNodes && rnModelFilter !== 'All') activeFilters.push({ key: 'model', label: `Model: ${rnModelFilter}`, onClear: () => setRnModelFilter('All') });
+                  if (stateF !== 'All') activeFilters.push({ key: 'state', label: `State: ${stateF}`, onClear: () => isRadioNodes ? setRnStateFilter('All') : setCellsStateFilter('All') });
                   if (!isRadioNodes && cellsTechnologyFilter !== 'All') activeFilters.push({ key: 'technology', label: `Technology: ${cellsTechnologyFilter}`, onClear: () => setCellsTechnologyFilter('All') });
-                  if (versionF !== 'All') activeFilters.push({ key: 'version', label: `Version: ${versionF}`, onClear: () => isRadioNodes ? setRnVersionFilter('All') : setCellsVersionFilter('All') });
-                  if (alarmF !== 'All') activeFilters.push({ key: 'alarm', label: `Alarms: ${alarmF}`, onClear: () => isRadioNodes ? setRnAlarmFilter('All') : setCellsAlarmFilter('All') });
                   if (inventorySearch.trim()) activeFilters.push({ key: 'search', label: `Search: "${inventorySearch.trim()}"`, onClear: () => setInventorySearch('') });
                   const hasActive = activeFilters.length > 0;
                   return (
@@ -959,8 +967,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     statusFilter={isRadioNodes ? rnStatusFilter : cellsStatusFilter}
                     technologyFilter={isRadioNodes ? 'All' : cellsTechnologyFilter}
                     modelFilter={isRadioNodes ? rnModelFilter : 'All'}
-                    versionFilter={isRadioNodes ? rnVersionFilter : cellsVersionFilter}
-                    alarmFilter={isRadioNodes ? rnAlarmFilter : cellsAlarmFilter}
+                    versionFilter="All"
+                    alarmFilter="All"
+                    stateFilter={isRadioNodes ? rnStateFilter : cellsStateFilter}
                     selectedRegions={effectiveRegions}
                   />
                 </div>
@@ -1272,7 +1281,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       Activity
                     </TabsTrigger>
                     <TabsTrigger value="threshold-crossing-alerts" className="rounded-full data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow">
-                      Threshold crossing alerts
+                      Threshold crossing
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="activity" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
@@ -1363,14 +1372,44 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                   </TabsContent>
                   <TabsContent value="threshold-crossing-alerts" className="mt-0 flex-1 flex flex-col min-h-0 overflow-hidden data-[state=inactive]:hidden">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
+                      <div className="relative w-full sm:max-w-[240px] shrink-0">
+                        <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder="Search devices, KPIs..."
+                          value={thresholdSearch}
+                          onChange={(e) => setThresholdSearch(e.target.value)}
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 pl-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        />
+                      </div>
                       <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                        <FilterSelect value={thresholdActSessFilter} onValueChange={setThresholdActSessFilter} label="ACT_SESS" options={THRESHOLD_ACT_SESS_OPTIONS} className="w-[140px] shrink-0" />
+                        <FilterSelect value={thresholdKpiFilter} onValueChange={setThresholdKpiFilter} label="KPI" options={THRESHOLD_KPI_OPTIONS} className="w-[200px] shrink-0" />
+                        <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm">
+                          {(['All', 'Active', 'Cleared'] as const).map((s) => (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => setThresholdStateFilter(s)}
+                              className={`px-3 h-9 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md ${thresholdStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="ml-auto shrink-0">
+                        <Button variant="outline">
+                          <Icon name="download" size={16} className="mr-1.5" />
+                          Export
+                        </Button>
                       </div>
                     </div>
                     {(() => {
-                      const count = getFilteredThresholdCount({ actSessFilter: thresholdActSessFilter });
+                      const count = getFilteredThresholdCount({ search: thresholdSearch, kpiFilter: thresholdKpiFilter, stateFilter: thresholdStateFilter });
                       const activeFilters: { key: string; label: string; onClear: () => void }[] = [];
-                      if (thresholdActSessFilter !== 'All') activeFilters.push({ key: 'actSess', label: `ACT_SESS: ${thresholdActSessFilter}`, onClear: () => setThresholdActSessFilter('All') });
+                      if (thresholdKpiFilter !== 'All') activeFilters.push({ key: 'kpi', label: `KPI: ${thresholdKpiFilter}`, onClear: () => setThresholdKpiFilter('All') });
+                      if (thresholdStateFilter !== 'All') activeFilters.push({ key: 'state', label: `State: ${thresholdStateFilter}`, onClear: () => setThresholdStateFilter('All') });
+                      if (thresholdSearch) activeFilters.push({ key: 'search', label: `"${thresholdSearch}"`, onClear: () => setThresholdSearch('') });
                       const hasActive = activeFilters.length > 0;
                       return (
                         <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
@@ -1396,7 +1435,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       );
                     })()}
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                      <ThresholdCrossingAlertsDataTable actSessFilter={thresholdActSessFilter} />
+                      <ThresholdCrossingAlertsDataTable search={thresholdSearch} kpiFilter={thresholdKpiFilter} stateFilter={thresholdStateFilter} />
                     </div>
                   </TabsContent>
                 </Tabs>

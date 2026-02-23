@@ -125,7 +125,7 @@ export interface EventsTableCardProps {
   regionFilter?: string;
 }
 
-export function EventsTableCard({ regionFilter }: EventsTableCardProps = {}) {
+export function EventsTableCard({ regionFilter: _regionFilter }: EventsTableCardProps = {}) {
   const pageSize = useResponsivePageSize();
   const [sorting, setSorting] = React.useState<SortingState>([{ id: 'severity', desc: false }]);
   const [globalFilter, setGlobalFilter] = React.useState('');

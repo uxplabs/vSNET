@@ -20,17 +20,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Icon } from '@/components/Icon';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useResponsivePageSize } from '@/hooks/use-responsive-page-size';
 import { DeviceLink } from '@/components/ui/device-link';
+import { Badge } from '@/components/ui/badge';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 export interface ThresholdCrossingAlertRow {
@@ -41,6 +35,7 @@ export interface ThresholdCrossingAlertRow {
   kpi: string;
   triggeredThreshold: string;
   triggeredValue: string;
+  state: 'Active' | 'Cleared' | 'Cleared manually';
   lastTriggered: string;
 }
 
@@ -102,6 +97,11 @@ const KPI_THRESHOLDS_ALT: [string, string][] = [
   /* Packet loss (%)        */ ['≤ 0.1', '0.24'],
 ];
 
+const STATES: ThresholdCrossingAlertRow['state'][] = ['Active', 'Cleared', 'Cleared manually'];
+
+export const THRESHOLD_KPI_OPTIONS = ['All', ...KPI_NAMES] as const;
+export const THRESHOLD_STATE_OPTIONS = ['All', ...STATES] as const;
+
 const THRESHOLD_ALERTS_DATA: ThresholdCrossingAlertRow[] = DEVICE_IDS.flatMap((device, i) => {
   const kpiIdx1 = i % KPI_NAMES.length;
   const kpiIdx2 = (i + 5) % KPI_NAMES.length;
@@ -114,6 +114,7 @@ const THRESHOLD_ALERTS_DATA: ThresholdCrossingAlertRow[] = DEVICE_IDS.flatMap((d
       kpi: KPI_NAMES[kpiIdx1],
       triggeredThreshold: KPI_THRESHOLDS[kpiIdx1][0],
       triggeredValue: KPI_THRESHOLDS[kpiIdx1][1],
+      state: STATES[i % 3],
       lastTriggered: i % 2 === 0 ? 'Feb 10, 2026 at 9:12 AM' : 'Feb 9, 2026 at 4:45 PM',
     },
     {
@@ -124,6 +125,7 @@ const THRESHOLD_ALERTS_DATA: ThresholdCrossingAlertRow[] = DEVICE_IDS.flatMap((d
       kpi: KPI_NAMES[kpiIdx2],
       triggeredThreshold: KPI_THRESHOLDS_ALT[kpiIdx2][0],
       triggeredValue: KPI_THRESHOLDS_ALT[kpiIdx2][1],
+      state: STATES[(i + 1) % 3],
       lastTriggered: i % 3 === 0 ? 'Feb 11, 2026 at 8:30 AM' : 'Feb 8, 2026 at 11:22 AM',
     },
   ];
@@ -178,7 +180,7 @@ const getColumns = (hideDeviceColumn?: boolean): ColumnDef<ThresholdCrossingAler
   {
     accessorKey: 'triggeredValue',
     header: ({ column }) => (
-      <SortableHeader column={column}>Triggered value</SortableHeader>
+      <SortableHeader column={column}>Last triggered value</SortableHeader>
     ),
     cell: ({ row }) => (
       <span className="tabular-nums font-medium">{row.getValue('triggeredValue') as string}</span>
@@ -194,21 +196,25 @@ const getColumns = (hideDeviceColumn?: boolean): ColumnDef<ThresholdCrossingAler
     ),
   },
   {
+    accessorKey: 'state',
+    header: ({ column }) => (
+      <SortableHeader column={column}>State</SortableHeader>
+    ),
+    cell: ({ row }) => {
+      const state = row.getValue('state') as string;
+      const variant = state === 'Active' ? 'destructive' : 'secondary';
+      return <Badge variant={variant}>{state}</Badge>;
+    },
+  },
+  {
     id: 'actions',
     header: '',
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="More actions">
-            <Icon name="more_vert" size={20} />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem>View details</DropdownMenuItem>
-          <DropdownMenuItem>Reset threshold</DropdownMenuItem>
-          <DropdownMenuItem>Edit threshold</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+    cell: ({ row }) => (
+      row.original.state === 'Active' ? (
+        <Button variant="default" size="sm">
+          Clear
+        </Button>
+      ) : null
     ),
     enableSorting: false,
     meta: {
@@ -218,29 +224,30 @@ const getColumns = (hideDeviceColumn?: boolean): ColumnDef<ThresholdCrossingAler
   return cols;
 };
 
-export function getFilteredThresholdCount(filters: { actSessFilter?: string }): number {
-  if (!filters.actSessFilter || filters.actSessFilter === 'All') {
-    return THRESHOLD_ALERTS_DATA.length;
-  }
+export function getFilteredThresholdCount(filters: { search?: string; kpiFilter?: string; stateFilter?: string; deviceId?: string }): number {
   return THRESHOLD_ALERTS_DATA.filter((row) => {
-    const idx = DEVICE_IDS.indexOf(row.device);
-    if (filters.actSessFilter === 'ACT_SESS_1') return idx % 3 === 0;
-    if (filters.actSessFilter === 'ACT_SESS_2') return idx % 3 === 1;
-    if (filters.actSessFilter === 'ACT_SESS_3') return idx % 3 === 2;
+    if (filters.deviceId && row.device !== filters.deviceId) return false;
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      if (!row.device.toLowerCase().includes(q) && !row.kpi.toLowerCase().includes(q) && !row.profileName.toLowerCase().includes(q) && !row.region.toLowerCase().includes(q)) return false;
+    }
+    if (filters.kpiFilter && filters.kpiFilter !== 'All' && row.kpi !== filters.kpiFilter) return false;
+    if (filters.stateFilter && filters.stateFilter !== 'All') {
+      if (filters.stateFilter === 'Cleared' ? row.state === 'Active' : row.state !== filters.stateFilter) return false;
+    }
     return true;
   }).length;
 }
 
 export interface ThresholdCrossingAlertsDataTableProps {
-  /** Filter to only show conditions for this device */
   deviceId?: string;
-  /** Hide the device column (for device detail page) */
   hideDeviceColumn?: boolean;
-  /** ACT_SESS filter from Devices page (ACT_SESS, All, ACT_SESS_1, ACT_SESS_2, ACT_SESS_3) */
-  actSessFilter?: string;
+  search?: string;
+  kpiFilter?: string;
+  stateFilter?: string;
 }
 
-export function ThresholdCrossingAlertsDataTable({ deviceId, hideDeviceColumn, actSessFilter }: ThresholdCrossingAlertsDataTableProps = {}) {
+export function ThresholdCrossingAlertsDataTable({ deviceId, hideDeviceColumn, search, kpiFilter, stateFilter }: ThresholdCrossingAlertsDataTableProps = {}) {
   const pageSize = useResponsivePageSize();
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: 'lastTriggered', desc: true },
@@ -253,17 +260,14 @@ export function ThresholdCrossingAlertsDataTable({ deviceId, hideDeviceColumn, a
   const filteredData = React.useMemo(() => {
     let data = THRESHOLD_ALERTS_DATA;
     if (deviceId) data = data.filter((row) => row.device === deviceId);
-    if (actSessFilter && actSessFilter !== 'All') {
-      data = data.filter((row) => {
-        const idx = DEVICE_IDS.indexOf(row.device);
-        if (actSessFilter === 'ACT_SESS_1') return idx % 3 === 0;
-        if (actSessFilter === 'ACT_SESS_2') return idx % 3 === 1;
-        if (actSessFilter === 'ACT_SESS_3') return idx % 3 === 2;
-        return true;
-      });
+    if (search) {
+      const q = search.toLowerCase();
+      data = data.filter((row) => row.device.toLowerCase().includes(q) || row.kpi.toLowerCase().includes(q) || row.profileName.toLowerCase().includes(q) || row.region.toLowerCase().includes(q));
     }
+    if (kpiFilter && kpiFilter !== 'All') data = data.filter((row) => row.kpi === kpiFilter);
+    if (stateFilter && stateFilter !== 'All') data = data.filter((row) => stateFilter === 'Cleared' ? row.state !== 'Active' : row.state === stateFilter);
     return data;
-  }, [deviceId, actSessFilter]);
+  }, [deviceId, search, kpiFilter, stateFilter]);
 
   const columns = React.useMemo(() => getColumns(hideDeviceColumn), [hideDeviceColumn]);
 

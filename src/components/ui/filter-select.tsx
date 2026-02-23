@@ -1,4 +1,3 @@
-import * as React from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "./select"
 import { cn } from "@/lib/utils"
 

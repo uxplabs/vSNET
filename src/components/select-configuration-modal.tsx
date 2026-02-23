@@ -17,9 +17,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from '@/components/ui/sheet';
-import { Badge } from '@/components/ui/badge';
 import { NodeTypeBadge } from '@/components/ui/node-type-badge';
 
 interface ConfigParameter {

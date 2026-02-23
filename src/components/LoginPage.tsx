@@ -20,7 +20,7 @@ export interface LoginPageProps {
   appName?: string;
 }
 
-function LoginPage({ onLogin, onLoginWithSSO, appName = 'AMS' }: LoginPageProps) {
+function LoginPage({ onLogin, onLoginWithSSO: _onLoginWithSSO, appName = 'AMS' }: LoginPageProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

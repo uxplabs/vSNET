@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { cn } from '@/lib/utils';
 import { DataTable } from '@/components/ui/data-table';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { Button } from '@/components/ui/button';

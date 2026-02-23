@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, lazy, Suspense } from 'react';
+import { useState, useMemo, useCallback, Suspense } from 'react';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
@@ -15,7 +15,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import {
@@ -52,12 +51,11 @@ export interface LabelManagementPageProps {
   onBack?: () => void;
 }
 
-export default function LabelManagementPage({ onBack }: LabelManagementPageProps) {
+export default function LabelManagementPage({ onBack: _onBack }: LabelManagementPageProps) {
   const [labelData, setLabelData] = useState<LabelManagementRow[]>(() => [...LABEL_MANAGEMENT_DATA]);
   const [search, setSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
   const [addDeviceSheetOpen, setAddDeviceSheetOpen] = useState(false);
-  const labelGroups = useMemo(() => getLabelGroupsWithCounts(labelData), [labelData]);
   const [selectedGroup, setSelectedGroup] = useState(() => getLabelGroupsWithCounts(LABEL_MANAGEMENT_DATA)[0]?.name ?? '');
   const [regionFilter, setRegionFilter] = useState<string>('All');
   const [groupFilter, setGroupFilter] = useState<string>('All');

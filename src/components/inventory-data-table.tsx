@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/table';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { Icon } from '@/components/Icon';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -34,7 +33,7 @@ import {
 import { TablePagination } from '@/components/ui/table-pagination';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DeviceLink } from '@/components/ui/device-link';
-import { ALARM_TYPE_CONFIG } from './devices-data-table';
+import { Badge } from '@/components/ui/badge';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 
 // ── Types ──────────────────────────────────────────────────────
@@ -59,6 +58,9 @@ export interface InventoryRow {
   type: 'Radio node' | 'NR cell';
   technology: 'LTE' | 'NR';
   version: string;
+  state: 'Active' | 'Inactive' | 'Degraded';
+  radioNodeIndex: number;
+  cellId: number;
 }
 
 // ── Mock data ──────────────────────────────────────────────────
@@ -66,7 +68,6 @@ export interface InventoryRow {
 const MODELS = ['AIR 6449', 'AIR 6419', 'AIR 3246', 'AIR 1281', 'RBS 6601', 'RBS 6301'];
 const VERSIONS = ['v3.1.0', 'v3.0.2', 'v2.9.4', 'v3.2.1', 'v2.8.0'];
 const DL_BANDWIDTHS = ['5 MHz', '10 MHz', '15 MHz', '20 MHz', '40 MHz', '50 MHz', '100 MHz'];
-const ZONE_DESCRIPTIONS = ['North sector primary', 'South sector primary', 'East sector overlay', 'West sector primary', 'Central sector primary', 'Edge sector primary'];
 const HOST_DEVICES = [
   'eNB-SEA-001', 'eNB-PDX-002', 'RN-PHX-003', 'eNB-SFO-004', 'RN-LAS-005',
   'eNB-NYC-006', 'RN-DEN-007', 'eNB-CHI-008', 'RN-ATL-009', 'eNB-MIA-010',
@@ -131,6 +132,9 @@ function generateInventoryData(): InventoryRow[] {
       type: i % 5 === 0 ? 'NR cell' : 'Radio node',
       technology: i % 3 === 0 ? 'NR' : 'LTE',
       version: VERSIONS[i % VERSIONS.length],
+      state: i % 7 === 0 ? 'Degraded' : i % 9 === 0 ? 'Inactive' : 'Active',
+      radioNodeIndex: i,
+      cellId: 1000 + i,
     });
   }
   return rows;
@@ -145,6 +149,7 @@ export const INVENTORY_TECHNOLOGY_OPTIONS = ['All', 'LTE', 'NR'] as const;
 export const INVENTORY_MODEL_OPTIONS = ['All', ...MODELS] as const;
 export const INVENTORY_VERSION_OPTIONS = ['All', ...VERSIONS] as const;
 export const INVENTORY_ALARM_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'None'] as const;
+export const INVENTORY_STATE_OPTIONS = ['All', 'Active', 'Inactive', 'Degraded'] as const;
 
 // ── Filtered count helper ──────────────────────────────────────
 
@@ -156,6 +161,7 @@ export function getFilteredInventoryCount(opts: {
   modelFilter: string;
   versionFilter: string;
   alarmFilter: string;
+  stateFilter?: string;
   selectedRegions?: string[];
 }): number {
   return INVENTORY_DATA.filter((row) => {
@@ -167,6 +173,7 @@ export function getFilteredInventoryCount(opts: {
     if (opts.modelFilter !== 'All' && row.model !== opts.modelFilter) return false;
     if (opts.versionFilter !== 'All' && row.version !== opts.versionFilter) return false;
     if (opts.alarmFilter !== 'All' && row.alarmType !== opts.alarmFilter) return false;
+    if (opts.stateFilter && opts.stateFilter !== 'All' && row.state !== opts.stateFilter) return false;
     if (opts.search.trim()) {
       const q = opts.search.toLowerCase();
       return (
@@ -217,29 +224,6 @@ function TruncatedDescriptionCell({ value }: { value: string }) {
 
 // ── Shared column helpers ────────────────────────────────────────
 
-const selectColumn: ColumnDef<InventoryRow> = {
-  id: 'select',
-  header: ({ table }) => (
-    <Checkbox
-      checked={table.getIsAllPageRowsSelected()}
-      onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-      aria-label="Select all"
-    />
-  ),
-  cell: ({ row }) => (
-    <Checkbox
-      checked={row.getIsSelected()}
-      onCheckedChange={(value) => row.toggleSelected(!!value)}
-      aria-label="Select row"
-    />
-  ),
-  enableSorting: false,
-  meta: {
-    headerClassName: 'sticky left-0 z-10 w-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-    cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-  },
-};
-
 const actionsColumn: ColumnDef<InventoryRow> = {
   id: 'actions',
   header: '',
@@ -270,11 +254,15 @@ const actionsColumn: ColumnDef<InventoryRow> = {
 function getColumns(viewFilter: string): ColumnDef<InventoryRow>[] {
   if (viewFilter === 'cells') {
     return [
-      selectColumn,
       {
         accessorKey: 'nrCell',
         header: ({ column }) => <SortableHeader column={column}>Cell</SortableHeader>,
         cell: ({ row }) => <DeviceLink value={row.getValue('nrCell') as string} maxLength={20} />,
+      },
+      {
+        accessorKey: 'cellId',
+        header: ({ column }) => <SortableHeader column={column}>Cell ID</SortableHeader>,
+        cell: ({ row }) => <span className="tabular-nums text-muted-foreground">{row.getValue('cellId') as number}</span>,
       },
       {
         accessorKey: 'technology',
@@ -324,27 +312,12 @@ function getColumns(viewFilter: string): ColumnDef<InventoryRow>[] {
         },
       },
       {
-        accessorKey: 'alarms',
-        header: ({ column }) => <SortableHeader column={column}>Alarms</SortableHeader>,
-        sortingFn: (rowA, rowB) => {
-          const order: Record<string, number> = { Critical: 0, Major: 1, Minor: 2, None: 3 };
-          const a = order[rowA.original.alarmType] ?? 4;
-          const b = order[rowB.original.alarmType] ?? 4;
-          if (a !== b) return a - b;
-          return (rowB.original.alarms ?? 0) - (rowA.original.alarms ?? 0);
-        },
+        accessorKey: 'state',
+        header: ({ column }) => <SortableHeader column={column}>State</SortableHeader>,
         cell: ({ row }) => {
-          const alarms = row.getValue('alarms') as number;
-          const alarmType = row.original.alarmType;
-          if (alarms === 0) return <span className="text-muted-foreground tabular-nums">0</span>;
-          const config = ALARM_TYPE_CONFIG[alarmType] ?? ALARM_TYPE_CONFIG.None;
-          return (
-            <span className="inline-flex items-center gap-2">
-              <span className="tabular-nums">{alarms}</span>
-              <Icon name={config.name} size={18} className={`shrink-0 ${config.className}`} />
-              {alarmType !== 'None' && <span className="text-sm">{alarmType}</span>}
-            </span>
-          );
+          const state = row.getValue('state') as string;
+          const variant = state === 'Active' ? 'default' : state === 'Degraded' ? 'destructive' : 'secondary';
+          return <Badge variant={variant}>{state}</Badge>;
         },
       },
       {
@@ -366,24 +339,22 @@ function getColumns(viewFilter: string): ColumnDef<InventoryRow>[] {
         header: ({ column }) => <SortableHeader column={column}>DL bandwidth</SortableHeader>,
         cell: ({ row }) => <span className="whitespace-nowrap">{row.getValue('dlBandwidth') as string}</span>,
       },
-      {
-        accessorKey: 'serialNumber',
-        header: ({ column }) => <SortableHeader column={column}>Serial number</SortableHeader>,
-        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.getValue('serialNumber') as string}</span>,
-      },
-      actionsColumn,
     ];
   }
 
   // Radio nodes columns (default)
   return [
-    selectColumn,
     {
       accessorKey: 'radioNode',
       header: ({ column }) => <SortableHeader column={column}>Radio node</SortableHeader>,
       cell: ({ row }) => (
         <DeviceLink value={row.getValue('radioNode') as string} maxLength={20} />
       ),
+    },
+    {
+      accessorKey: 'radioNodeIndex',
+      header: ({ column }) => <SortableHeader column={column}>Index</SortableHeader>,
+      cell: ({ row }) => <span className="tabular-nums text-muted-foreground">{row.getValue('radioNodeIndex') as number}</span>,
     },
     {
       accessorKey: 'region',
@@ -434,27 +405,12 @@ function getColumns(viewFilter: string): ColumnDef<InventoryRow>[] {
       },
     },
     {
-      accessorKey: 'alarms',
-      header: ({ column }) => <SortableHeader column={column}>Alarms</SortableHeader>,
-      sortingFn: (rowA, rowB) => {
-        const order: Record<string, number> = { Critical: 0, Major: 1, Minor: 2, None: 3 };
-        const a = order[rowA.original.alarmType] ?? 4;
-        const b = order[rowB.original.alarmType] ?? 4;
-        if (a !== b) return a - b;
-        return (rowB.original.alarms ?? 0) - (rowA.original.alarms ?? 0);
-      },
+      accessorKey: 'state',
+      header: ({ column }) => <SortableHeader column={column}>State</SortableHeader>,
       cell: ({ row }) => {
-        const alarms = row.getValue('alarms') as number;
-        const alarmType = row.original.alarmType;
-        if (alarms === 0) return <span className="text-muted-foreground tabular-nums">0</span>;
-        const config = ALARM_TYPE_CONFIG[alarmType] ?? ALARM_TYPE_CONFIG.None;
-        return (
-          <span className="inline-flex items-center gap-2">
-            <span className="tabular-nums">{alarms}</span>
-            <Icon name={config.name} size={18} className={`shrink-0 ${config.className}`} />
-            {alarmType !== 'None' && <span className="text-sm">{alarmType}</span>}
-          </span>
-        );
+        const state = row.getValue('state') as string;
+        const variant = state === 'Active' ? 'default' : state === 'Degraded' ? 'destructive' : 'secondary';
+        return <Badge variant={variant}>{state}</Badge>;
       },
     },
     {
@@ -502,6 +458,7 @@ export interface InventoryDataTableProps {
   modelFilter?: string;
   versionFilter?: string;
   alarmFilter?: string;
+  stateFilter?: string;
   selectedRegions?: string[];
 }
 
@@ -513,6 +470,7 @@ export function InventoryDataTable({
   modelFilter = 'All',
   versionFilter = 'All',
   alarmFilter = 'All',
+  stateFilter = 'All',
   selectedRegions,
 }: InventoryDataTableProps) {
   const columns = React.useMemo(() => getColumns(viewFilter), [viewFilter]);
@@ -527,6 +485,7 @@ export function InventoryDataTable({
       if (modelFilter !== 'All' && row.model !== modelFilter) return false;
       if (versionFilter !== 'All' && row.version !== versionFilter) return false;
       if (alarmFilter !== 'All' && row.alarmType !== alarmFilter) return false;
+      if (stateFilter !== 'All' && row.state !== stateFilter) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         return (
@@ -541,7 +500,7 @@ export function InventoryDataTable({
       }
       return true;
     });
-  }, [search, viewFilter, statusFilter, technologyFilter, modelFilter, versionFilter, alarmFilter, selectedRegions]);
+  }, [search, viewFilter, statusFilter, technologyFilter, modelFilter, versionFilter, alarmFilter, stateFilter, selectedRegions]);
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);

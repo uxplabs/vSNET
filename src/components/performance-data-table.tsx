@@ -226,7 +226,7 @@ export interface PerformanceTableFilters {
   search?: string;
   lteFilter?: string;
   timeFilter?: string;
-  statusFilter?: 'all' | 'good' | 'bad';
+  statusFilter?: 'all' | 'good' | 'bad' | 'optimal' | 'degraded';
 }
 
 export function getFilteredPerformanceCount(filters: PerformanceTableFilters): number {
@@ -236,8 +236,8 @@ export function getFilteredPerformanceCount(filters: PerformanceTableFilters): n
     result = result.filter((r) => r.device.toLowerCase().includes(q) || r.region.toLowerCase().includes(q));
   }
   if (filters.statusFilter && filters.statusFilter !== 'all') {
-    if (filters.statusFilter === 'good') result = result.filter((r) => r.dataAccessibilityPct >= 98);
-    if (filters.statusFilter === 'bad') result = result.filter((r) => r.dataAccessibilityPct < 95);
+    if (filters.statusFilter === 'good' || filters.statusFilter === 'optimal') result = result.filter((r) => r.dataAccessibilityPct >= 98);
+    if (filters.statusFilter === 'bad' || filters.statusFilter === 'degraded') result = result.filter((r) => r.dataAccessibilityPct < 95);
   }
   return result.length;
 }
@@ -249,8 +249,8 @@ function filterPerformanceData(data: PerformanceRow[], filters: PerformanceTable
     result = result.filter((r) => r.device.toLowerCase().includes(q) || r.region.toLowerCase().includes(q));
   }
   if (filters.statusFilter && filters.statusFilter !== 'all') {
-    if (filters.statusFilter === 'good') result = result.filter((r) => r.dataAccessibilityPct >= 98);
-    if (filters.statusFilter === 'bad') result = result.filter((r) => r.dataAccessibilityPct < 95);
+    if (filters.statusFilter === 'good' || filters.statusFilter === 'optimal') result = result.filter((r) => r.dataAccessibilityPct >= 98);
+    if (filters.statusFilter === 'bad' || filters.statusFilter === 'degraded') result = result.filter((r) => r.dataAccessibilityPct < 95);
   }
   return result;
 }

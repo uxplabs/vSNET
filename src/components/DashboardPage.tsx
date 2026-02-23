@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
+import { useState, useRef, useCallback, useMemo, Suspense, lazy } from 'react';
 import { Navbar01 } from './navbar-01';
 import { Icon } from './Icon';
 import { StatCard } from './ui/stat-card';

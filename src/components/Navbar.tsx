@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 import { cn } from '@/lib/utils';

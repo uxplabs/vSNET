@@ -221,7 +221,7 @@ export function AddDeviceToLabelSheet({
     getPaginationRowModel: getPaginationRowModel(),
     onRowSelectionChange: setRowSelection,
     onPaginationChange: (updater) => {
-      const next = updater({ pageIndex, pageSize });
+      const next = typeof updater === 'function' ? updater({ pageIndex, pageSize }) : updater;
       setPageIndex(next.pageIndex);
     },
     state: {

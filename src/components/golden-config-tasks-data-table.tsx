@@ -33,31 +33,32 @@ export interface GoldenConfigTaskRow {
   lastUpdate: string;
   passCount: number;
   failCount: number;
+  skippedCount: number;
   lastRunDate: string;
   disabled?: boolean;
 }
 
 export const GOLDEN_CONFIG_TASKS_DATA: GoldenConfigTaskRow[] = [
-  { id: '1', deviceType: 'SN', description: 'Baseline LTE eNodeB configuration v3.2', technology: 'LTE', imageConstraint: '>=2.0.5', lastUpdate: '2026-01-28', passCount: 42, failCount: 3, lastRunDate: '2026-02-03' },
-  { id: '2', deviceType: 'SN', description: 'LTE radio parameters – band 7/28', technology: 'LTE', imageConstraint: '>=1.8.0', lastUpdate: '2026-01-15', passCount: 38, failCount: 0, lastRunDate: '2026-02-02' },
-  { id: '3', deviceType: 'CU', description: 'CU RRC connection management baseline', technology: 'NR', imageConstraint: '>=3.1.0', lastUpdate: '2026-01-22', passCount: 12, failCount: 8, lastRunDate: '2026-02-03' },
-  { id: '4', deviceType: 'RCP', description: 'RCP security hardening profile', technology: 'LTE', imageConstraint: '>=4.0.2', lastUpdate: '2026-01-10', passCount: 25, failCount: 0, lastRunDate: '2026-02-01' },
-  { id: '5', deviceType: 'SN', description: 'Carrier aggregation profile CA_7A-28A', technology: 'LTE', imageConstraint: '>=2.1.0', lastUpdate: '2026-02-01', passCount: 30, failCount: 2, lastRunDate: '2026-02-03' },
-  { id: '6', deviceType: 'VCU', description: 'Virtual CU resource allocation policy', technology: 'NR', imageConstraint: '>=1.5.3', lastUpdate: '2026-01-20', passCount: 18, failCount: 0, lastRunDate: '2026-01-31' },
-  { id: '7', deviceType: 'SN', description: 'Neighbour relation table – region sync', technology: 'LTE', imageConstraint: '>=2.0.5', lastUpdate: '2026-01-30', passCount: 20, failCount: 15, lastRunDate: '2026-02-03' },
-  { id: '8', deviceType: 'RCP', description: 'QoS policy template – voice priority', technology: 'NR', imageConstraint: '>=4.0.0', lastUpdate: '2026-01-18', passCount: 22, failCount: 1, lastRunDate: '2026-02-02' },
-  { id: '9', deviceType: 'SN', description: 'eNodeB alarm threshold configuration', technology: 'LTE', imageConstraint: '>=2.2.1', lastUpdate: '2026-02-02', passCount: 45, failCount: 0, lastRunDate: '2026-02-03' },
-  { id: '10', deviceType: 'DAS', description: 'DAS head-end unit configuration', technology: 'LTE', imageConstraint: '>=1.0.4', lastUpdate: '2026-01-25', passCount: 5, failCount: 10, lastRunDate: '2026-02-01', disabled: true },
-  { id: '11', deviceType: 'SN', description: 'LTE handover parameters – inter-freq', technology: 'LTE', imageConstraint: '>=2.0.5', lastUpdate: '2026-01-27', passCount: 35, failCount: 1, lastRunDate: '2026-02-03' },
-  { id: '12', deviceType: 'CU', description: 'CU F1 interface configuration', technology: 'NR', imageConstraint: '>=3.0.0', lastUpdate: '2026-01-14', passCount: 19, failCount: 0, lastRunDate: '2026-02-01' },
-  { id: '13', deviceType: 'SN', description: 'PRACH configuration – high-density urban', technology: 'LTE', imageConstraint: '>=2.1.0', lastUpdate: '2026-01-31', passCount: 28, failCount: 0, lastRunDate: '2026-02-03' },
-  { id: '14', deviceType: 'VCU', description: 'VCU NFVI platform baseline', technology: 'NR', imageConstraint: '>=1.5.0', lastUpdate: '2026-01-19', passCount: 8, failCount: 6, lastRunDate: '2026-02-02' },
-  { id: '15', deviceType: 'SN', description: 'SON self-optimization profile', technology: 'NR', imageConstraint: '>=2.3.0', lastUpdate: '2026-02-03', passCount: 50, failCount: 0, lastRunDate: '2026-02-04' },
-  { id: '16', deviceType: 'RCP', description: 'Core packet gateway baseline', technology: 'LTE', imageConstraint: '>=4.1.0', lastUpdate: '2026-01-22', passCount: 24, failCount: 0, lastRunDate: '2026-02-03' },
-  { id: '17', deviceType: 'SN', description: 'MIMO antenna config – 4T4R', technology: 'LTE', imageConstraint: '>=2.0.5', lastUpdate: '2026-01-26', passCount: 33, failCount: 2, lastRunDate: '2026-02-02' },
-  { id: '18', deviceType: 'DAS', description: 'DAS remote unit RF parameters', technology: 'LTE', imageConstraint: '>=1.0.2', lastUpdate: '2026-01-20', passCount: 14, failCount: 0, lastRunDate: '2026-01-31' },
-  { id: '19', deviceType: 'CU', description: 'CU-UP user plane throughput profile', technology: 'NR', imageConstraint: '>=3.1.2', lastUpdate: '2026-01-29', passCount: 21, failCount: 0, lastRunDate: '2026-02-03' },
-  { id: '20', deviceType: 'SN', description: 'Cell reselection priority table', technology: 'LTE', imageConstraint: '>=1.9.0', lastUpdate: '2026-01-17', passCount: 10, failCount: 12, lastRunDate: '2026-02-01' },
+  { id: '1', deviceType: 'SN', description: 'Baseline LTE eNodeB configuration v3.2', technology: 'LTE', imageConstraint: '>=2.0.5', lastUpdate: '2026-01-28', passCount: 42, failCount: 3, skippedCount: 2, lastRunDate: '2026-02-03' },
+  { id: '2', deviceType: 'SN', description: 'LTE radio parameters – band 7/28', technology: 'LTE', imageConstraint: '>=1.8.0', lastUpdate: '2026-01-15', passCount: 38, failCount: 0, skippedCount: 0, lastRunDate: '2026-02-02' },
+  { id: '3', deviceType: 'CU', description: 'CU RRC connection management baseline', technology: 'NR', imageConstraint: '>=3.1.0', lastUpdate: '2026-01-22', passCount: 12, failCount: 8, skippedCount: 4, lastRunDate: '2026-02-03' },
+  { id: '4', deviceType: 'RCP', description: 'RCP security hardening profile', technology: 'LTE', imageConstraint: '>=4.0.2', lastUpdate: '2026-01-10', passCount: 25, failCount: 0, skippedCount: 0, lastRunDate: '2026-02-01' },
+  { id: '5', deviceType: 'SN', description: 'Carrier aggregation profile CA_7A-28A', technology: 'LTE', imageConstraint: '>=2.1.0', lastUpdate: '2026-02-01', passCount: 30, failCount: 2, skippedCount: 1, lastRunDate: '2026-02-03' },
+  { id: '6', deviceType: 'VCU', description: 'Virtual CU resource allocation policy', technology: 'NR', imageConstraint: '>=1.5.3', lastUpdate: '2026-01-20', passCount: 18, failCount: 0, skippedCount: 0, lastRunDate: '2026-01-31' },
+  { id: '7', deviceType: 'SN', description: 'Neighbour relation table – region sync', technology: 'LTE', imageConstraint: '>=2.0.5', lastUpdate: '2026-01-30', passCount: 20, failCount: 15, skippedCount: 3, lastRunDate: '2026-02-03' },
+  { id: '8', deviceType: 'RCP', description: 'QoS policy template – voice priority', technology: 'NR', imageConstraint: '>=4.0.0', lastUpdate: '2026-01-18', passCount: 22, failCount: 1, skippedCount: 0, lastRunDate: '2026-02-02' },
+  { id: '9', deviceType: 'SN', description: 'eNodeB alarm threshold configuration', technology: 'LTE', imageConstraint: '>=2.2.1', lastUpdate: '2026-02-02', passCount: 45, failCount: 0, skippedCount: 0, lastRunDate: '2026-02-03' },
+  { id: '10', deviceType: 'DAS', description: 'DAS head-end unit configuration', technology: 'LTE', imageConstraint: '>=1.0.4', lastUpdate: '2026-01-25', passCount: 5, failCount: 10, skippedCount: 5, lastRunDate: '2026-02-01', disabled: true },
+  { id: '11', deviceType: 'SN', description: 'LTE handover parameters – inter-freq', technology: 'LTE', imageConstraint: '>=2.0.5', lastUpdate: '2026-01-27', passCount: 35, failCount: 1, skippedCount: 0, lastRunDate: '2026-02-03' },
+  { id: '12', deviceType: 'CU', description: 'CU F1 interface configuration', technology: 'NR', imageConstraint: '>=3.0.0', lastUpdate: '2026-01-14', passCount: 19, failCount: 0, skippedCount: 0, lastRunDate: '2026-02-01' },
+  { id: '13', deviceType: 'SN', description: 'PRACH configuration – high-density urban', technology: 'LTE', imageConstraint: '>=2.1.0', lastUpdate: '2026-01-31', passCount: 28, failCount: 0, skippedCount: 0, lastRunDate: '2026-02-03' },
+  { id: '14', deviceType: 'VCU', description: 'VCU NFVI platform baseline', technology: 'NR', imageConstraint: '>=1.5.0', lastUpdate: '2026-01-19', passCount: 8, failCount: 6, skippedCount: 2, lastRunDate: '2026-02-02' },
+  { id: '15', deviceType: 'SN', description: 'SON self-optimization profile', technology: 'NR', imageConstraint: '>=2.3.0', lastUpdate: '2026-02-03', passCount: 50, failCount: 0, skippedCount: 0, lastRunDate: '2026-02-04' },
+  { id: '16', deviceType: 'RCP', description: 'Core packet gateway baseline', technology: 'LTE', imageConstraint: '>=4.1.0', lastUpdate: '2026-01-22', passCount: 24, failCount: 0, skippedCount: 0, lastRunDate: '2026-02-03' },
+  { id: '17', deviceType: 'SN', description: 'MIMO antenna config – 4T4R', technology: 'LTE', imageConstraint: '>=2.0.5', lastUpdate: '2026-01-26', passCount: 33, failCount: 2, skippedCount: 1, lastRunDate: '2026-02-02' },
+  { id: '18', deviceType: 'DAS', description: 'DAS remote unit RF parameters', technology: 'LTE', imageConstraint: '>=1.0.2', lastUpdate: '2026-01-20', passCount: 14, failCount: 0, skippedCount: 0, lastRunDate: '2026-01-31' },
+  { id: '19', deviceType: 'CU', description: 'CU-UP user plane throughput profile', technology: 'NR', imageConstraint: '>=3.1.2', lastUpdate: '2026-01-29', passCount: 21, failCount: 0, skippedCount: 0, lastRunDate: '2026-02-03' },
+  { id: '20', deviceType: 'SN', description: 'Cell reselection priority table', technology: 'LTE', imageConstraint: '>=1.9.0', lastUpdate: '2026-01-17', passCount: 10, failCount: 12, skippedCount: 3, lastRunDate: '2026-02-01' },
 ];
 
 /* Editable description cell */
@@ -183,7 +184,7 @@ function getColumns(onToggleDisabled: (id: string) => void, disabledRows: Set<st
       ),
       accessorFn: (row) => row.passCount + row.failCount,
       cell: ({ row }) => {
-        const { passCount, failCount } = row.original;
+        const { passCount, failCount, skippedCount } = row.original;
         if (disabledRows.has(row.original.id)) return null;
         return (
           <div className="flex items-center gap-3">
@@ -207,6 +208,17 @@ function getColumns(onToggleDisabled: (id: string) => void, disabledRows: Set<st
                 <TooltipContent>{failCount} failed</TooltipContent>
               </Tooltip>
             )}
+            {skippedCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <Icon name="skip_next" size={16} />
+                    <span className="tabular-nums text-sm">{skippedCount}</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{skippedCount} skipped</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         );
       },
@@ -217,6 +229,10 @@ function getColumns(onToggleDisabled: (id: string) => void, disabledRows: Set<st
         const isDisabled = disabledRows.has(row.original.id);
         return (
           <div className="flex items-center justify-end gap-1">
+            <Button variant="outline" size="sm" disabled={isDisabled}>
+              <Icon name="play_arrow" size={16} className="mr-1.5" />
+              Run now
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">

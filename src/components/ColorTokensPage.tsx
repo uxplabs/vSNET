@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from './ui/card';
 import { Button } from './ui/button';
-import { Tabs, TabsContent, TabsListUnderline, TabsTriggerUnderline } from './ui/tabs';
+import { Tabs, TabsListUnderline, TabsTriggerUnderline } from './ui/tabs';
 import { Separator } from './ui/separator';
 
 interface ColorTokenRow {

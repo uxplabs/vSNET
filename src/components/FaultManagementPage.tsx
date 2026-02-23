@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
@@ -48,11 +48,10 @@ export interface FaultManagementPageProps {
   onBack?: () => void;
 }
 
-export default function FaultManagementPage({ onBack }: FaultManagementPageProps) {
+export default function FaultManagementPage({ onBack: _onBack }: FaultManagementPageProps) {
   const [faultTab, setFaultTab] = useState('events-configuration');
   const [search, setSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
-  const notificationGroups = useMemo(() => getNotificationGroupsWithCounts(), []);
   const [selectedGroup, setSelectedGroup] = useState(() => getNotificationGroupsWithCounts()[0]?.name ?? '');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [severityFilter, setSeverityFilter] = useState<string>('All');
