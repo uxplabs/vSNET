@@ -856,18 +856,6 @@ function DeviceDetailPage({
     return () => clearTimeout(t);
   }, [scrollToNotes, onScrollToNotesDone]);
 
-  const summaryGridRef = React.useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
-    const update = () => {
-      const cols = getComputedStyle(node).gridTemplateColumns.split(' ').length;
-      const remaining = cols - (7 % cols);
-      node.style.setProperty('--labels-col', `span ${remaining}`);
-    };
-    update();
-    const obs = new ResizeObserver(update);
-    obs.observe(node);
-  }, []);
-
   const [summaryValues, setSummaryValues] = useState({
     hostname: device.device,
     location: getDeviceAddress(device.region || 'Pacific Northwest', device.id),
@@ -968,10 +956,6 @@ function DeviceDetailPage({
                       {device.region}
                     </Badge>
                   )}
-                  <span className="text-sm text-gray-400">
-                    {summaryValues.location}
-                  </span>
-                  <span className="text-sm text-gray-500">•</span>
                   <DeviceStatus status={device.status} variant="dark" iconSize={14} className="text-sm" />
                   {device.configMismatch != null && device.configMismatch > 0 && (
                     <>
@@ -1125,7 +1109,7 @@ function DeviceDetailPage({
               <CardContent className="pt-6 space-y-8">
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-foreground">Summary</h4>
-                  <div ref={summaryGridRef} className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-6 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     <NameValueField
                       label="Hostname"
                       value={summaryValues.hostname}
@@ -1174,14 +1158,14 @@ function DeviceDetailPage({
                       value={summaryValues.labels}
                       onSave={(v) => setSummaryValues((s) => ({ ...s, labels: v }))}
                       placeholder="—"
-                      style={{ gridColumn: 'var(--labels-col, span 1)' }}
+                      style={{ gridColumn: '1 / -1' }}
                     />
                   </div>
                 </div>
                 <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-foreground">Status</h4>
-                  <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-6 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Node status</span>
                       <span className="font-medium">{device.status}</span>
@@ -1215,7 +1199,7 @@ function DeviceDetailPage({
                     <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
                       <h4 className="text-sm font-semibold text-foreground">Location</h4>
-                      <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+                      <div className="grid grid-cols-1 gap-x-6 gap-y-6 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Latitude</span>
                           <span className="font-medium">{getDeviceCoordinates(device.region || 'Pacific Northwest', device.id).lat}</span>
@@ -1229,7 +1213,7 @@ function DeviceDetailPage({
                     <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
                       <h4 className="text-sm font-semibold text-foreground">Hardware</h4>
-                      <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+                      <div className="grid grid-cols-1 gap-x-6 gap-y-6 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Management server</span>
                           <span className="font-medium">10.12.0.1</span>
@@ -1255,7 +1239,7 @@ function DeviceDetailPage({
                     <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
                       <h4 className="text-sm font-semibold text-foreground">Settings</h4>
-                      <div className="grid gap-x-6 gap-y-6 text-sm" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+                      <div className="grid grid-cols-1 gap-x-6 gap-y-6 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <div className="flex flex-col gap-1">
                           <span className="text-muted-foreground">Notifications</span>
                           <span className="font-medium">Enabled</span>
