@@ -8,7 +8,7 @@ import { DeviceStatus } from './ui/device-status';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
-import { DasTopology } from './das-topology';
+import { DasTopology, getDasTopologyInventoryRows } from './das-topology';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
   Table,
@@ -798,6 +798,12 @@ function DeviceDetailPage({
   const alarmsCardRef = React.useRef<HTMLDivElement>(null);
 
   const [dasInventoryView, setDasInventoryView] = useState<'list' | 'map'>('list');
+  const [dasTopologySearch, setDasTopologySearch] = useState('');
+  const [dasTopologyStatusFilter, setDasTopologyStatusFilter] = useState('All');
+  const [dasTopologyTypeFilter, setDasTopologyTypeFilter] = useState('All');
+  const [dasTableSearch, setDasTableSearch] = useState('');
+  const [dasTableStatusFilter, setDasTableStatusFilter] = useState('All');
+  const [dasTableTypeFilter, setDasTableTypeFilter] = useState('All');
   const [snmpValues, setSnmpValues] = useState({
     ipAddress: device.ipAddress || '10.12.1.42',
     snmpPort: '161',
@@ -2496,19 +2502,83 @@ function DeviceDetailPage({
           )}
 
           {activeSection === 'inventory' && (() => {
-            const DAS_INVENTORY = [
-              { id: 'heu', name: 'HEU-400-A', type: 'Head-end unit', status: 'Connected' as const, serial: 'HEU-2024-00147' },
-              { id: 'eh', name: 'EH-100-A', type: 'Expansion hub', status: 'Connected' as const, serial: 'EH-2024-00512' },
-              { id: 'ru1', name: 'RU-200-01', type: 'Remote unit', status: 'Connected' as const, serial: 'RU-2024-03281' },
-              { id: 'ru2', name: 'RU-200-02', type: 'Remote unit', status: 'Connected' as const, serial: 'RU-2024-03282' },
-              { id: 'ru3', name: 'RU-200-03', type: 'Remote unit', status: 'Disconnected' as const, serial: 'RU-2024-03290' },
-              { id: 'ps', name: 'PS-48V-R-01', type: 'Power supply', status: 'Connected' as const, serial: 'PS-2024-10044' },
-              { id: 'sfp', name: 'SFP-10G-SR-01', type: 'Optical transceiver', status: 'In maintenance' as const, serial: 'OT-2024-44210' },
-            ];
+            const DAS_INVENTORY = getDasTopologyInventoryRows();
+            const dasTableStatusOptions = ['All', ...Array.from(new Set(DAS_INVENTORY.map((item) => item.status)))];
+            const dasTableTypeOptions = ['All', ...Array.from(new Set(DAS_INVENTORY.map((item) => item.type)))];
+
+            const filteredDasInventory = DAS_INVENTORY.filter((item) => {
+              if (dasTableStatusFilter !== 'All' && item.status !== dasTableStatusFilter) return false;
+              if (dasTableTypeFilter !== 'All' && item.type !== dasTableTypeFilter) return false;
+              if (dasTableSearch.trim()) {
+                const q = dasTableSearch.trim().toLowerCase();
+                return (
+                  item.name.toLowerCase().includes(q) ||
+                  item.type.toLowerCase().includes(q) ||
+                  item.status.toLowerCase().includes(q) ||
+                  item.serial.toLowerCase().includes(q)
+                );
+              }
+              return true;
+            });
 
             return (
             <div className="space-y-4">
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-between gap-3">
+                {dasInventoryView === 'map' ? (
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="relative w-full sm:max-w-[240px] shrink-0">
+                      <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search by label, band, location..."
+                        value={dasTopologySearch}
+                        onChange={(e) => setDasTopologySearch(e.target.value)}
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 pl-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      />
+                    </div>
+                    <FilterSelect
+                      value={dasTopologyStatusFilter}
+                      onValueChange={setDasTopologyStatusFilter}
+                      label="Status"
+                      options={['All', 'Online', 'Degraded', 'Offline']}
+                      className="w-[140px] shrink-0"
+                    />
+                    <FilterSelect
+                      value={dasTopologyTypeFilter}
+                      onValueChange={setDasTopologyTypeFilter}
+                      label="Type"
+                      options={['All', 'RIU', 'DCU', 'DEU', 'dLRU', 'dMRU', 'dHRU', 'AUC', 'EU', 'EUG', 'N2RU', 'M2RU', 'H2RU', 'N3RU', 'M3RU']}
+                      className="w-[170px] shrink-0"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="relative w-full sm:max-w-[240px] shrink-0">
+                      <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search name, type, status..."
+                        value={dasTableSearch}
+                        onChange={(e) => setDasTableSearch(e.target.value)}
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 pl-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      />
+                    </div>
+                    <FilterSelect
+                      value={dasTableStatusFilter}
+                      onValueChange={setDasTableStatusFilter}
+                      label="Status"
+                      options={dasTableStatusOptions}
+                      className="w-[150px] shrink-0"
+                    />
+                    <FilterSelect
+                      value={dasTableTypeFilter}
+                      onValueChange={setDasTableTypeFilter}
+                      label="Type"
+                      options={dasTableTypeOptions}
+                      className="w-[180px] shrink-0"
+                    />
+                  </div>
+                )}
                 <ToggleGroup type="single" value={dasInventoryView} onValueChange={(v) => v && setDasInventoryView(v as 'list' | 'map')} size="sm" variant="outline">
                   <ToggleGroupItem value="list" aria-label="List view">
                     <Icon name="view_list" size={16} />
@@ -2533,7 +2603,7 @@ function DeviceDetailPage({
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {DAS_INVENTORY.map((item) => (
+                          {filteredDasInventory.map((item) => (
                             <TableRow key={item.serial}>
                               <TableCell className="px-4 py-3 font-medium">{item.name}</TableCell>
                               <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.type}</TableCell>
@@ -2552,8 +2622,12 @@ function DeviceDetailPage({
 
               {dasInventoryView === 'map' && (
                 <Card>
-                  <CardContent className="pt-4 pb-2">
-                    <DasTopology />
+                  <CardContent className="p-0">
+                    <DasTopology
+                      searchQuery={dasTopologySearch}
+                      statusFilter={dasTopologyStatusFilter}
+                      typeFilter={dasTopologyTypeFilter}
+                    />
                   </CardContent>
                 </Card>
               )}
