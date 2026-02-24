@@ -722,12 +722,18 @@ export function DevicesDataTable({
     onPaginationChange: (updater) => setPagination(updater),
     state: { sorting, rowSelection, pagination },
   });
+  const hasRows = table.getRowModel().rows.length > 0;
 
   return (
     <TooltipProvider delayDuration={300}>
     <div className="flex flex-col flex-1 min-h-0 gap-4 h-full">
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden rounded-lg border bg-card">
-        <Table className="table-fixed" style={{ minWidth: 1200 }}>
+      <div className="relative flex-1 min-h-0 overflow-x-auto overflow-y-hidden rounded-lg border bg-card">
+        {!hasRows && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+            <span className="text-sm text-muted-foreground">No results.</span>
+          </div>
+        )}
+        <Table className="table-fixed" style={{ minWidth: hasRows ? 1200 : '100%' }}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -746,7 +752,7 @@ export function DevicesDataTable({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {hasRows ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'} className="group">
                   {row.getVisibleCells().map((cell) => (
@@ -759,13 +765,7 @@ export function DevicesDataTable({
                   ))}
                 </TableRow>
               ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center px-4 py-3">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
+            ) : null}
           </TableBody>
         </Table>
       </div>

@@ -253,7 +253,10 @@ function getColumns(onToggleDisabled: (id: string) => void, disabledRows: Set<st
           </div>
         );
       },
-      meta: { className: 'w-12' },
+      meta: {
+        headerClassName: 'sticky right-0 z-10 bg-card w-[170px] text-right',
+        cellClassName: 'sticky right-0 z-10 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors w-[170px]',
+      },
     },
   ];
 }
