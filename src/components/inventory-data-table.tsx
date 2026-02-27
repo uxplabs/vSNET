@@ -151,6 +151,10 @@ export const INVENTORY_VERSION_OPTIONS = ['All', ...VERSIONS] as const;
 export const INVENTORY_ALARM_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'None'] as const;
 export const INVENTORY_STATE_OPTIONS = ['All', 'Active', 'Inactive', 'Degraded'] as const;
 
+function mapRadioNodeState(state: InventoryRow['state']): 'OSS init' | 'TK' {
+  return state === 'Active' ? 'OSS init' : 'TK';
+}
+
 // ── Filtered count helper ──────────────────────────────────────
 
 export function getFilteredInventoryCount(opts: {
@@ -173,7 +177,11 @@ export function getFilteredInventoryCount(opts: {
     if (opts.modelFilter !== 'All' && row.model !== opts.modelFilter) return false;
     if (opts.versionFilter !== 'All' && row.version !== opts.versionFilter) return false;
     if (opts.alarmFilter !== 'All' && row.alarmType !== opts.alarmFilter) return false;
-    if (opts.stateFilter && opts.stateFilter !== 'All' && row.state !== opts.stateFilter) return false;
+    if (opts.stateFilter && opts.stateFilter !== 'All') {
+      if (opts.viewFilter === 'radio-nodes') {
+        if (mapRadioNodeState(row.state) !== opts.stateFilter) return false;
+      } else if (row.state !== opts.stateFilter) return false;
+    }
     if (opts.search.trim()) {
       const q = opts.search.toLowerCase();
       return (
@@ -325,13 +333,8 @@ function getColumns(viewFilter: string): ColumnDef<InventoryRow>[] {
         header: ({ column }) => <SortableHeader column={column}>Zones</SortableHeader>,
         cell: ({ row }) => {
           const zoneList = row.getValue('zones') as string[];
-          return (
-            <div className="flex flex-col gap-0.5">
-              {zoneList.map((z) => (
-                <span key={z} className="font-mono text-xs text-muted-foreground">{z}</span>
-              ))}
-            </div>
-          );
+          const zoneNumbers = zoneList.map((z) => z.replace(/^[^-]*-/, ''));
+          return <span className="font-mono text-xs text-muted-foreground">{zoneNumbers.join(', ')}</span>;
         },
       },
       {
@@ -408,9 +411,8 @@ function getColumns(viewFilter: string): ColumnDef<InventoryRow>[] {
       accessorKey: 'state',
       header: ({ column }) => <SortableHeader column={column}>State</SortableHeader>,
       cell: ({ row }) => {
-        const state = row.getValue('state') as string;
-        const variant = state === 'Active' ? 'default' : state === 'Degraded' ? 'destructive' : 'secondary';
-        return <Badge variant={variant}>{state}</Badge>;
+        const displayState = mapRadioNodeState(row.getValue('state') as InventoryRow['state']);
+        return <Badge variant="secondary">{displayState}</Badge>;
       },
     },
     {
@@ -485,7 +487,11 @@ export function InventoryDataTable({
       if (modelFilter !== 'All' && row.model !== modelFilter) return false;
       if (versionFilter !== 'All' && row.version !== versionFilter) return false;
       if (alarmFilter !== 'All' && row.alarmType !== alarmFilter) return false;
-      if (stateFilter !== 'All' && row.state !== stateFilter) return false;
+      if (stateFilter !== 'All') {
+        if (viewFilter === 'radio-nodes') {
+          if (mapRadioNodeState(row.state) !== stateFilter) return false;
+        } else if (row.state !== stateFilter) return false;
+      }
       if (search.trim()) {
         const q = search.toLowerCase();
         return (

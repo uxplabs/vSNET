@@ -13,7 +13,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
-import { DevicesDataTable, DEVICES_DATA, getDeviceSidebarCounts, getDeviceSidebarCountsByRegion, getFilteredDeviceCount } from './devices-data-table';
+import { DevicesDataTable, DEVICES_DATA, getDeviceSidebarCounts, getDeviceSidebarCountsByRegion, getFilteredDeviceCount, getFilteredDevices, type DeviceRow } from './devices-data-table';
 import { AlarmsDataTable, getFilteredAlarmsCount } from './alarms-data-table';
 import { EventsDataTable, getFilteredEventCount } from './events-data-table';
 import { ScheduledTasksDataTable, getFilteredTaskCount } from './scheduled-tasks-data-table';
@@ -30,6 +30,8 @@ import { InventoryDataTable, getFilteredInventoryCount, INVENTORY_STATUS_OPTIONS
 import { ChevronDown } from 'lucide-react';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ErrorBoundary } from './error-boundary';
+import { RegionsMap } from './regions-map';
+import { DeviceDrawer } from './device-drawer';
 import {
   Sidebar,
   SidebarContent,
@@ -60,7 +62,7 @@ import {
 export interface DevicesPageProps {
   appName?: string;
   onSignOut?: () => void;
-  onNavigate?: (page: string, tab?: string, filters?: { statusFilter?: string; configStatusFilter?: string }) => void;
+  onNavigate?: (page: string, tab?: string, filters?: { statusFilter?: string; configStatusFilter?: string; regionFilter?: string }) => void;
   mainTab?: string;
   onMainTabChange?: (tab: string) => void;
   region?: string;
@@ -71,6 +73,7 @@ export interface DevicesPageProps {
   onNavigateToDeviceDetail?: (device: any, options?: { openNotes?: boolean; initialSection?: string; createdTemplate?: string }) => void;
   initialStatusFilter?: string;
   initialConfigStatusFilter?: string;
+  initialRegionFilter?: string;
 }
 
 const STATUS_OPTIONS = ['All', 'Connected', 'Disconnected', 'In maintenance', 'Offline'] as const;
@@ -101,7 +104,7 @@ type RegionOption = 'all' | 'disconnected' | 'kpiSyncErrors' | 'inMaintenance' |
 type DeviceGroupOption = 'Core network' | 'Radio access' | 'Edge devices' | 'Test environment';
 
 
-function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabProp, onMainTabChange, region, regions, onRegionChange, onRegionsChange, fixedRegion, onNavigateToDeviceDetail, initialStatusFilter, initialConfigStatusFilter }: DevicesPageProps) {
+function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabProp, onMainTabChange, region, regions, onRegionChange, onRegionsChange, fixedRegion, onNavigateToDeviceDetail, initialStatusFilter, initialConfigStatusFilter, initialRegionFilter }: DevicesPageProps) {
   const [internalTab, setInternalTab] = useState('device');
   const mainTab = (mainTabProp ?? internalTab) || 'device';
   const handleMainTabChange = onMainTabChange ?? setInternalTab;
@@ -130,10 +133,14 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
     }
     return result;
   }, [isAllRegions, effectiveRegions]);
+  const allDevicesInSelectedRegionsCount = useMemo(() => {
+    if (isAllRegions) return DEVICES_DATA.length;
+    return DEVICES_DATA.filter((d) => effectiveRegions!.includes(d.region)).length;
+  }, [isAllRegions, effectiveRegions]);
 
   const ungroupedCount = Math.max(0, deviceCounts.region.all - Object.values(deviceCounts.groups).reduce((a, b) => a + b, 0));
   const [search, setSearch] = useState('');
-  const [regionFilter, setRegionFilter] = useState<string>('All');
+  const [regionFilter, setRegionFilter] = useState<string>(initialRegionFilter ?? 'All');
   const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter ?? 'All');
   const [configStatusFilter, setConfigStatusFilter] = useState<string>(initialConfigStatusFilter ?? 'All');
   const [typeFilter, setTypeFilter] = useState<string>('All');
@@ -163,6 +170,9 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [thresholdSearch, setThresholdSearch] = useState('');
   const [thresholdKpiFilter, setThresholdKpiFilter] = useState<string>('All');
   const [thresholdStateFilter, setThresholdStateFilter] = useState<string>('All');
+  const [deviceMapVisible, setDeviceMapVisible] = useState(false);
+  const [focusedMapDeviceId, setFocusedMapDeviceId] = useState<string | null>(null);
+  const [mapDrilldownRegion, setMapDrilldownRegion] = useState<string | null>(null);
   const [inventorySearch, setInventorySearch] = useState('');
   const [inventoryViewFilter, setInventoryViewFilter] = useState('radio-nodes');
   // Radio nodes filters
@@ -178,6 +188,8 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [selectedTask, setSelectedTask] = useState<ScheduledTaskRow | null>(null);
   const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+  const [mapSelectedDevice, setMapSelectedDevice] = useState<DeviceRow | null>(null);
+  const [mapDeviceDrawerOpen, setMapDeviceDrawerOpen] = useState(false);
   const [deviceSelectedCount, setDeviceSelectedCount] = useState(0);
   const [clearSelectionTrigger, setClearSelectionTrigger] = useState(0);
   const [alarmSelectedCount, setAlarmSelectedCount] = useState(0);
@@ -208,6 +220,46 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const clearPerformanceFilters = () => {
     setPerformanceSearch(''); setPerformanceLteFilter('All'); setPerformanceTimeFilter('All'); setPerformanceStatusFilter('all');
   };
+  const filteredDevicesForMap = useMemo(() => getFilteredDevices({
+    sidebarRegion: selectedRegion,
+    regionFilter,
+    statusFilter,
+    search,
+    configStatusFilter,
+    typeFilter,
+    versionFilter,
+    alarmsFilter,
+    labelsFilter,
+  }, regions), [selectedRegion, regionFilter, statusFilter, search, configStatusFilter, typeFilter, versionFilter, alarmsFilter, labelsFilter, regions]);
+
+  const deviceMapData = useMemo(() => {
+    const byRegion = new Map(
+      NORTH_AMERICAN_REGIONS.map((regionName) => [regionName, {
+        region: regionName,
+        totalDevices: 0,
+        connected: 0,
+        disconnected: 0,
+        inMaintenance: 0,
+        offline: 0,
+        kpiSyncErrors: 0,
+      }]),
+    );
+
+    filteredDevicesForMap.forEach((device) => {
+      const row = byRegion.get(device.region);
+      if (!row) return;
+      row.totalDevices += 1;
+      if (device.status === 'Connected') row.connected += 1;
+      if (device.status === 'Disconnected') row.disconnected += 1;
+      if (device.status === 'In maintenance') row.inMaintenance += 1;
+      if (device.status === 'Offline') row.offline += 1;
+      if (device.configStatus === 'Out of sync') row.kpiSyncErrors += 1;
+    });
+
+    return NORTH_AMERICAN_REGIONS
+      .map((regionName) => byRegion.get(regionName)!)
+      .filter((row) => row.totalDevices > 0);
+  }, [filteredDevicesForMap]);
   const clearThresholdFilters = () => { setThresholdSearch(''); setThresholdKpiFilter('All'); setThresholdStateFilter('All'); };
 
   // Keep filter dropdowns in sync with sidebar selection
@@ -245,6 +297,34 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
       setConfigStatusFilter(initialConfigStatusFilter);
     }
   }, [initialConfigStatusFilter]);
+
+  useEffect(() => {
+    if (!initialRegionFilter || initialRegionFilter === 'All') {
+      setRegionFilter('All');
+      return;
+    }
+    if (regions && regions.includes(initialRegionFilter)) {
+      setRegionFilter(initialRegionFilter);
+    } else {
+      setRegionFilter('All');
+    }
+  }, [initialRegionFilter, regions]);
+
+  useEffect(() => {
+    if (regionFilter === 'All') {
+      setMapDrilldownRegion(null);
+    }
+  }, [regionFilter]);
+
+  useEffect(() => {
+    if (mapDrilldownRegion && effectiveRegions && effectiveRegions.length > 0 && !effectiveRegions.includes('All') && !effectiveRegions.includes(mapDrilldownRegion)) {
+      setMapDrilldownRegion(null);
+    }
+  }, [mapDrilldownRegion, effectiveRegions]);
+  const mapSelectedRegion = mapDrilldownRegion ?? (regionFilter !== 'All' ? regionFilter : region);
+  const mapSelectedRegions = mapDrilldownRegion
+    ? [mapDrilldownRegion]
+    : (regionFilter !== 'All' ? [regionFilter] : effectiveRegions);
 
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
@@ -334,7 +414,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('all')}>
                       <Icon name="devices" size={18} />
                       <span>All devices</span>
-                      <SidebarMenuBadge>{deviceCounts.region.all}</SidebarMenuBadge>
+                      <SidebarMenuBadge>{allDevicesInSelectedRegionsCount}</SidebarMenuBadge>
                     </button>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -552,6 +632,25 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       </div>
                     </>
                   )}
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={deviceMapVisible ? 'secondary' : 'outline'}
+                          size="icon"
+                          className="ml-auto shrink-0"
+                          onClick={() => setDeviceMapVisible((v) => !v)}
+                          title={deviceMapVisible ? 'Hide map' : 'Show map'}
+                          aria-pressed={deviceMapVisible}
+                        >
+                          <Icon name="map" size={20} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {deviceMapVisible ? 'Hide map' : 'Show map'}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 {/* Selected count + Clear OR active filters + result count (row above table like default view) */}
                 {deviceSelectedCount >= 1 ? (
@@ -571,6 +670,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 ) : (() => {
                         const count = getFilteredDeviceCount({
                           sidebarRegion: selectedRegion,
+                          regionFilter,
                           statusFilter,
                           search,
                           configStatusFilter,
@@ -617,6 +717,26 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                         );
                 })()}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  {deviceMapVisible && (
+                    <div className="mb-4 shrink-0">
+                      <RegionsMap
+                        region={mapSelectedRegion}
+                        regions={mapSelectedRegions}
+                        onRegionChange={fixedRegion ? undefined : (selectedMapRegion) => {
+                          setRegionFilter(selectedMapRegion);
+                          setMapDrilldownRegion(selectedMapRegion);
+                        }}
+                        data={deviceMapData}
+                        devices={filteredDevicesForMap}
+                        focusedDeviceId={focusedMapDeviceId}
+                        singleRegionZoom={9}
+                        onDevicePinClick={(device) => {
+                          setMapSelectedDevice(device);
+                          setMapDeviceDrawerOpen(true);
+                        }}
+                      />
+                    </div>
+                  )}
                   <DevicesDataTable
                     selectedRegions={regions}
                     sidebarRegion={selectedRegion}
@@ -630,7 +750,14 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     labelsFilter={labelsFilter}
                     onNavigateToDeviceDetail={onNavigateToDeviceDetail}
                     onSelectionChange={setDeviceSelectedCount}
+                    onSelectedDeviceChange={(device) => setFocusedMapDeviceId(device?.id ?? null)}
                     clearSelectionTrigger={clearSelectionTrigger}
+                  />
+                  <DeviceDrawer
+                    device={mapSelectedDevice}
+                    open={mapDeviceDrawerOpen}
+                    onOpenChange={setMapDeviceDrawerOpen}
+                    onNavigateToDetails={onNavigateToDeviceDetail}
                   />
                 </div>
                 </ErrorBoundary>
@@ -878,7 +1005,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       <FilterSelect value={rnStatusFilter} onValueChange={setRnStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-[110px] shrink-0" />
                       <FilterSelect value={rnModelFilter} onValueChange={setRnModelFilter} label="Model" options={INVENTORY_MODEL_OPTIONS} className="w-[130px] shrink-0" />
                       <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm shrink-0">
-                        {(['All', 'Active', 'Inactive', 'Degraded'] as const).map((s) => (
+                        {(['All', 'OSS init', 'TK'] as const).map((s) => (
                           <button
                             key={s}
                             type="button"

@@ -78,6 +78,7 @@ import { DebugLogsDataTable } from './debug-logs-data-table';
 import { IP_INTERFACES_DATA } from './ip-interfaces-data-table';
 import { NameValueField, EditableLabelsField } from './ui/editable-value';
 import { NodeTypeBadge } from './ui/node-type-badge';
+import { RegionsMap } from './regions-map';
 import {
   type ChartConfig,
   ChartContainer,
@@ -1111,6 +1112,7 @@ function DeviceDetailPage({
           {activeSection === 'summary' && (
           <div className="space-y-6">
             {/* Name/value pair section from device drawer */}
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-stretch">
             <Card>
               <CardContent className="pt-6 space-y-8">
                 <div className="space-y-4">
@@ -1289,6 +1291,19 @@ function DeviceDetailPage({
                 </Button>
               </CardContent>
             </Card>
+            <Card className="h-full flex flex-col">
+              <CardContent className="pt-0 flex-1">
+                <RegionsMap
+                  region={device.region}
+                  regions={device.region ? [device.region] : undefined}
+                  devices={[device]}
+                  singleRegionZoom={13}
+                  heightClassName="h-full min-h-[400px]"
+                  devicePinSpreadScale={0}
+                />
+              </CardContent>
+            </Card>
+            </div>
 
             {/* Alarms, Events, Conditions, Notes */}
             <Card ref={alarmsCardRef}>

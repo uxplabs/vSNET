@@ -518,6 +518,8 @@ interface DevicesDataTableProps {
   onAddNoteClick?: (device: DeviceRow) => void;
   /** Called when row selection changes; receives the number of selected rows. */
   onSelectionChange?: (selectedCount: number) => void;
+  /** Called when selected row changes; used to sync table selection with map focus. */
+  onSelectedDeviceChange?: (device: DeviceRow | null) => void;
   /** When this value changes, row selection is cleared (e.g. parent increments when user clicks Clear). */
   clearSelectionTrigger?: number;
   /** Selected regions from global nav - if multiple, show Region column */
@@ -596,10 +598,15 @@ export function getFilteredDeviceCount(filters: DeviceTableFilters, selectedRegi
   return applyDeviceFilters(DEVICES_DATA, filters, selectedRegions).length;
 }
 
+export function getFilteredDevices(filters: DeviceTableFilters, selectedRegions?: string[]): DeviceRow[] {
+  return applyDeviceFilters(DEVICES_DATA, filters, selectedRegions);
+}
+
 export function DevicesDataTable({
   onNavigateToDeviceDetail,
   onAddNoteClick,
   onSelectionChange,
+  onSelectedDeviceChange,
   clearSelectionTrigger,
   selectedRegions = [],
   sidebarRegion = 'all',
@@ -705,6 +712,19 @@ export function DevicesDataTable({
       selectedRegions,
     ]
   );
+
+  const selectedDeviceForMap = React.useMemo(() => {
+    const selectedIds = new Set(
+      Object.entries(rowSelection)
+        .filter(([, isSelected]) => isSelected)
+        .map(([id]) => id),
+    );
+    return data.find((d) => selectedIds.has(d.id)) ?? null;
+  }, [rowSelection, data]);
+
+  React.useEffect(() => {
+    onSelectedDeviceChange?.(selectedDeviceForMap);
+  }, [selectedDeviceForMap, onSelectedDeviceChange]);
 
   React.useEffect(() => {
     setPagination((prev) => ({ ...prev, pageSize }));

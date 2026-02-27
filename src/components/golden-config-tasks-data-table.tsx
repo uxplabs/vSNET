@@ -228,11 +228,7 @@ function getColumns(onToggleDisabled: (id: string) => void, disabledRows: Set<st
       cell: ({ row }) => {
         const isDisabled = disabledRows.has(row.original.id);
         return (
-          <div className="flex items-center justify-end gap-1">
-            <Button variant="outline" size="sm" disabled={isDisabled}>
-              <Icon name="play_arrow" size={16} className="mr-1.5" />
-              Run now
-            </Button>
+          <div className="flex items-center justify-end">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -240,6 +236,10 @@ function getColumns(onToggleDisabled: (id: string) => void, disabledRows: Set<st
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled={isDisabled}>
+                  <Icon name="play_arrow" size={16} className="mr-2" />
+                  Run now
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onToggleDisabled(row.original.id)}>
                   <Icon name={isDisabled ? 'check_circle' : 'block'} size={16} className="mr-2" />
                   {isDisabled ? 'Enable' : 'Disable'}

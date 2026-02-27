@@ -27,6 +27,7 @@ function App() {
   const [devicesTab, setDevicesTab] = useState('device')
   const [devicesStatusFilter, setDevicesStatusFilter] = useState<string>('All')
   const [devicesConfigStatusFilter, setDevicesConfigStatusFilter] = useState<string>('All')
+  const [devicesRegionFilter, setDevicesRegionFilter] = useState<string>('All')
   const [regions, setRegions] = useState<string[]>(['Pacific Northwest'])
   const region = regions[0] ?? 'Pacific Northwest'
 
@@ -94,7 +95,7 @@ function App() {
     setGlobalDrawerOpen(true)
   }, [])
 
-  const handleNavigate = (page: string, tab?: string, filters?: { statusFilter?: string; configStatusFilter?: string }) => {
+  const handleNavigate = (page: string, tab?: string, filters?: { statusFilter?: string; configStatusFilter?: string; regionFilter?: string }) => {
     setCurrentPage(page as Page)
     if (page === 'devices') {
       setSelectedDevice(null)
@@ -102,6 +103,7 @@ function App() {
       setDevicesTab(tab ?? 'device')
       setDevicesStatusFilter(filters?.statusFilter ?? 'All')
       setDevicesConfigStatusFilter(filters?.configStatusFilter ?? 'All')
+      setDevicesRegionFilter(filters?.regionFilter ?? 'All')
     }
   }
 
@@ -269,6 +271,7 @@ function App() {
             onNavigateToDeviceDetail={handleNavigateToDeviceDetail}
             initialStatusFilter={devicesStatusFilter}
             initialConfigStatusFilter={devicesConfigStatusFilter}
+            initialRegionFilter={devicesRegionFilter}
           />
         </div>
       )}

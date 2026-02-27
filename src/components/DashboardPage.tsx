@@ -11,6 +11,7 @@ const DashboardAlarmsTab = lazy(() => import('./DashboardAlarmsTab').then((m) =>
 const DashboardCapacityTab = lazy(() => import('./DashboardCapacityTab').then((m) => ({ default: m.DashboardCapacityTab })));
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 const DASHBOARD_TABS = [
   { value: 'network-overview', label: 'Network overview' },
@@ -23,7 +24,7 @@ const DASHBOARD_TABS = [
 export interface DashboardPageProps {
   appName?: string;
   onSignOut?: () => void;
-  onNavigate?: (page: string, tab?: string, filters?: { statusFilter?: string; configStatusFilter?: string }) => void;
+  onNavigate?: (page: string, tab?: string, filters?: { statusFilter?: string; configStatusFilter?: string; regionFilter?: string }) => void;
   region?: string;
   regions?: string[];
   onRegionChange?: (region: string) => void;
@@ -118,6 +119,23 @@ function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions
     };
   }, [effectiveRegions, fixedRegion]);
 
+  const dashboardMapTooltipData = useMemo(() => {
+    const base = new Map<string, { active: number; disconnected: number; critical: number; major: number }>();
+    DEVICES_DATA.forEach((d) => {
+      const row = base.get(d.region) ?? { active: 0, disconnected: 0, critical: 0, major: 0 };
+      if (d.status === 'Connected') row.active += 1;
+      if (d.status === 'Disconnected') row.disconnected += 1;
+      base.set(d.region, row);
+    });
+    ALARMS_DATA.forEach((a) => {
+      const row = base.get(a.region) ?? { active: 0, disconnected: 0, critical: 0, major: 0 };
+      if (a.severity === 'Critical') row.critical += 1;
+      if (a.severity === 'Major') row.major += 1;
+      base.set(a.region, row);
+    });
+    return Object.fromEntries(base);
+  }, []);
+
   const scrollToAlarmsAndFilter = useCallback((severity: string) => {
     setAlarmsSeverityFilter(severity);
     setTimeout(() => {
@@ -148,20 +166,37 @@ function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions
                         <Icon name="smartphone" size={20} className="text-muted-foreground" />
                         Devices
                       </h2>
-                      <Button
-                        variant={mapVisible ? 'secondary' : 'outline'}
-                        size="icon"
-                        onClick={() => setMapVisible((v) => !v)}
-                        title={mapVisible ? 'Hide map' : 'Show map'}
-                        aria-pressed={mapVisible}
-                      >
-                        <Icon name="map" size={20} />
-                      </Button>
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={mapVisible ? 'secondary' : 'outline'}
+                              size="icon"
+                              onClick={() => setMapVisible((v) => !v)}
+                              title={mapVisible ? 'Hide map' : 'Show map'}
+                              aria-pressed={mapVisible}
+                            >
+                              <Icon name="map" size={20} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {mapVisible ? 'Hide map' : 'Show map'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                     {mapVisible && (
                       <div className="mb-6">
                         <Suspense fallback={<div className="rounded-lg border bg-card h-[400px] flex items-center justify-center bg-muted/30"><span className="text-muted-foreground text-sm">Loading map…</span></div>}>
-                          <RegionsMap region={fixedRegion ?? region} regions={effectiveRegions} onRegionChange={fixedRegion ? undefined : onRegionChange} />
+                          <RegionsMap
+                            region={fixedRegion ?? region}
+                            regions={effectiveRegions}
+                            onRegionChange={fixedRegion ? undefined : (selectedRegion) => {
+                              onNavigate?.('devices', 'device', { regionFilter: selectedRegion });
+                            }}
+                            regionTooltipData={dashboardMapTooltipData}
+                            regionPinHoverState
+                          />
                         </Suspense>
                       </div>
                     )}
