@@ -29,9 +29,11 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   /** Optional header rendered above the table inside the card */
   header?: React.ReactNode;
+  /** Optional row click handler */
+  onRowClick?: (row: TData) => void;
 }
 
-export function DataTable<TData, TValue>({ columns, data, header }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({ columns, data, header, onRowClick }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const pageSize = useResponsivePageSize();
@@ -84,7 +86,12 @@ export function DataTable<TData, TValue>({ columns, data, header }: DataTablePro
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'} className="group">
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                  className={cn('group', onRowClick && 'cursor-pointer')}
+                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                >
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta as { cellClassName?: string; className?: string } | undefined;
                     const cellClass = meta?.cellClassName ?? meta?.className;

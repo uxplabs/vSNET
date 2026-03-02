@@ -234,7 +234,10 @@ function DashboardPage({ appName = 'AMS', onSignOut, onNavigate, region, regions
                       <Icon name="public" size={20} className="text-muted-foreground" />
                       Regions
                     </h2>
-                    <RegionsDataTable regionsFilter={effectiveRegions} />
+                    <RegionsDataTable
+                      regionsFilter={effectiveRegions}
+                      onRegionClick={(selectedRegion) => onNavigate?.('devices', 'device', { regionFilter: selectedRegion })}
+                    />
                   </section>
                 </div>
             )}

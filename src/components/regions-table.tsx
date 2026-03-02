@@ -98,9 +98,11 @@ const columns: ColumnDef<RegionRow>[] = [
 export interface RegionsDataTableProps {
   /** Array of selected region names to display. Shows all when empty or contains "All". */
   regionsFilter?: string[];
+  /** Optional callback when a row is clicked. */
+  onRegionClick?: (region: string) => void;
 }
 
-export function RegionsDataTable({ regionsFilter }: RegionsDataTableProps) {
+export function RegionsDataTable({ regionsFilter, onRegionClick }: RegionsDataTableProps) {
   const data = React.useMemo(() => {
     if (regionsFilter && regionsFilter.length > 0 && !regionsFilter.includes('All')) {
       return REGIONS_DATA.filter((r) => regionsFilter.includes(r.region));
@@ -108,5 +110,5 @@ export function RegionsDataTable({ regionsFilter }: RegionsDataTableProps) {
     return REGIONS_DATA;
   }, [regionsFilter]);
 
-  return <DataTable columns={columns} data={data} />;
+  return <DataTable columns={columns} data={data} onRowClick={onRegionClick ? (row) => onRegionClick(row.region) : undefined} />;
 }

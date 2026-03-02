@@ -32,6 +32,7 @@ import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ErrorBoundary } from './error-boundary';
 import { RegionsMap } from './regions-map';
 import { DeviceDrawer } from './device-drawer';
+import { OverflowFilterBar } from './ui/overflow-filter-bar';
 import {
   Sidebar,
   SidebarContent,
@@ -303,7 +304,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
       setRegionFilter('All');
       return;
     }
-    if (regions && regions.includes(initialRegionFilter)) {
+    if (regions && (regions.includes('All') || regions.includes(initialRegionFilter))) {
       setRegionFilter(initialRegionFilter);
     } else {
       setRegionFilter('All');
@@ -321,6 +322,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
       setMapDrilldownRegion(null);
     }
   }, [mapDrilldownRegion, effectiveRegions]);
+
   const mapSelectedRegion = mapDrilldownRegion ?? (regionFilter !== 'All' ? regionFilter : region);
   const mapSelectedRegions = mapDrilldownRegion
     ? [mapDrilldownRegion]
@@ -619,17 +621,23 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                           className="pl-9 w-full min-w-0"
                         />
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                        {regions && regions.length > 1 && (
-                          <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={['All', ...regions]} className="w-[140px] shrink-0" />
-                        )}
-                        <FilterSelect value={statusFilter} onValueChange={handleStatusFilterChange} label="Status" options={STATUS_OPTIONS} className="w-[120px] shrink-0" />
-                        <FilterSelect value={configStatusFilter} onValueChange={handleConfigStatusFilterChange} label="Config status" options={CONFIG_STATUS_OPTIONS} className="w-[130px] shrink-0" />
-                        <FilterSelect value={typeFilter} onValueChange={setTypeFilter} label="Device type" options={TYPE_OPTIONS} className="w-[130px] shrink-0" />
-                        <FilterSelect value={versionFilter} onValueChange={setVersionFilter} label="Version" options={VERSION_OPTIONS} className="w-[100px] shrink-0" />
-                        <FilterSelect value={alarmsFilter} onValueChange={setAlarmsFilter} label="Alarms" options={ALARMS_OPTIONS} className="w-[110px] shrink-0" />
-                        <FilterSelect value={labelsFilter} onValueChange={setLabelsFilter} label="Labels" options={LABELS_OPTIONS} className="w-[110px] shrink-0" />
-                      </div>
+                      <OverflowFilterBar
+                        items={[
+                          ...(regions && regions.length > 1
+                            ? [{
+                                key: 'region',
+                                width: 140,
+                                content: <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={['All', ...regions]} className="w-full" />,
+                              }]
+                            : []),
+                          { key: 'status', width: 120, content: <FilterSelect value={statusFilter} onValueChange={handleStatusFilterChange} label="Status" options={STATUS_OPTIONS} className="w-full" /> },
+                          { key: 'configStatus', width: 130, content: <FilterSelect value={configStatusFilter} onValueChange={handleConfigStatusFilterChange} label="Config status" options={CONFIG_STATUS_OPTIONS} className="w-full" /> },
+                          { key: 'type', width: 130, content: <FilterSelect value={typeFilter} onValueChange={setTypeFilter} label="Device type" options={TYPE_OPTIONS} className="w-full" /> },
+                          { key: 'version', width: 100, content: <FilterSelect value={versionFilter} onValueChange={setVersionFilter} label="Version" options={VERSION_OPTIONS} className="w-full" /> },
+                          { key: 'alarms', width: 110, content: <FilterSelect value={alarmsFilter} onValueChange={setAlarmsFilter} label="Alarms" options={ALARMS_OPTIONS} className="w-full" /> },
+                          { key: 'labels', width: 110, content: <FilterSelect value={labelsFilter} onValueChange={setLabelsFilter} label="Labels" options={LABELS_OPTIONS} className="w-full" /> },
+                        ]}
+                      />
                     </>
                   )}
                   <TooltipProvider delayDuration={200}>
@@ -793,17 +801,23 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                           className="pl-9 w-full min-w-0"
                         />
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                        {regions && regions.length > 1 && (
-                          <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={['All', ...regions]} className="w-[140px] shrink-0" />
-                        )}
-                        <FilterSelect value={statusFilter} onValueChange={handleStatusFilterChange} label="Status" options={STATUS_OPTIONS} className="w-[120px] shrink-0" />
-                        <FilterSelect value={configStatusFilter} onValueChange={handleConfigStatusFilterChange} label="Config status" options={CONFIG_STATUS_OPTIONS} className="w-[130px] shrink-0" />
-                        <FilterSelect value={typeFilter} onValueChange={setTypeFilter} label="Device type" options={TYPE_OPTIONS} className="w-[130px] shrink-0" />
-                        <FilterSelect value={versionFilter} onValueChange={setVersionFilter} label="Version" options={VERSION_OPTIONS} className="w-[100px] shrink-0" />
-                        <FilterSelect value={alarmsFilter} onValueChange={setAlarmsFilter} label="Alarms" options={ALARMS_OPTIONS} className="w-[110px] shrink-0" />
-                        <FilterSelect value={labelsFilter} onValueChange={setLabelsFilter} label="Labels" options={LABELS_OPTIONS} className="w-[110px] shrink-0" />
-                      </div>
+                      <OverflowFilterBar
+                        items={[
+                          ...(regions && regions.length > 1
+                            ? [{
+                                key: 'region',
+                                width: 140,
+                                content: <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={['All', ...regions]} className="w-full" />,
+                              }]
+                            : []),
+                          { key: 'status', width: 120, content: <FilterSelect value={statusFilter} onValueChange={handleStatusFilterChange} label="Status" options={STATUS_OPTIONS} className="w-full" /> },
+                          { key: 'configStatus', width: 130, content: <FilterSelect value={configStatusFilter} onValueChange={handleConfigStatusFilterChange} label="Config status" options={CONFIG_STATUS_OPTIONS} className="w-full" /> },
+                          { key: 'type', width: 130, content: <FilterSelect value={typeFilter} onValueChange={setTypeFilter} label="Device type" options={TYPE_OPTIONS} className="w-full" /> },
+                          { key: 'version', width: 100, content: <FilterSelect value={versionFilter} onValueChange={setVersionFilter} label="Version" options={VERSION_OPTIONS} className="w-full" /> },
+                          { key: 'alarms', width: 110, content: <FilterSelect value={alarmsFilter} onValueChange={setAlarmsFilter} label="Alarms" options={ALARMS_OPTIONS} className="w-full" /> },
+                          { key: 'labels', width: 110, content: <FilterSelect value={labelsFilter} onValueChange={setLabelsFilter} label="Labels" options={LABELS_OPTIONS} className="w-full" /> },
+                        ]}
+                      />
                     </>
                   )}
                 </div>
@@ -898,14 +912,20 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       className="pl-9 w-full min-w-0"
                     />
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                    {regions && regions.length > 1 && (
-                      <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={['All', ...regions]} className="w-[140px] shrink-0" />
-                    )}
-                    <FilterSelect value={eventsTypeFilter} onValueChange={setEventsTypeFilter} label="Type" options={EVENTS_TYPE_OPTIONS} className="w-[160px] shrink-0" />
-                    <FilterSelect value={eventsSeverityFilter} onValueChange={setEventsSeverityFilter} label="Severity" options={EVENTS_SEVERITY_OPTIONS} className="w-[120px] shrink-0" />
-                    <FilterSelect value={eventsSourceFilter} onValueChange={setEventsSourceFilter} label="Source" options={EVENTS_SOURCE_OPTIONS} className="w-[130px] shrink-0" />
-                  </div>
+                  <OverflowFilterBar
+                    items={[
+                      ...(regions && regions.length > 1
+                        ? [{
+                            key: 'region',
+                            width: 140,
+                            content: <FilterSelect value={regionFilter} onValueChange={setRegionFilter} label="Region" options={['All', ...regions]} className="w-full" />,
+                          }]
+                        : []),
+                      { key: 'type', width: 160, content: <FilterSelect value={eventsTypeFilter} onValueChange={setEventsTypeFilter} label="Type" options={EVENTS_TYPE_OPTIONS} className="w-full" /> },
+                      { key: 'severity', width: 120, content: <FilterSelect value={eventsSeverityFilter} onValueChange={setEventsSeverityFilter} label="Severity" options={EVENTS_SEVERITY_OPTIONS} className="w-full" /> },
+                      { key: 'source', width: 130, content: <FilterSelect value={eventsSourceFilter} onValueChange={setEventsSourceFilter} label="Source" options={EVENTS_SOURCE_OPTIONS} className="w-full" /> },
+                    ]}
+                  />
                     </>
                   )}
                 </div>
@@ -1001,39 +1021,55 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     />
                   </div>
                   {isRadioNodes ? (
-                    <>
-                      <FilterSelect value={rnStatusFilter} onValueChange={setRnStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-[110px] shrink-0" />
-                      <FilterSelect value={rnModelFilter} onValueChange={setRnModelFilter} label="Model" options={INVENTORY_MODEL_OPTIONS} className="w-[130px] shrink-0" />
-                      <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm shrink-0">
-                        {(['All', 'OSS init', 'TK'] as const).map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => setRnStateFilter(s)}
-                            className={`px-3 h-9 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md ${rnStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                          >
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-                    </>
+                    <OverflowFilterBar
+                      items={[
+                        { key: 'status', width: 110, content: <FilterSelect value={rnStatusFilter} onValueChange={setRnStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-full" /> },
+                        { key: 'model', width: 130, content: <FilterSelect value={rnModelFilter} onValueChange={setRnModelFilter} label="Model" options={INVENTORY_MODEL_OPTIONS} className="w-full" /> },
+                        {
+                          key: 'state',
+                          width: 200,
+                          content: (
+                            <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm w-full overflow-hidden">
+                              {(['All', 'OSS init', 'TK'] as const).map((s) => (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  onClick={() => setRnStateFilter(s)}
+                                  className={`px-3 h-9 text-sm font-medium transition-colors flex-1 ${rnStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                                >
+                                  {s}
+                                </button>
+                              ))}
+                            </div>
+                          ),
+                        },
+                      ]}
+                    />
                   ) : (
-                    <>
-                      <FilterSelect value={cellsStatusFilter} onValueChange={setCellsStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-[110px] shrink-0" />
-                      <FilterSelect value={cellsTechnologyFilter} onValueChange={setCellsTechnologyFilter} label="Technology" options={INVENTORY_TECHNOLOGY_OPTIONS} className="w-[130px] shrink-0" />
-                      <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm shrink-0">
-                        {(['All', 'Active', 'Inactive', 'Degraded'] as const).map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => setCellsStateFilter(s)}
-                            className={`px-3 h-9 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md ${cellsStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                          >
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-                    </>
+                    <OverflowFilterBar
+                      items={[
+                        { key: 'status', width: 110, content: <FilterSelect value={cellsStatusFilter} onValueChange={setCellsStatusFilter} label="Status" options={INVENTORY_STATUS_OPTIONS} className="w-full" /> },
+                        { key: 'technology', width: 130, content: <FilterSelect value={cellsTechnologyFilter} onValueChange={setCellsTechnologyFilter} label="Technology" options={INVENTORY_TECHNOLOGY_OPTIONS} className="w-full" /> },
+                        {
+                          key: 'state',
+                          width: 240,
+                          content: (
+                            <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm w-full overflow-hidden">
+                              {(['All', 'Active', 'Inactive', 'Degraded'] as const).map((s) => (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  onClick={() => setCellsStateFilter(s)}
+                                  className={`px-3 h-9 text-sm font-medium transition-colors flex-1 ${cellsStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                                >
+                                  {s}
+                                </button>
+                              ))}
+                            </div>
+                          ),
+                        },
+                      ]}
+                    />
                   )}
                   <div className="ml-auto">
                     <Button variant="outline" size="default" className="gap-1.5">
@@ -1117,11 +1153,13 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       className="pl-9 w-full min-w-0"
                     />
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                    <FilterSelect value={tasksTypeFilter} onValueChange={setTasksTypeFilter} label="Type" options={TASKS_TYPE_OPTIONS} className="w-[130px] shrink-0" />
-                    <FilterSelect value={tasksStatusFilter} onValueChange={setTasksStatusFilter} label="Status" options={TASKS_STATUS_OPTIONS} className="w-[120px] shrink-0" />
-                    <FilterSelect value={tasksDomainFilter} onValueChange={setTasksDomainFilter} label="Domain" options={TASKS_DOMAIN_OPTIONS} className="w-[140px] shrink-0" />
-                  </div>
+                  <OverflowFilterBar
+                    items={[
+                      { key: 'type', width: 130, content: <FilterSelect value={tasksTypeFilter} onValueChange={setTasksTypeFilter} label="Type" options={TASKS_TYPE_OPTIONS} className="w-full" /> },
+                      { key: 'status', width: 120, content: <FilterSelect value={tasksStatusFilter} onValueChange={setTasksStatusFilter} label="Status" options={TASKS_STATUS_OPTIONS} className="w-full" /> },
+                      { key: 'domain', width: 140, content: <FilterSelect value={tasksDomainFilter} onValueChange={setTasksDomainFilter} label="Domain" options={TASKS_DOMAIN_OPTIONS} className="w-full" /> },
+                    ]}
+                  />
                   <Button variant="outline" size="default" className="shrink-0 gap-1 ml-auto" onClick={() => setAddTaskDialogOpen(true)}>
                     <Icon name="add" size={18} />
                     Add scheduled task
@@ -1216,11 +1254,13 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       className="pl-9 w-full min-w-0"
                     />
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                    <FilterSelect value={softwareTypeFilter} onValueChange={setSoftwareTypeFilter} label="Type" options={SOFTWARE_TYPE_OPTIONS} className="w-[130px] shrink-0" />
-                    <FilterSelect value={softwareStatusFilter} onValueChange={setSoftwareStatusFilter} label="Status" options={SOFTWARE_STATUS_OPTIONS} className="w-[120px] shrink-0" />
-                    <FilterSelect value={softwareVersionFilter} onValueChange={setSoftwareVersionFilter} label="Version" options={SOFTWARE_VERSION_OPTIONS} className="w-[100px] shrink-0" />
-                  </div>
+                  <OverflowFilterBar
+                    items={[
+                      { key: 'type', width: 130, content: <FilterSelect value={softwareTypeFilter} onValueChange={setSoftwareTypeFilter} label="Type" options={SOFTWARE_TYPE_OPTIONS} className="w-full" /> },
+                      { key: 'status', width: 120, content: <FilterSelect value={softwareStatusFilter} onValueChange={setSoftwareStatusFilter} label="Status" options={SOFTWARE_STATUS_OPTIONS} className="w-full" /> },
+                      { key: 'version', width: 100, content: <FilterSelect value={softwareVersionFilter} onValueChange={setSoftwareVersionFilter} label="Version" options={SOFTWARE_VERSION_OPTIONS} className="w-full" /> },
+                    ]}
+                  />
                 </div>
                 {(() => {
                   const count = getFilteredSoftwareCount({
@@ -1286,11 +1326,13 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                           className="pl-9 w-full min-w-0"
                         />
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                        <FilterSelect value={softwareTypeFilter} onValueChange={setSoftwareTypeFilter} label="Type" options={SOFTWARE_TYPE_OPTIONS} className="w-[130px] shrink-0" />
-                        <FilterSelect value={softwareStatusFilter} onValueChange={setSoftwareStatusFilter} label="Status" options={SOFTWARE_STATUS_OPTIONS} className="w-[120px] shrink-0" />
-                        <FilterSelect value={softwareVersionFilter} onValueChange={setSoftwareVersionFilter} label="Version" options={SOFTWARE_VERSION_OPTIONS} className="w-[100px] shrink-0" />
-                      </div>
+                      <OverflowFilterBar
+                        items={[
+                          { key: 'type', width: 130, content: <FilterSelect value={softwareTypeFilter} onValueChange={setSoftwareTypeFilter} label="Type" options={SOFTWARE_TYPE_OPTIONS} className="w-full" /> },
+                          { key: 'status', width: 120, content: <FilterSelect value={softwareStatusFilter} onValueChange={setSoftwareStatusFilter} label="Status" options={SOFTWARE_STATUS_OPTIONS} className="w-full" /> },
+                          { key: 'version', width: 100, content: <FilterSelect value={softwareVersionFilter} onValueChange={setSoftwareVersionFilter} label="Version" options={SOFTWARE_VERSION_OPTIONS} className="w-full" /> },
+                        ]}
+                      />
                     </div>
                     {(() => {
                       const count = getFilteredSoftwareCount({
@@ -1350,11 +1392,13 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                       className="pl-9 w-full min-w-0"
                     />
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                    <FilterSelect value={reportsTypeFilter} onValueChange={setReportsTypeFilter} label="Type" options={REPORT_TYPE_OPTIONS} className="w-[110px] shrink-0" />
-                    <FilterSelect value={reportsTaskFilter} onValueChange={setReportsTaskFilter} label="Task" options={REPORT_TASK_OPTIONS} className="w-[140px] shrink-0" />
-                    <FilterSelect value={reportsCreatedFilter} onValueChange={setReportsCreatedFilter} label="Created" options={REPORT_CREATED_OPTIONS} className="w-[120px] shrink-0" />
-                  </div>
+                  <OverflowFilterBar
+                    items={[
+                      { key: 'type', width: 110, content: <FilterSelect value={reportsTypeFilter} onValueChange={setReportsTypeFilter} label="Type" options={REPORT_TYPE_OPTIONS} className="w-full" /> },
+                      { key: 'task', width: 140, content: <FilterSelect value={reportsTaskFilter} onValueChange={setReportsTaskFilter} label="Task" options={REPORT_TASK_OPTIONS} className="w-full" /> },
+                      { key: 'created', width: 120, content: <FilterSelect value={reportsCreatedFilter} onValueChange={setReportsCreatedFilter} label="Created" options={REPORT_CREATED_OPTIONS} className="w-full" /> },
+                    ]}
+                  />
                 </div>
                 {(() => {
                   const count = getFilteredReportCount({
@@ -1427,30 +1471,38 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                           className="pl-9 w-full min-w-0"
                         />
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                        <FilterSelect value={performanceLteFilter} onValueChange={setPerformanceLteFilter} label="LTE" options={PERFORMANCE_LTE_OPTIONS} className="w-[110px] shrink-0" />
-                        <FilterSelect value={performanceTimeFilter} onValueChange={setPerformanceTimeFilter} label="Last hour" options={PERFORMANCE_TIME_OPTIONS} className="w-[120px] shrink-0" />
-                        <div className="inline-flex items-center rounded-md border border-input shadow-sm shrink-0">
-                          {([
-                            { value: 'all', label: 'All' },
-                            { value: 'degraded', label: 'Degraded' },
-                            { value: 'optimal', label: 'Optimal' },
-                          ] as const).map((opt, i, arr) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => setPerformanceStatusFilter(opt.value)}
-                              className={`h-9 px-3 text-sm font-medium transition-colors ${
-                                performanceStatusFilter === opt.value
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-background text-foreground hover:bg-muted'
-                              } ${i === 0 ? 'rounded-l-md' : ''} ${i === arr.length - 1 ? 'rounded-r-md' : ''} ${i > 0 ? 'border-l border-input' : ''}`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      <OverflowFilterBar
+                        items={[
+                          { key: 'lte', width: 110, content: <FilterSelect value={performanceLteFilter} onValueChange={setPerformanceLteFilter} label="LTE" options={PERFORMANCE_LTE_OPTIONS} className="w-full" /> },
+                          { key: 'time', width: 120, content: <FilterSelect value={performanceTimeFilter} onValueChange={setPerformanceTimeFilter} label="Last hour" options={PERFORMANCE_TIME_OPTIONS} className="w-full" /> },
+                          {
+                            key: 'status',
+                            width: 240,
+                            content: (
+                              <div className="inline-flex w-full items-center rounded-md border border-input shadow-sm overflow-hidden">
+                                {([
+                                  { value: 'all', label: 'All' },
+                                  { value: 'degraded', label: 'Degraded' },
+                                  { value: 'optimal', label: 'Optimal' },
+                                ] as const).map((opt, i, arr) => (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setPerformanceStatusFilter(opt.value)}
+                                    className={`h-9 px-3 text-sm font-medium transition-colors flex-1 ${
+                                      performanceStatusFilter === opt.value
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-background text-foreground hover:bg-muted'
+                                    } ${i > 0 ? 'border-l border-input' : ''}`}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                ))}
+                              </div>
+                            ),
+                          },
+                        ]}
+                      />
                     </div>
                     {(() => {
                       const count = getFilteredPerformanceCount({
@@ -1509,21 +1561,29 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                           className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 pl-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                         />
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-                        <FilterSelect value={thresholdKpiFilter} onValueChange={setThresholdKpiFilter} label="KPI" options={THRESHOLD_KPI_OPTIONS} className="w-[200px] shrink-0" />
-                        <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm">
-                          {(['All', 'Active', 'Cleared'] as const).map((s) => (
-                            <button
-                              key={s}
-                              type="button"
-                              onClick={() => setThresholdStateFilter(s)}
-                              className={`px-3 h-9 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md ${thresholdStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                            >
-                              {s}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      <OverflowFilterBar
+                        items={[
+                          { key: 'kpi', width: 200, content: <FilterSelect value={thresholdKpiFilter} onValueChange={setThresholdKpiFilter} label="KPI" options={THRESHOLD_KPI_OPTIONS} className="w-full" /> },
+                          {
+                            key: 'state',
+                            width: 220,
+                            content: (
+                              <div className="inline-flex w-full items-center rounded-md border border-input bg-transparent shadow-sm overflow-hidden">
+                                {(['All', 'Active', 'Cleared'] as const).map((s, i) => (
+                                  <button
+                                    key={s}
+                                    type="button"
+                                    onClick={() => setThresholdStateFilter(s)}
+                                    className={`px-3 h-9 text-sm font-medium transition-colors flex-1 ${thresholdStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'} ${i > 0 ? 'border-l border-input' : ''}`}
+                                  >
+                                    {s}
+                                  </button>
+                                ))}
+                              </div>
+                            ),
+                          },
+                        ]}
+                      />
                       <div className="ml-auto shrink-0">
                         <Button variant="outline">
                           <Icon name="download" size={16} className="mr-1.5" />
