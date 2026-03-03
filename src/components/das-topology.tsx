@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tree, type TreeNode } from "@/components/ui/tree";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // ─── DAS hierarchy types (Inventory-aligned) ──────────────────────────────────
 const T = {
@@ -76,6 +77,44 @@ const physicalAlarms = [
   "Cabinet Door Alarm",
   "Heat Exchanger Failure",
 ];
+
+const RF_BANDS = ["700", "CELL/ESMR", "AWS3", "PCS", "WCS"];
+const RF_PAM_SERIALS = ["22-19-21-0180", "22-19-28-0F01", "22-19-26-9DF0", "22-19-22-1DBE", "10-14-45-04FB"];
+const RF_DL_POWER = ["No signal", "No signal", "No signal", "No signal", "No signal"];
+const RF_SERVICE_STATE = ["On", "On", "On", "On", "On"];
+const RF_OUT_POWER = ["30dBm", "30dBm", "34dBm", "33dBm", "33dBm"];
+const RF_UL_LIMITER = ["On", "On", "On", "On", "On"];
+const RF_SERVICE_STATE_OPTIONS = ["On", "Off"];
+const RF_OUT_POWER_OPTIONS = ["28dBm", "30dBm", "31dBm", "32dBm", "33dBm", "34dBm", "35dBm"];
+const RF_UL_LIMITER_OPTIONS = ["On", "Off"];
+
+function RFStandardSelect({ value, options }: { value: string; options: string[] }) {
+  return (
+    <Select defaultValue={value}>
+      <SelectTrigger className="h-7 w-[110px] text-xs">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option} value={option} className="text-xs">
+            {option}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function RFInfoButton() {
+  return (
+    <button
+      type="button"
+      className="inline-flex h-6 min-w-[58px] items-center justify-center rounded bg-sky-500 px-3 text-[11px] font-semibold uppercase tracking-wide text-white"
+    >
+      Info
+    </button>
+  );
+}
 
 function AlarmDot({ status = "ok" }: { status?: string }) {
   const color =
@@ -697,7 +736,56 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
                 )}
               </TabsContent>
               <TabsContent value="RF Parameters" className="m-0">
-                <div className="text-xs text-muted-foreground">RF Parameters content placeholder.</div>
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-[140px] px-3 py-2 text-xs">Band</TableHead>
+                        {RF_BANDS.map((band) => (
+                          <TableHead key={band} className="px-3 py-2 text-xs text-left">{band}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">PAM S/N</TableCell>
+                        {RF_PAM_SERIALS.map((serial, idx) => (
+                          <TableCell key={`sn-${idx}`} className="px-3 py-2 text-xs">{serial}</TableCell>
+                        ))}
+                      </TableRow>
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">DL Power</TableCell>
+                        {RF_DL_POWER.map((value, idx) => (
+                          <TableCell key={`dl-${idx}`} className="px-3 py-2 text-xs text-slate-500">{value}</TableCell>
+                        ))}
+                      </TableRow>
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">Service State</TableCell>
+                        {RF_SERVICE_STATE.map((value, idx) => (
+                          <TableCell key={`svc-${idx}`} className="px-3 py-2"><RFStandardSelect value={value} options={RF_SERVICE_STATE_OPTIONS} /></TableCell>
+                        ))}
+                      </TableRow>
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">Out Power</TableCell>
+                        {RF_OUT_POWER.map((value, idx) => (
+                          <TableCell key={`out-${idx}`} className="px-3 py-2"><RFStandardSelect value={value} options={RF_OUT_POWER_OPTIONS} /></TableCell>
+                        ))}
+                      </TableRow>
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">UL Limiter</TableCell>
+                        {RF_UL_LIMITER.map((value, idx) => (
+                          <TableCell key={`ul-${idx}`} className="px-3 py-2"><RFStandardSelect value={value} options={RF_UL_LIMITER_OPTIONS} /></TableCell>
+                        ))}
+                      </TableRow>
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">Source Info</TableCell>
+                        {RF_BANDS.map((_, idx) => (
+                          <TableCell key={`info-${idx}`} className="px-3 py-2"><RFInfoButton /></TableCell>
+                        ))}
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
               </TabsContent>
               <TabsContent value="Comment(N/A)" className="m-0">
                 <div className="text-xs text-muted-foreground">Comment(N/A) content placeholder.</div>

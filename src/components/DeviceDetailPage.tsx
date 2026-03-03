@@ -79,6 +79,7 @@ import { IP_INTERFACES_DATA } from './ip-interfaces-data-table';
 import { NameValueField, EditableLabelsField } from './ui/editable-value';
 import { NodeTypeBadge } from './ui/node-type-badge';
 import { RegionsMap } from './regions-map';
+import { InternalSidebarList } from './ui/internal-sidebar-list';
 import {
   type ChartConfig,
   ChartContainer,
@@ -398,6 +399,24 @@ const CELL_ALARM_SEVERITY_ICON: Record<'Critical' | 'Major' | 'Minor', { name: s
   Major: { name: 'error_outline', className: 'text-warning' },
   Minor: { name: 'warning', className: 'text-yellow-500' },
 };
+const FLOOR_VIEW_BUILDINGS = [
+  { id: 'north-tower', name: 'North Tower', floors: 12, remotes: 48, bound: 44, unbound: 4 },
+  { id: 'south-annex', name: 'South Annex', floors: 6, remotes: 18, bound: 16, unbound: 2 },
+  { id: 'parking-structure', name: 'Parking Structure', floors: 4, remotes: 10, bound: 7, unbound: 3 },
+] as const;
+function getFloorRows(building: (typeof FLOOR_VIEW_BUILDINGS)[number]) {
+  return Array.from({ length: building.floors }).map((_, index, arr) => {
+    const base = Math.floor(building.remotes / arr.length);
+    const remainder = building.remotes % arr.length;
+    const remotes = base + (index < remainder ? 1 : 0);
+    const level = arr.length - index;
+    return {
+      id: `${building.id}-floor-${level}`,
+      name: `Floor ${level}`,
+      remotes,
+    };
+  });
+}
 type SiteChartId =
   | 'erab-establishment'
   | 'volte-establishment'
@@ -933,6 +952,7 @@ function DeviceDetailPage({
         'NR cells',
         'Zones',
         'X2 connections',
+        'Floor view',
         'Performance',
         'Files',
         'SSH terminal',
@@ -951,6 +971,8 @@ function DeviceDetailPage({
   const [alarmsEventsTab, setAlarmsEventsTab] = React.useState('alarms');
   const [performanceTab, setPerformanceTab] = React.useState('site');
   const [expandedSiteChart, setExpandedSiteChart] = React.useState<SiteChartId | null>(null);
+  const [selectedFloorByBuilding, setSelectedFloorByBuilding] = React.useState<Record<string, string>>({});
+  const [floorSearchByBuilding, setFloorSearchByBuilding] = React.useState<Record<string, string>>({});
   const [tcHistSearch, setTcHistSearch] = React.useState('');
   const [tcHistKpiFilter, setTcHistKpiFilter] = React.useState('All');
   const [tcHistStateFilter, setTcHistStateFilter] = React.useState('All');
@@ -2087,6 +2109,130 @@ function DeviceDetailPage({
                 <X2ConnectionsDataTable />
               </CardContent>
             </Card>
+          )}
+
+          {activeSection === 'floor-view' && (
+            <Tabs defaultValue={FLOOR_VIEW_BUILDINGS[0].id} className="space-y-6">
+              <TabsList className="h-auto w-full justify-start gap-0 overflow-x-auto rounded-none border-b bg-transparent p-0">
+                {FLOOR_VIEW_BUILDINGS.map((building) => (
+                  <TabsTrigger
+                    key={building.id}
+                    value={building.id}
+                    className="group relative h-auto min-w-[260px] items-start justify-start rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-left data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  >
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1.5 top-1.5 h-7 w-7 opacity-0 pointer-events-none group-data-[state=active]:opacity-100 group-data-[state=active]:pointer-events-auto"
+                          aria-label="Building options"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Icon name="more_vert" size={16} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            toast(`Edit ${building.name}`);
+                          }}
+                        >
+                          <Icon name="edit" size={16} className="mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            toast(`Delete ${building.name}`);
+                          }}
+                        >
+                          <Icon name="delete" size={16} className="mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <div className="space-y-2">
+                      <div className="text-sm font-semibold">{building.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {building.floors} floors, {building.remotes} remotes
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-[11px]">
+                          {building.bound} bound
+                        </Badge>
+                        <Badge variant="secondary" className="text-[11px]">
+                          {building.unbound} unbound
+                        </Badge>
+                      </div>
+                    </div>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {FLOOR_VIEW_BUILDINGS.map((building) => (
+                <TabsContent key={building.id} value={building.id} className="mt-0">
+                  {(() => {
+                    const floorRows = getFloorRows(building);
+                    const floorSearch = floorSearchByBuilding[building.id] ?? '';
+                    const filteredFloorRows = floorSearch.trim()
+                      ? floorRows.filter((row) => row.name.toLowerCase().includes(floorSearch.trim().toLowerCase()))
+                      : floorRows;
+                    const selectedFloorId = selectedFloorByBuilding[building.id] ?? floorRows[0]?.id;
+                    const selectedFloor = floorRows.find((row) => row.id === selectedFloorId) ?? floorRows[0];
+                    return (
+                  <div className="flex flex-col gap-6 lg:flex-row">
+                    <InternalSidebarList
+                      title="Floors"
+                      items={filteredFloorRows.map((row) => ({ id: row.id, label: row.name, count: row.remotes }))}
+                      selectedId={selectedFloorId}
+                      onSelect={(id) =>
+                        setSelectedFloorByBuilding((prev) => ({
+                          ...prev,
+                          [building.id]: id,
+                        }))
+                      }
+                      showAddAction
+                      onAddAction={() => toast('Add floor action')}
+                      addAriaLabel="Add floor"
+                      showSearch
+                      searchValue={floorSearch}
+                      onSearchChange={(value) =>
+                        setFloorSearchByBuilding((prev) => ({
+                          ...prev,
+                          [building.id]: value,
+                        }))
+                      }
+                      searchPlaceholder="Search floors..."
+                      emptyMessage="No floors match"
+                    />
+                    <div className="flex-1 rounded-lg border bg-muted/20 p-6">
+                      <div className="mb-4 flex items-center justify-between gap-3 border-b pb-3">
+                        <h3 className="text-base font-semibold text-foreground">
+                          {selectedFloor ? selectedFloor.name : 'Floor'}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label="Edit floor">
+                            <Icon name="edit" size={16} />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label="Delete floor">
+                            <Icon name="delete" size={16} />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {building.name} {selectedFloor ? `${selectedFloor.name}` : ''} floor view placeholder.
+                      </div>
+                    </div>
+                  </div>
+                    );
+                  })()}
+                </TabsContent>
+              ))}
+            </Tabs>
           )}
 
           {activeSection === 'performance' && (
