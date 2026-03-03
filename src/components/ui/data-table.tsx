@@ -31,9 +31,13 @@ interface DataTableProps<TData, TValue> {
   header?: React.ReactNode;
   /** Optional row click handler */
   onRowClick?: (row: TData) => void;
+  /** Optional callback with selected rows */
+  onSelectionChange?: (rows: TData[]) => void;
+  /** Optional row id getter for stable selection */
+  getRowId?: (originalRow: TData, index: number, parent?: { id: string; index: number }) => string;
 }
 
-export function DataTable<TData, TValue>({ columns, data, header, onRowClick }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({ columns, data, header, onRowClick, onSelectionChange, getRowId }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const pageSize = useResponsivePageSize();
@@ -49,6 +53,7 @@ export function DataTable<TData, TValue>({ columns, data, header, onRowClick }: 
   const table = useReactTable({
     data,
     columns,
+    getRowId,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -57,6 +62,11 @@ export function DataTable<TData, TValue>({ columns, data, header, onRowClick }: 
     onPaginationChange: setPagination,
     state: { sorting, rowSelection, pagination },
   });
+
+  React.useEffect(() => {
+    if (!onSelectionChange) return;
+    onSelectionChange(table.getSelectedRowModel().rows.map((row) => row.original));
+  }, [onSelectionChange, rowSelection, table]);
 
   return (
     <div className="space-y-4">

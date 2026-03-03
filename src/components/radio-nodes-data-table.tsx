@@ -7,6 +7,7 @@ import { SortableHeader } from '@/components/ui/sortable-header';
 import { Icon } from '@/components/Icon';
 import { DeviceStatus } from '@/components/ui/device-status';
 import { DeviceLink } from '@/components/ui/device-link';
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ALARM_TYPE_CONFIG } from './devices-data-table';
@@ -14,29 +15,51 @@ import { ALARM_TYPE_CONFIG } from './devices-data-table';
 export interface RadioNodeRow {
   index: number;
   name: string;
+  role: 'RIU' | 'DCU' | 'DEU' | 'dLRU' | 'dMRU' | 'dHRU';
   description: string;
   status: 'Up' | 'Down';
   enabled: boolean;
   alarms: number;
   alarmType: 'Critical' | 'Major' | 'Minor' | 'None';
-  nrCell1: string;
-  nrCell2: string;
+  supportBands: string;
   ethernetId: string;
   model: string;
+  serialNumber: string;
 }
 
 export const RADIO_NODES_DATA: RadioNodeRow[] = [
-  { index: 1, name: 'Radio Node 1', description: 'Primary sector', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', nrCell1: 'NR-001', nrCell2: 'NR-002', ethernetId: '00:1a:2b:3c:4d:5e', model: 'ABAB123' },
-  { index: 2, name: 'Radio Node 2', description: 'Secondary sector', status: 'Up', enabled: true, alarms: 1, alarmType: 'Minor', nrCell1: 'NR-002', nrCell2: 'NR-003', ethernetId: '00:1a:2b:3c:4d:5f', model: 'ABAB123' },
-  { index: 3, name: 'Radio Node 3', description: 'Backup sector', status: 'Down', enabled: false, alarms: 2, alarmType: 'Major', nrCell1: 'NR-003', nrCell2: 'NR-004', ethernetId: '00:1a:2b:3c:4d:60', model: 'ABAB123' },
-  { index: 4, name: 'Radio Node 4', description: 'Overlay sector', status: 'Down', enabled: true, alarms: 0, alarmType: 'None', nrCell1: 'NR-004', nrCell2: 'NR-005', ethernetId: '00:1a:2b:3c:4d:61', model: 'FGH456' },
-  { index: 5, name: 'Radio Node 5', description: 'Test sector', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', nrCell1: 'NR-005', nrCell2: 'NR-006', ethernetId: '00:1a:2b:3c:4d:62', model: 'FGH456' },
+  { index: 1, name: 'RIU 1', role: 'RIU', description: 'Head-end room', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', supportBands: 'n41, n71', ethernetId: '00:1a:2b:3c:4d:5e', model: 'ABAB123', serialNumber: 'RN-000001' },
+  { index: 2, name: 'DCU 1', role: 'DCU', description: 'Distribution cabinet A', status: 'Up', enabled: true, alarms: 1, alarmType: 'Minor', supportBands: 'n41, n77', ethernetId: '00:1a:2b:3c:4d:5f', model: 'ABAB123', serialNumber: 'RN-000002' },
+  { index: 3, name: 'DEU 1', role: 'DEU', description: 'Distribution edge unit', status: 'Down', enabled: false, alarms: 2, alarmType: 'Major', supportBands: 'n71, n77', ethernetId: '00:1a:2b:3c:4d:60', model: 'ABAB123', serialNumber: 'RN-000003' },
+  { index: 4, name: 'dLRU 1', role: 'dLRU', description: 'Remote low-power unit', status: 'Down', enabled: true, alarms: 0, alarmType: 'None', supportBands: 'n41', ethernetId: '00:1a:2b:3c:4d:61', model: 'FGH456', serialNumber: 'RN-000004' },
+  { index: 5, name: 'dMRU 1', role: 'dMRU', description: 'Remote medium-power unit', status: 'Up', enabled: true, alarms: 0, alarmType: 'None', supportBands: 'n77', ethernetId: '00:1a:2b:3c:4d:62', model: 'FGH456', serialNumber: 'RN-000005' },
 ];
 
 const STATUS_OPTIONS = ['All', 'Connected', 'Disconnected'] as const;
 const MODEL_OPTIONS = ['All', 'ABAB123', 'FGH456'] as const;
+const INDEX_OPTIONS = ['All', ...RADIO_NODES_DATA.map((row) => String(row.index))] as const;
 
 const columns: ColumnDef<RadioNodeRow>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')}
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+    meta: { className: 'w-[3rem] min-w-[3rem]' },
+  },
   {
     accessorKey: 'index',
     header: ({ column }) => <SortableHeader column={column}>Index</SortableHeader>,
@@ -101,14 +124,10 @@ const columns: ColumnDef<RadioNodeRow>[] = [
     },
   },
   {
-    accessorKey: 'nrCell1',
-    id: 'nrCells',
-    header: ({ column }) => <SortableHeader column={column}>NR cells</SortableHeader>,
+    accessorKey: 'supportBands',
+    header: ({ column }) => <SortableHeader column={column}>Support bands</SortableHeader>,
     cell: ({ row }) => (
-      <div className="flex flex-col gap-0.5">
-        <DeviceLink value={row.original.nrCell1} />
-        <DeviceLink value={row.original.nrCell2} />
-      </div>
+      <span className="block truncate">{row.getValue('supportBands') as string}</span>
     ),
   },
   {
@@ -126,22 +145,34 @@ const columns: ColumnDef<RadioNodeRow>[] = [
       <span className="block truncate">{row.getValue('model') as string}</span>
     ),
   },
+  {
+    accessorKey: 'serialNumber',
+    header: ({ column }) => <SortableHeader column={column}>Serial number</SortableHeader>,
+    cell: ({ row }) => (
+      <span className="block truncate font-mono text-sm">{row.getValue('serialNumber') as string}</span>
+    ),
+    meta: { className: 'min-w-[10rem]' },
+  },
 ];
 
 export function filterRadioNodes(
   data: RadioNodeRow[],
   search: string,
   statusFilter: string,
-  modelFilter: string
+  modelFilter: string,
+  indexFilter: string = 'All',
 ): RadioNodeRow[] {
   return data.filter((row) => {
     const searchLower = search.trim().toLowerCase();
     if (searchLower) {
       const searchable = [
         row.name,
+        row.role,
         row.description,
+        row.supportBands,
         row.ethernetId,
         row.model,
+        row.serialNumber,
         String(row.index),
       ].join(' ').toLowerCase();
       if (!searchable.includes(searchLower)) return false;
@@ -153,12 +184,16 @@ export function filterRadioNodes(
     if (modelFilter && modelFilter !== 'All') {
       if (row.model !== modelFilter) return false;
     }
+    if (indexFilter && indexFilter !== 'All') {
+      if (String(row.index) !== indexFilter) return false;
+    }
     return true;
   });
 }
 
 export const RADIO_NODES_STATUS_OPTIONS = STATUS_OPTIONS;
 export const RADIO_NODES_MODEL_OPTIONS = MODEL_OPTIONS;
+export const RADIO_NODES_INDEX_OPTIONS = INDEX_OPTIONS;
 
 export interface RadioNodesDataTableProps {
   search: string;
@@ -167,21 +202,30 @@ export interface RadioNodesDataTableProps {
   onStatusFilterChange: (value: string) => void;
   modelFilter: string;
   onModelFilterChange: (value: string) => void;
+  indexFilter?: string;
+  onSelectionChange?: (selectedRows: RadioNodeRow[]) => void;
 }
 
 export function RadioNodesDataTable({
   search,
   statusFilter,
   modelFilter,
+  indexFilter = 'All',
+  onSelectionChange,
 }: RadioNodesDataTableProps) {
   const filteredData = React.useMemo(
-    () => filterRadioNodes(RADIO_NODES_DATA, search, statusFilter, modelFilter),
-    [search, statusFilter, modelFilter]
+    () => filterRadioNodes(RADIO_NODES_DATA, search, statusFilter, modelFilter, indexFilter),
+    [search, statusFilter, modelFilter, indexFilter]
   );
 
   return (
     <TooltipProvider delayDuration={300}>
-      <DataTable columns={columns} data={filteredData} />
+      <DataTable
+        columns={columns}
+        data={filteredData}
+        onSelectionChange={onSelectionChange}
+        getRowId={(row) => String(row.index)}
+      />
     </TooltipProvider>
   );
 }

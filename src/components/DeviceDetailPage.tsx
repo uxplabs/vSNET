@@ -67,7 +67,7 @@ import { AlarmsDataTable } from './alarms-data-table';
 import { EventsDataTable } from './events-data-table';
 import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount, THRESHOLD_KPI_OPTIONS } from './threshold-crossing-alerts-data-table';
 import { IpInterfacesDataTable } from './ip-interfaces-data-table';
-import { RadioNodesDataTable, RADIO_NODES_STATUS_OPTIONS, RADIO_NODES_MODEL_OPTIONS, RADIO_NODES_DATA, filterRadioNodes } from './radio-nodes-data-table';
+import { RadioNodesDataTable, RADIO_NODES_STATUS_OPTIONS, RADIO_NODES_MODEL_OPTIONS, RADIO_NODES_INDEX_OPTIONS, RADIO_NODES_DATA, filterRadioNodes, type RadioNodeRow } from './radio-nodes-data-table';
 import { AddRadioNodeSheet, type AddRadioNodeFormData } from './add-radio-node-sheet';
 import { toast } from 'sonner';
 import { NrCellsDataTable, NR_CELLS_DATA } from './nr-cells-data-table';
@@ -78,6 +78,7 @@ import { DebugLogsDataTable } from './debug-logs-data-table';
 import { IP_INTERFACES_DATA } from './ip-interfaces-data-table';
 import { NameValueField, EditableLabelsField } from './ui/editable-value';
 import { NodeTypeBadge } from './ui/node-type-badge';
+import { RegionsMap } from './regions-map';
 import {
   type ChartConfig,
   ChartContainer,
@@ -770,8 +771,44 @@ function DeviceDetailPage({
 
   const [notes, setNotes] = useState<Array<{ id: string; author: string; content: string; datetime: string }>>([...INITIAL_NOTES]);
   const [radioNodesSearch, setRadioNodesSearch] = useState('');
+  const [radioNodesIndexFilter, setRadioNodesIndexFilter] = useState('All');
   const [radioNodesStatusFilter, setRadioNodesStatusFilter] = useState('All');
   const [radioNodesModelFilter, setRadioNodesModelFilter] = useState('All');
+  const [selectedRadioNodes, setSelectedRadioNodes] = useState<RadioNodeRow[]>([]);
+  const filteredRadioNodes = React.useMemo(
+    () => filterRadioNodes(RADIO_NODES_DATA, radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter, radioNodesIndexFilter),
+    [radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter, radioNodesIndexFilter],
+  );
+  const selectedRadioNodeMapIds = React.useMemo(
+    () => selectedRadioNodes.map((row) => `${device.id}-rn-${row.index}`),
+    [selectedRadioNodes, device.id],
+  );
+  const radioNodesMapDevices = React.useMemo<DeviceRow[]>(
+    () =>
+      filteredRadioNodes.map((node) => ({
+        id: `${device.id}-rn-${node.index}`,
+        device: node.name,
+        type: 'RCP',
+        notes: node.description,
+        status: node.status === 'Up' ? 'Connected' : 'Disconnected',
+        alarms: node.alarms,
+        alarmType: node.alarmType,
+        configStatus: 'Synchronized',
+        version: device.version,
+        ipAddress: device.ipAddress,
+        deviceGroup: 'Radio access',
+        region: device.region,
+        labels: [],
+      })),
+    [filteredRadioNodes, device],
+  );
+  const radioNodesRoleByMapId = React.useMemo<Record<string, string>>(
+    () =>
+      Object.fromEntries(
+        filteredRadioNodes.map((node) => [`${device.id}-rn-${node.index}`, node.role]),
+      ),
+    [filteredRadioNodes, device.id],
+  );
   const [addRadioNodeSheetOpen, setAddRadioNodeSheetOpen] = useState(false);
   const [configMismatchSheetOpen, setConfigMismatchSheetOpen] = useState(false);
   const [createdTemplateName, setCreatedTemplateName] = useState<string | null>(initialCreatedTemplate ?? null);
@@ -789,10 +826,10 @@ function DeviceDetailPage({
   const [cellStatusFilter, setCellStatusFilter] = useState<(typeof CELL_STATUS_OPTIONS)[number]>('all');
   const SIDEBAR_BADGE_COUNTS = React.useMemo<Record<string, number>>(() => ({
     'ip-interfaces': IP_INTERFACES_DATA.length,
-    'radio-nodes': filterRadioNodes(RADIO_NODES_DATA, radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter).length,
+    'radio-nodes': filteredRadioNodes.length,
     'nr-cells': NR_CELLS_DATA.length,
     'zones': ZONES_DATA.length,
-  }), [radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter]);
+  }), [filteredRadioNodes.length]);
   const [noteInput, setNoteInput] = useState('');
   const notesScrollRef = React.useRef<HTMLDivElement>(null);
   const alarmsCardRef = React.useRef<HTMLDivElement>(null);
@@ -1678,6 +1715,7 @@ function DeviceDetailPage({
                       onChange={(e) => setRadioNodesSearch(e.target.value)}
                     />
                   </div>
+                  <FilterSelect value={radioNodesIndexFilter} onValueChange={setRadioNodesIndexFilter} label="Index" options={[...RADIO_NODES_INDEX_OPTIONS]} className="w-[110px]" />
                   <FilterSelect value={radioNodesStatusFilter} onValueChange={setRadioNodesStatusFilter} label="Status" options={[...RADIO_NODES_STATUS_OPTIONS]} className="w-[130px]" />
                   <FilterSelect value={radioNodesModelFilter} onValueChange={setRadioNodesModelFilter} label="Model" options={[...RADIO_NODES_MODEL_OPTIONS]} className="w-[120px]" />
                 </div>
@@ -1692,6 +1730,23 @@ function DeviceDetailPage({
                 </Tooltip>
               </CardHeader>
               <CardContent>
+                {device.type === 'DAS' && (
+                  <div className="mb-4">
+                    <RegionsMap
+                      region={device.region}
+                      regions={device.region ? [device.region] : undefined}
+                      devices={radioNodesMapDevices}
+                      singleRegionZoom={13}
+                      heightClassName="h-[300px]"
+                      devicePinSpreadScale={1}
+                      fitToDevices
+                      highlightedDeviceIds={selectedRadioNodeMapIds}
+                      fitToDeviceIds={selectedRadioNodeMapIds}
+                      deviceRoleById={radioNodesRoleByMapId}
+                      deviceLayoutProfile="dasHierarchy"
+                    />
+                  </div>
+                )}
                 <RadioNodesDataTable
                   search={radioNodesSearch}
                   onSearchChange={setRadioNodesSearch}
@@ -1699,6 +1754,8 @@ function DeviceDetailPage({
                   onStatusFilterChange={setRadioNodesStatusFilter}
                   modelFilter={radioNodesModelFilter}
                   onModelFilterChange={setRadioNodesModelFilter}
+                  indexFilter={radioNodesIndexFilter}
+                  onSelectionChange={setSelectedRadioNodes}
                 />
               </CardContent>
             </Card>
@@ -2623,15 +2680,11 @@ function DeviceDetailPage({
               )}
 
               {dasInventoryView === 'map' && (
-                <Card>
-                  <CardContent className="p-0">
-                    <DasTopology
-                      searchQuery={dasTopologySearch}
-                      statusFilter={dasTopologyStatusFilter}
-                      typeFilter={dasTopologyTypeFilter}
-                    />
-                  </CardContent>
-                </Card>
+                <DasTopology
+                  searchQuery={dasTopologySearch}
+                  statusFilter={dasTopologyStatusFilter}
+                  typeFilter={dasTopologyTypeFilter}
+                />
               )}
             </div>
             );

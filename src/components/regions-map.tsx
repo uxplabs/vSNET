@@ -136,13 +136,19 @@ function getDevicePosition(device: DeviceRow, spreadScale = 1): [number, number]
   ];
 }
 
-function createDeviceIcon(device: DeviceRow, large = false): L.DivIcon {
-  const color = DEVICE_STATUS_COLORS[device.status] ?? 'rgb(100 116 139)';
-  const size = large ? 22 : 10;
-  const border = large ? 4 : 2;
+function createDeviceIcon(
+  device: DeviceRow,
+  options?: { large?: boolean; highlighted?: boolean; muted?: boolean },
+): L.DivIcon {
+  const large = options?.large ?? false;
+  const highlighted = options?.highlighted ?? false;
+  const muted = options?.muted ?? false;
+  const color = muted ? 'rgb(100 116 139)' : (DEVICE_STATUS_COLORS[device.status] ?? 'rgb(100 116 139)');
+  const size = large ? 22 : highlighted ? 14 : 10;
+  const border = large ? 4 : highlighted ? 3 : 2;
   const anchor = size / 2;
   return L.divIcon({
-    html: `<div class="device-pin-shell" title="${device.device} (${device.status})" style="width:${size}px;height:${size}px;border-radius:9999px;background:${color};border:${border}px solid white;box-shadow:0 2px 8px rgb(0 0 0 / 0.45);"></div>`,
+    html: `<div class="device-pin-shell" title="${device.device} (${device.status})" style="width:${size}px;height:${size}px;border-radius:9999px;background:${color};border:${border}px solid white;opacity:${muted ? '0.85' : '1'};box-shadow:${highlighted ? '0 0 0 2px rgba(59, 130, 246, 0.45), 0 3px 10px rgb(0 0 0 / 0.5)' : '0 2px 8px rgb(0 0 0 / 0.45)'};"></div>`,
     className: 'device-marker device-pin-hover border-none bg-transparent',
     iconSize: [size, size],
     iconAnchor: [anchor, anchor],
@@ -194,6 +200,48 @@ function FocusedDeviceUpdater({ focusedDevice }: { focusedDevice?: DeviceRow | n
   return null;
 }
 
+function DeviceBoundsUpdater({
+  enabled,
+  positions,
+  targetPositions,
+  singleRegionZoom,
+}: {
+  enabled: boolean;
+  positions: [number, number][];
+  targetPositions?: [number, number][];
+  singleRegionZoom: number;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (!enabled) return;
+    const activePositions = (targetPositions && targetPositions.length > 0) ? targetPositions : positions;
+    const validPositions = activePositions.filter(
+      (pos): pos is [number, number] =>
+        Array.isArray(pos) &&
+        pos.length === 2 &&
+        Number.isFinite(pos[0]) &&
+        Number.isFinite(pos[1]),
+    );
+    if (validPositions.length === 0) return;
+    if (validPositions.length === 1) {
+      map.setView(validPositions[0], Math.max(singleRegionZoom, 10), { animate: true });
+      return;
+    }
+    const bounds = L.latLngBounds(validPositions);
+    if (!bounds.isValid()) return;
+    const size = map.getSize();
+    const padX = Math.max(24, Math.round(size.x * 0.08));
+    const padY = Math.max(24, Math.round(size.y * 0.12));
+    map.fitBounds(bounds, {
+      paddingTopLeft: [padX, padY],
+      paddingBottomRight: [padX, padY],
+      maxZoom: Math.max(singleRegionZoom + 1, 11),
+      animate: true,
+    });
+  }, [enabled, map, positions, targetPositions, singleRegionZoom]);
+  return null;
+}
+
 export interface RegionsMapProps {
   region?: string;
   regions?: string[];
@@ -210,6 +258,11 @@ export interface RegionsMapProps {
   onDevicePinClick?: (device: DeviceRow) => void;
   heightClassName?: string;
   devicePinSpreadScale?: number;
+  fitToDevices?: boolean;
+  highlightedDeviceIds?: string[];
+  fitToDeviceIds?: string[];
+  deviceRoleById?: Record<string, string>;
+  deviceLayoutProfile?: 'default' | 'dasHierarchy';
 }
 
 export function RegionsMap({
@@ -228,6 +281,11 @@ export function RegionsMap({
   onDevicePinClick,
   heightClassName = 'h-[400px]',
   devicePinSpreadScale = 1,
+  fitToDevices = false,
+  highlightedDeviceIds,
+  fitToDeviceIds,
+  deviceRoleById,
+  deviceLayoutProfile = 'default',
 }: RegionsMapProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -259,6 +317,32 @@ export function RegionsMap({
     return list;
   }, [region, regions, data]);
 
+  const getPositionForDevice = (d: DeviceRow): [number, number] => {
+    if (deviceLayoutProfile !== 'dasHierarchy') {
+      return getDevicePosition(d, devicePinSpreadScale);
+    }
+    const center = getRegionCenter(d.region) ?? [39.5, -98];
+    const role = (deviceRoleById?.[d.id] ?? '').toUpperCase();
+    const baseRadiusByRole: Record<string, number> = {
+      RIU: 0.004,  // near head-end
+      DCU: 0.03,
+      DEU: 0.05,
+      DLRU: 0.12,
+      DMRU: 0.18,
+      DHRU: 0.24,
+    };
+    const h1 = hashString(`${d.id}-${d.device}`);
+    const h2 = hashString(`${d.device}-${d.id}`);
+    const angle = ((h1 % 360) * Math.PI) / 180;
+    const jitter = ((h2 % 25) / 1000); // small deterministic spread
+    const base = baseRadiusByRole[role] ?? 0.09;
+    const radius = Math.max(0.002, (base + jitter) * Math.max(devicePinSpreadScale, 0.1));
+    return [
+      center[0] + Math.sin(angle) * radius,
+      center[1] + Math.cos(angle) * radius,
+    ];
+  };
+
   const deviceMarkers = useMemo(() => {
     if (!devices || !isSingleRegionSelected) return [];
     return devices
@@ -269,18 +353,33 @@ export function RegionsMap({
       })
       .map((d) => ({
         key: d.id,
-        pos: getDevicePosition(d, devicePinSpreadScale),
+        pos: getPositionForDevice(d),
         device: d,
       }));
-  }, [devices, isSingleRegionSelected, activeRegions, region, devicePinSpreadScale]);
+  }, [devices, isSingleRegionSelected, activeRegions, region, devicePinSpreadScale, deviceLayoutProfile, deviceRoleById]);
+  const devicePositions = useMemo(
+    () => deviceMarkers.map((marker) => marker.pos),
+    [deviceMarkers],
+  );
+  const fitToTargetPositions = useMemo(() => {
+    if (!fitToDeviceIds || fitToDeviceIds.length === 0) return undefined;
+    const fitSet = new Set(fitToDeviceIds);
+    const filtered = deviceMarkers.filter((marker) => fitSet.has(marker.key)).map((marker) => marker.pos);
+    return filtered.length > 0 ? filtered : undefined;
+  }, [deviceMarkers, fitToDeviceIds]);
+  const highlightedSet = useMemo(
+    () => new Set(highlightedDeviceIds ?? []),
+    [highlightedDeviceIds],
+  );
+  const hasHighlighted = highlightedSet.size > 0;
 
   const focusedDevice = useMemo(
     () => devices?.find((d) => d.id === focusedDeviceId) ?? null,
     [devices, focusedDeviceId],
   );
   const focusedDeviceMarker = useMemo(
-    () => (focusedDevice ? { key: focusedDevice.id, pos: getDevicePosition(focusedDevice, devicePinSpreadScale), device: focusedDevice } : null),
-    [focusedDevice, devicePinSpreadScale],
+    () => (focusedDevice ? { key: focusedDevice.id, pos: getPositionForDevice(focusedDevice), device: focusedDevice } : null),
+    [focusedDevice, devicePinSpreadScale, deviceLayoutProfile, deviceRoleById],
   );
 
   if (!mounted) {
@@ -313,6 +412,7 @@ export function RegionsMap({
       >
         <MapViewUpdater region={region} regions={regions} singleRegionZoom={singleRegionZoom} />
         <FocusedDeviceUpdater focusedDevice={focusedDevice} />
+        <DeviceBoundsUpdater enabled={fitToDevices} positions={devicePositions} targetPositions={fitToTargetPositions} singleRegionZoom={singleRegionZoom} />
         <TileLayer
           attribution={tileAttribution}
           url={tileUrl}
@@ -321,7 +421,7 @@ export function RegionsMap({
           <Marker
             key={focusedDeviceMarker.key}
             position={focusedDeviceMarker.pos}
-            icon={createDeviceIcon(focusedDeviceMarker.device, true)}
+            icon={createDeviceIcon(focusedDeviceMarker.device, { large: true, highlighted: true })}
             eventHandlers={onDevicePinClick ? { click: () => onDevicePinClick(focusedDeviceMarker.device) } : undefined}
           >
             <LeafletTooltip direction="top" offset={[0, -10]} opacity={1} sticky interactive>
@@ -362,7 +462,10 @@ export function RegionsMap({
             <Marker
               key={key}
               position={pos}
-              icon={createDeviceIcon(device)}
+              icon={createDeviceIcon(device, {
+                highlighted: highlightedSet.has(key),
+                muted: hasHighlighted && !highlightedSet.has(key),
+              })}
               eventHandlers={onDevicePinClick ? { click: () => onDevicePinClick(device) } : undefined}
             >
               <LeafletTooltip direction="top" offset={[0, -8]} opacity={1} sticky interactive>
