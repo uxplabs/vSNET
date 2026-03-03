@@ -293,6 +293,7 @@ const CELL_STATUS_OPTIONS = ['all', 'good', 'bad'] as const;
 const CELL_PERFORMANCE_ROWS = [
   {
     name: 'Cell-1',
+    cellId: 'CELL-1001',
     callSetupSuccessRate: 99.2,
     erabs: 1245,
     rrcSuccessRate: 98.7,
@@ -303,9 +304,14 @@ const CELL_PERFORMANCE_ROWS = [
     dlBytes: 987654321,
     ulBytes: 321654987,
     status: 'good',
+    enabled: true,
+    zones: 4,
+    radioNodes: 3,
+    dlBandwidth: '100 MHz',
   },
   {
     name: 'Cell-2',
+    cellId: 'CELL-1002',
     callSetupSuccessRate: 97.4,
     erabs: 1132,
     rrcSuccessRate: 96.8,
@@ -316,9 +322,14 @@ const CELL_PERFORMANCE_ROWS = [
     dlBytes: 756432198,
     ulBytes: 289765432,
     status: 'bad',
+    enabled: true,
+    zones: 3,
+    radioNodes: 2,
+    dlBandwidth: '80 MHz',
   },
   {
     name: 'Cell-3',
+    cellId: 'CELL-1003',
     callSetupSuccessRate: 98.6,
     erabs: 1388,
     rrcSuccessRate: 98.1,
@@ -329,9 +340,14 @@ const CELL_PERFORMANCE_ROWS = [
     dlBytes: 1123456789,
     ulBytes: 412356789,
     status: 'good',
+    enabled: true,
+    zones: 5,
+    radioNodes: 4,
+    dlBandwidth: '100 MHz',
   },
   {
     name: 'Cell-4',
+    cellId: 'CELL-1004',
     callSetupSuccessRate: 96.9,
     erabs: 1045,
     rrcSuccessRate: 95.7,
@@ -342,9 +358,14 @@ const CELL_PERFORMANCE_ROWS = [
     dlBytes: 623456789,
     ulBytes: 245678901,
     status: 'bad',
+    enabled: false,
+    zones: 2,
+    radioNodes: 2,
+    dlBandwidth: '60 MHz',
   },
   {
     name: 'Cell-5',
+    cellId: 'CELL-1005',
     callSetupSuccessRate: 98.9,
     erabs: 1294,
     rrcSuccessRate: 98.4,
@@ -355,8 +376,38 @@ const CELL_PERFORMANCE_ROWS = [
     dlBytes: 998877665,
     ulBytes: 356778899,
     status: 'good',
+    enabled: true,
+    zones: 4,
+    radioNodes: 3,
+    dlBandwidth: '80 MHz',
   },
 ] as const;
+
+const CELL_DETAIL_INTERVALS = ['15 min'] as const;
+const CELL_ALARM_ROWS = [
+  { cellName: 'Cell-1', timestamp: 'Jan 27, 10:15', updated: 'Jan 27, 10:22', severity: 'Major', source: 'RAN' },
+  { cellName: 'Cell-1', timestamp: 'Jan 27, 11:30', updated: 'Jan 27, 11:37', severity: 'Minor', source: 'Scheduler' },
+  { cellName: 'Cell-2', timestamp: 'Jan 27, 09:45', updated: 'Jan 27, 09:52', severity: 'Critical', source: 'Backhaul' },
+  { cellName: 'Cell-2', timestamp: 'Jan 27, 12:00', updated: 'Jan 27, 12:05', severity: 'Major', source: 'RRC' },
+  { cellName: 'Cell-3', timestamp: 'Jan 27, 08:30', updated: 'Jan 27, 08:41', severity: 'Minor', source: 'Sync' },
+  { cellName: 'Cell-4', timestamp: 'Jan 27, 07:50', updated: 'Jan 27, 08:02', severity: 'Major', source: 'Cell config' },
+  { cellName: 'Cell-5', timestamp: 'Jan 27, 11:10', updated: 'Jan 27, 11:18', severity: 'Minor', source: 'ANR' },
+] as const;
+const CELL_ALARM_SEVERITY_ICON: Record<'Critical' | 'Major' | 'Minor', { name: string; className: string }> = {
+  Critical: { name: 'error', className: 'text-destructive' },
+  Major: { name: 'error_outline', className: 'text-warning' },
+  Minor: { name: 'warning', className: 'text-yellow-500' },
+};
+type SiteChartId =
+  | 'erab-establishment'
+  | 'volte-establishment'
+  | 'rrc-success-rate'
+  | 'erab-drop-rate'
+  | 'volte-drop-rate'
+  | 's1-ho'
+  | 'handin-intra'
+  | 'gtp-data-volume'
+  | 'hw-memory-usage';
 
 const formatBytes = (value: number) => `${(value / 1_000_000).toFixed(1)} MB`;
 
@@ -899,6 +950,7 @@ function DeviceDetailPage({
   const [showSummaryMap, setShowSummaryMap] = React.useState(false);
   const [alarmsEventsTab, setAlarmsEventsTab] = React.useState('alarms');
   const [performanceTab, setPerformanceTab] = React.useState('site');
+  const [expandedSiteChart, setExpandedSiteChart] = React.useState<SiteChartId | null>(null);
   const [tcHistSearch, setTcHistSearch] = React.useState('');
   const [tcHistKpiFilter, setTcHistKpiFilter] = React.useState('All');
   const [tcHistStateFilter, setTcHistStateFilter] = React.useState('All');
@@ -978,6 +1030,9 @@ function DeviceDetailPage({
   const [cellSearch, setCellSearch] = useState('');
   const [cellTimeRange, setCellTimeRange] = useState<(typeof CELL_TIME_RANGES)[number]>(CELL_TIME_RANGES[0]);
   const [cellStatusFilter, setCellStatusFilter] = useState<(typeof CELL_STATUS_OPTIONS)[number]>('all');
+  const [cellDetailSheetOpen, setCellDetailSheetOpen] = useState(false);
+  const [selectedCellName, setSelectedCellName] = useState<string | null>(null);
+  const [cellDetailInterval, setCellDetailInterval] = useState<(typeof CELL_DETAIL_INTERVALS)[number]>(CELL_DETAIL_INTERVALS[0]);
   const SIDEBAR_BADGE_COUNTS = React.useMemo<Record<string, number>>(() => ({
     'ip-interfaces': IP_INTERFACES_DATA.length,
     'radio-nodes': filteredRadioNodes.length,
@@ -987,6 +1042,68 @@ function DeviceDetailPage({
   const [noteInput, setNoteInput] = useState('');
   const notesScrollRef = React.useRef<HTMLDivElement>(null);
   const alarmsCardRef = React.useRef<HTMLDivElement>(null);
+  const selectedCell = React.useMemo(
+    () => CELL_PERFORMANCE_ROWS.find((row) => row.name === selectedCellName) ?? null,
+    [selectedCellName],
+  );
+  const selectedCellAlarms = React.useMemo(
+    () => (selectedCell ? CELL_ALARM_ROWS.filter((row) => row.cellName === selectedCell.name) : []),
+    [selectedCell],
+  );
+  const cellDetailChartData = React.useMemo(() => {
+    if (!selectedCell) return [];
+    const slots = ['10:00', '10:15', '10:30', '10:45', '11:00', '11:15', '11:30', '11:45'];
+    return slots.map((time, index) => {
+      const wave = [0, 1, -1, 2, -2, 1, 0, -1][index] ?? 0;
+      const availabilityOutages = selectedCell.status === 'good'
+        ? [0, 0, 1, 0, 0, 1, 0, 0][index]
+        : [1, 2, 1, 3, 2, 2, 1, 2][index];
+      return {
+        time,
+        erabEstablishmentSr: Number((selectedCell.callSetupSuccessRate - 0.35 + wave * 0.12).toFixed(2)),
+        erabEstablishmentAttempts: Math.max(200, Math.round(selectedCell.connEstabAttSum / 8 + wave * 70)),
+        volteEstablishmentSr: Number((selectedCell.callSetupSuccessRate + 0.6 + wave * 0.1).toFixed(2)),
+        volteEstablishmentAttempts: Math.max(80, Math.round((selectedCell.connEstabAttSum * 0.28) / 8 + wave * 22)),
+        erabsDropRate: Number((selectedCell.erabDropRate + wave * 0.05).toFixed(2)),
+        erabsDrops: Math.max(0, Math.round(selectedCell.erabDrops / 2 + wave * 2)),
+        volteDropRate: Number((selectedCell.erabDropRate * 0.6 + wave * 0.03).toFixed(2)),
+        volteDropCount: Math.max(0, Math.round(selectedCell.erabDrops * 0.45 + wave * 1.5)),
+        s1HoSuccessRate: Number((selectedCell.rrcSuccessRate - 0.35 + wave * 0.12).toFixed(2)),
+        s1HoAttempts: Math.max(60, Math.round(selectedCell.maxRrcUsers * 0.72 + wave * 20)),
+        handInIntra: Math.max(45, Math.round(selectedCell.maxRrcUsers * 0.58 + wave * 16)),
+        handInIntraAttempts: Math.max(50, Math.round(selectedCell.maxRrcUsers * 0.63 + wave * 18)),
+        handInIntraSr: Number((selectedCell.rrcSuccessRate - 0.55 + wave * 0.14).toFixed(2)),
+        sceLteCellGtpDlNumBytes: Math.max(50_000_000, Math.round(selectedCell.dlBytes * (0.78 + wave * 0.03))),
+        sceLteCellGtpUlNumBytes: Math.max(20_000_000, Math.round(selectedCell.ulBytes * (0.78 + wave * 0.03))),
+        availabilityPct: Number(((selectedCell.enabled ? 99.7 : 97.8) + wave * 0.12).toFixed(2)),
+        availabilityOutages,
+      };
+    });
+  }, [selectedCell]);
+  const expandedSiteChartTitle = React.useMemo(() => {
+    switch (expandedSiteChart) {
+      case 'erab-establishment':
+        return 'ERAB establishment';
+      case 'volte-establishment':
+        return 'VoLTE establishment';
+      case 'rrc-success-rate':
+        return 'RRC success rate';
+      case 'erab-drop-rate':
+        return 'ERAB drop rate';
+      case 'volte-drop-rate':
+        return 'VoLTE drop rate';
+      case 's1-ho':
+        return 'S1 HO success rate';
+      case 'handin-intra':
+        return 'HandIn Intra';
+      case 'gtp-data-volume':
+        return 'SCE_LTE_GTP data volume';
+      case 'hw-memory-usage':
+        return 'Memory usage';
+      default:
+        return 'Chart';
+    }
+  }, [expandedSiteChart]);
 
   const [dasInventoryView, setDasInventoryView] = useState<'list' | 'map'>('list');
   const [dasTopologySearch, setDasTopologySearch] = useState('');
@@ -2047,8 +2164,11 @@ function DeviceDetailPage({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {/* Chart 1: ERAB establishment */}
                           <Card>
-                            <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0">
                               <CardTitle>ERAB establishment</CardTitle>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedSiteChart('erab-establishment')}>
+                                <Icon name="open_in_full" size={16} />
+                              </Button>
                             </CardHeader>
                             <CardContent>
                               <ChartContainer
@@ -2057,7 +2177,7 @@ function DeviceDetailPage({
                                   erabEstablishmentSr: { label: 'SR (%)', color: 'var(--chart-1, #38BDF8)' },
                                   erabEstablishmentAttempts: { label: 'Attempts', color: 'var(--chart-2, #2DD4BF)' },
                                 } satisfies ChartConfig}
-                                className="min-h-[200px] w-full"
+                                className="h-[200px] min-h-[200px] w-full !aspect-auto"
                               >
                                 <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -2074,8 +2194,11 @@ function DeviceDetailPage({
                           </Card>
                           {/* Chart 2: VoLTE establishment */}
                           <Card>
-                            <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0">
                               <CardTitle>VoLTE establishment</CardTitle>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedSiteChart('volte-establishment')}>
+                                <Icon name="open_in_full" size={16} />
+                              </Button>
                             </CardHeader>
                             <CardContent>
                               <ChartContainer
@@ -2084,7 +2207,7 @@ function DeviceDetailPage({
                                   volteEstablishmentSr: { label: 'SR (%)', color: 'var(--chart-1, #38BDF8)' },
                                   volteEstablishmentAttempts: { label: 'Attempts', color: 'var(--chart-2, #2DD4BF)' },
                                 } satisfies ChartConfig}
-                                className="min-h-[200px] w-full"
+                                className="h-[200px] min-h-[200px] w-full !aspect-auto"
                               >
                                 <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -2101,8 +2224,11 @@ function DeviceDetailPage({
                           </Card>
                           {/* Chart 3: RRC SR */}
                           <Card>
-                            <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0">
                               <CardTitle>RRC success rate</CardTitle>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedSiteChart('rrc-success-rate')}>
+                                <Icon name="open_in_full" size={16} />
+                              </Button>
                             </CardHeader>
                             <CardContent>
                               <ChartContainer
@@ -2110,7 +2236,7 @@ function DeviceDetailPage({
                                   day: { label: 'Day' },
                                   rrcSr: { label: 'RRC SR (%)', color: 'var(--chart-1, #38BDF8)' },
                                 } satisfies ChartConfig}
-                                className="min-h-[200px] w-full"
+                                className="h-[200px] min-h-[200px] w-full !aspect-auto"
                               >
                                 <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -2129,8 +2255,11 @@ function DeviceDetailPage({
                         <h3 className="text-lg font-semibold">Retainability</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <Card>
-                            <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0">
                               <CardTitle>ERAB drop rate</CardTitle>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedSiteChart('erab-drop-rate')}>
+                                <Icon name="open_in_full" size={16} />
+                              </Button>
                             </CardHeader>
                             <CardContent>
                               <ChartContainer
@@ -2139,7 +2268,7 @@ function DeviceDetailPage({
                                   erabDropRate: { label: 'Drop rate (%)', color: 'var(--chart-1, #38BDF8)' },
                                   erabDropCount: { label: 'Drop count', color: 'var(--chart-2, #2DD4BF)' },
                                 } satisfies ChartConfig}
-                                className="min-h-[200px] w-full"
+                                className="h-[200px] min-h-[200px] w-full !aspect-auto"
                               >
                                 <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -2155,8 +2284,11 @@ function DeviceDetailPage({
                             </CardContent>
                           </Card>
                           <Card>
-                            <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0">
                               <CardTitle>VoLTE drop rate</CardTitle>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedSiteChart('volte-drop-rate')}>
+                                <Icon name="open_in_full" size={16} />
+                              </Button>
                             </CardHeader>
                             <CardContent>
                               <ChartContainer
@@ -2165,7 +2297,7 @@ function DeviceDetailPage({
                                   volteDropRate: { label: 'Drop rate (%)', color: 'var(--chart-1, #38BDF8)' },
                                   volteDropCount: { label: 'Drop count', color: 'var(--chart-2, #2DD4BF)' },
                                 } satisfies ChartConfig}
-                                className="min-h-[200px] w-full"
+                                className="h-[200px] min-h-[200px] w-full !aspect-auto"
                               >
                                 <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -2186,8 +2318,11 @@ function DeviceDetailPage({
                         <h3 className="text-lg font-semibold">Handover</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <Card>
-                            <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0">
                               <CardTitle>S1 HO success rate</CardTitle>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedSiteChart('s1-ho')}>
+                                <Icon name="open_in_full" size={16} />
+                              </Button>
                             </CardHeader>
                             <CardContent>
                               <ChartContainer
@@ -2196,7 +2331,7 @@ function DeviceDetailPage({
                                   s1HoSuccessRate: { label: 'Success rate (%)', color: 'var(--chart-1, #38BDF8)' },
                                   s1HoAttempts: { label: 'Attempts', color: 'var(--chart-2, #2DD4BF)' },
                                 } satisfies ChartConfig}
-                                className="min-h-[200px] w-full"
+                                className="h-[200px] min-h-[200px] w-full !aspect-auto"
                               >
                                 <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -2212,8 +2347,11 @@ function DeviceDetailPage({
                             </CardContent>
                           </Card>
                           <Card>
-                            <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0">
                               <CardTitle>HandIn Intra</CardTitle>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedSiteChart('handin-intra')}>
+                                <Icon name="open_in_full" size={16} />
+                              </Button>
                             </CardHeader>
                             <CardContent>
                               <ChartContainer
@@ -2223,7 +2361,7 @@ function DeviceDetailPage({
                                   handInIntraAttempts: { label: 'Intra attempts', color: 'var(--chart-4, #A78BFA)' },
                                   handInIntraSr: { label: 'SR (%)', color: 'var(--chart-1, #38BDF8)' },
                                 } satisfies ChartConfig}
-                                className="min-h-[200px] w-full"
+                                className="h-[200px] min-h-[200px] w-full !aspect-auto"
                               >
                                 <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -2245,28 +2383,66 @@ function DeviceDetailPage({
                         <h3 className="text-lg font-semibold">Data volume</h3>
                         <div className="grid grid-cols-1 gap-6">
                           <Card>
-                            <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0">
                               <CardTitle>SCE_LTE_GTP data volume</CardTitle>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedSiteChart('gtp-data-volume')}>
+                                <Icon name="open_in_full" size={16} />
+                              </Button>
                             </CardHeader>
                             <CardContent>
-                              <ChartContainer
-                                config={{
-                                  day: { label: 'Day' },
-                                  gtpDlNumBytes: { label: 'SCE_LTE_GTP.DL.NumBytes', color: 'var(--chart-1, #38BDF8)' },
-                                  gtpUlNumBytes: { label: 'SCE_LTE_GTP.UL.NumBytes', color: 'var(--chart-2, #2DD4BF)' },
-                                } satisfies ChartConfig}
-                                className="min-h-[220px] w-full"
-                              >
-                                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
-                                  <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${(Number(v) / 1_000_000_000).toFixed(0)} GB`} />
-                                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
-                                  <ChartLegend content={<ChartLegendContent />} />
-                                  <Line type="monotone" dataKey="gtpDlNumBytes" stroke="var(--color-gtpDlNumBytes)" strokeWidth={2} dot={false} />
-                                  <Line type="monotone" dataKey="gtpUlNumBytes" stroke="var(--color-gtpUlNumBytes)" strokeWidth={2} dot={false} />
-                                </LineChart>
-                              </ChartContainer>
+                              <div className="h-[200px]">
+                                <ChartContainer
+                                  config={{
+                                    day: { label: 'Day' },
+                                    gtpDlNumBytes: { label: 'SCE_LTE_GTP.DL.NumBytes', color: 'var(--chart-1, #38BDF8)' },
+                                    gtpUlNumBytes: { label: 'SCE_LTE_GTP.UL.NumBytes', color: 'var(--chart-2, #2DD4BF)' },
+                                  } satisfies ChartConfig}
+                                  className="h-full w-full !aspect-auto"
+                                >
+                                  <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                                    <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${(Number(v) / 1_000_000_000).toFixed(0)} GB`} />
+                                    <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                                    <ChartLegend content={<ChartLegendContent />} />
+                                    <Line type="monotone" dataKey="gtpDlNumBytes" stroke="var(--color-gtpDlNumBytes)" strokeWidth={2} dot={false} />
+                                    <Line type="monotone" dataKey="gtpUlNumBytes" stroke="var(--color-gtpUlNumBytes)" strokeWidth={2} dot={false} />
+                                  </LineChart>
+                                </ChartContainer>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </section>
+                      <section className="space-y-6">
+                        <h3 className="text-lg font-semibold">HW resources</h3>
+                        <div className="grid grid-cols-1 gap-6">
+                          <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                              <CardTitle>Memory usage</CardTitle>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedSiteChart('hw-memory-usage')}>
+                                <Icon name="open_in_full" size={16} />
+                              </Button>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="h-[200px]">
+                                <ChartContainer
+                                  config={{
+                                    day: { label: 'Day' },
+                                    memory: { label: 'Memory usage (%)', color: 'var(--chart-2, #2DD4BF)' },
+                                  } satisfies ChartConfig}
+                                  className="h-full w-full !aspect-auto"
+                                >
+                                  <LineChart accessibilityLayer data={RESOURCES_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                                    <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                                    <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                                    <ChartLegend content={<ChartLegendContent />} />
+                                    <Line type="monotone" dataKey="memory" stroke="var(--color-memory)" strokeWidth={2} dot={false} />
+                                  </LineChart>
+                                </ChartContainer>
+                              </div>
                             </CardContent>
                           </Card>
                         </div>
@@ -2322,19 +2498,19 @@ function DeviceDetailPage({
                       </div>
 
                       <div className="rounded-lg border bg-card overflow-x-auto">
-                        <Table>
+                        <Table className="table-fixed min-w-[1480px]">
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="px-4 py-3 h-11">Cell name</TableHead>
-                              <TableHead className="px-4 py-3 h-11">Call setup success rate added ERAB</TableHead>
-                              <TableHead className="px-4 py-3 h-11">ERABs</TableHead>
-                              <TableHead className="px-4 py-3 h-11">RRC establishment success rate</TableHead>
-                              <TableHead className="px-4 py-3 h-11">SCE_LTE_RRC_Cell.ConnEstabAtt.Sum</TableHead>
-                              <TableHead className="px-4 py-3 h-11">LTE_MAX_RRC_CONNECTED_USERS_Cell</TableHead>
-                              <TableHead className="px-4 py-3 h-11">ERABs drop rate</TableHead>
-                              <TableHead className="px-4 py-3 h-11">ERABs drops</TableHead>
-                              <TableHead className="px-4 py-3 h-11">SCE_LTECell_GTP.DL.NumBytes</TableHead>
-                              <TableHead className="px-4 py-3 h-11">SCE_LTECell_GTP.UL.NumBytes</TableHead>
+                              <TableHead className="sticky left-0 z-20 px-3 py-3 h-11 w-[140px] bg-card">Cell name</TableHead>
+                              <TableHead className="px-3 py-3 h-11 w-[140px] whitespace-normal break-all leading-snug">Call setup success rate (ERAB)</TableHead>
+                              <TableHead className="px-3 py-3 h-11 w-[140px] whitespace-normal break-all leading-snug">ERABs</TableHead>
+                              <TableHead className="px-3 py-3 h-11 w-[140px] whitespace-normal break-all leading-snug">RRC establishment success rate</TableHead>
+                              <TableHead className="px-3 py-3 h-11 w-[140px] whitespace-normal break-all leading-snug">SCE_LTE_RRC_Cell.ConnEstabAtt.Sum</TableHead>
+                              <TableHead className="px-3 py-3 h-11 w-[140px] whitespace-normal break-all leading-snug">LTE_MAX_RRC_CONNECTED_USERS_Cell</TableHead>
+                              <TableHead className="px-3 py-3 h-11 w-[140px] whitespace-normal break-all leading-snug">ERAB drop rate</TableHead>
+                              <TableHead className="px-3 py-3 h-11 w-[140px] whitespace-normal break-all leading-snug">ERAB drops</TableHead>
+                              <TableHead className="px-3 py-3 h-11 w-[140px] whitespace-normal break-all leading-snug">SCE_LTECell_GTP.DL.NumBytes</TableHead>
+                              <TableHead className="px-3 py-3 h-11 w-[140px] whitespace-normal break-all leading-snug">SCE_LTECell_GTP.UL.NumBytes</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -2345,17 +2521,24 @@ function DeviceDetailPage({
                               const matchesStatus = cellStatusFilter === 'all' ? true : row.status === cellStatusFilter;
                               return matchesSearch && matchesStatus;
                             }).map((row) => (
-                              <TableRow key={row.name}>
-                                <TableCell className="px-4 py-3 font-medium">{row.name}</TableCell>
-                                <TableCell className="px-4 py-3 tabular-nums">{row.callSetupSuccessRate.toFixed(2)}%</TableCell>
-                                <TableCell className="px-4 py-3 tabular-nums">{row.erabs}</TableCell>
-                                <TableCell className="px-4 py-3 tabular-nums">{row.rrcSuccessRate.toFixed(2)}%</TableCell>
-                                <TableCell className="px-4 py-3 tabular-nums">{row.connEstabAttSum}</TableCell>
-                                <TableCell className="px-4 py-3 tabular-nums">{row.maxRrcUsers}</TableCell>
-                                <TableCell className="px-4 py-3 tabular-nums">{row.erabDropRate.toFixed(2)}%</TableCell>
-                                <TableCell className="px-4 py-3 tabular-nums">{row.erabDrops}</TableCell>
-                                <TableCell className="px-4 py-3 tabular-nums">{formatBytes(row.dlBytes)}</TableCell>
-                                <TableCell className="px-4 py-3 tabular-nums">{formatBytes(row.ulBytes)}</TableCell>
+                              <TableRow
+                                key={row.name}
+                                className="group cursor-pointer"
+                                onClick={() => {
+                                  setSelectedCellName(row.name);
+                                  setCellDetailSheetOpen(true);
+                                }}
+                              >
+                                <TableCell className="sticky left-0 z-10 px-3 py-3 w-[140px] font-medium bg-card group-hover:bg-muted/50">{row.name}</TableCell>
+                                <TableCell className="px-3 py-3 w-[140px] tabular-nums">{row.callSetupSuccessRate.toFixed(2)}%</TableCell>
+                                <TableCell className="px-3 py-3 w-[140px] tabular-nums">{row.erabs}</TableCell>
+                                <TableCell className="px-3 py-3 w-[140px] tabular-nums">{row.rrcSuccessRate.toFixed(2)}%</TableCell>
+                                <TableCell className="px-3 py-3 w-[140px] tabular-nums">{row.connEstabAttSum}</TableCell>
+                                <TableCell className="px-3 py-3 w-[140px] tabular-nums">{row.maxRrcUsers}</TableCell>
+                                <TableCell className="px-3 py-3 w-[140px] tabular-nums">{row.erabDropRate.toFixed(2)}%</TableCell>
+                                <TableCell className="px-3 py-3 w-[140px] tabular-nums">{row.erabDrops}</TableCell>
+                                <TableCell className="px-3 py-3 w-[140px] tabular-nums">{formatBytes(row.dlBytes)}</TableCell>
+                                <TableCell className="px-3 py-3 w-[140px] tabular-nums">{formatBytes(row.ulBytes)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -3365,6 +3548,484 @@ function DeviceDetailPage({
         }}
         onTemplateCreated={() => setCreatedTemplateName(`${device.device}-mismatch-fix`)}
       />
+      <Sheet open={!!expandedSiteChart} onOpenChange={(open) => !open && setExpandedSiteChart(null)}>
+        <SheetContent side="right" className="w-[94vw] sm:max-w-5xl lg:max-w-6xl flex flex-col h-full">
+          <SheetHeader className="shrink-0">
+            <SheetTitle>{expandedSiteChartTitle}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto min-h-0 py-6">
+            {expandedSiteChart === 'erab-establishment' && (
+              <ChartContainer config={{ day: { label: 'Day' }, erabEstablishmentSr: { label: 'SR (%)', color: 'var(--chart-1, #38BDF8)' }, erabEstablishmentAttempts: { label: 'Attempts', color: 'var(--chart-2, #2DD4BF)' } } satisfies ChartConfig} className="h-[420px] min-h-[420px] w-full">
+                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                  <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[97, 100]} tickFormatter={(v) => `${v}%`} />
+                  <YAxis yAxisId="attempts" orientation="right" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line yAxisId="sr" type="monotone" dataKey="erabEstablishmentSr" stroke="var(--color-erabEstablishmentSr)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="attempts" type="monotone" dataKey="erabEstablishmentAttempts" stroke="var(--color-erabEstablishmentAttempts)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            )}
+            {expandedSiteChart === 'volte-establishment' && (
+              <ChartContainer config={{ day: { label: 'Day' }, volteEstablishmentSr: { label: 'SR (%)', color: 'var(--chart-1, #38BDF8)' }, volteEstablishmentAttempts: { label: 'Attempts', color: 'var(--chart-2, #2DD4BF)' } } satisfies ChartConfig} className="h-[420px] min-h-[420px] w-full">
+                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                  <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[98.5, 99.6]} tickFormatter={(v) => `${v}%`} />
+                  <YAxis yAxisId="attempts" orientation="right" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line yAxisId="sr" type="monotone" dataKey="volteEstablishmentSr" stroke="var(--color-volteEstablishmentSr)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="attempts" type="monotone" dataKey="volteEstablishmentAttempts" stroke="var(--color-volteEstablishmentAttempts)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            )}
+            {expandedSiteChart === 'rrc-success-rate' && (
+              <ChartContainer config={{ day: { label: 'Day' }, rrcSr: { label: 'RRC SR (%)', color: 'var(--chart-1, #38BDF8)' } } satisfies ChartConfig} className="h-[420px] min-h-[420px] w-full">
+                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${v}%`} />
+                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line type="monotone" dataKey="rrcSr" stroke="var(--color-rrcSr)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            )}
+            {expandedSiteChart === 'erab-drop-rate' && (
+              <ChartContainer config={{ day: { label: 'Day' }, erabDropRate: { label: 'Drop rate (%)', color: 'var(--chart-1, #38BDF8)' }, erabDropCount: { label: 'Drop count', color: 'var(--chart-2, #2DD4BF)' } } satisfies ChartConfig} className="h-[420px] min-h-[420px] w-full">
+                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                  <YAxis yAxisId="rate" tickLine={false} axisLine={false} tickMargin={8} domain={[0, 1.2]} tickFormatter={(v) => `${v}%`} />
+                  <YAxis yAxisId="count" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line yAxisId="rate" type="monotone" dataKey="erabDropRate" stroke="var(--color-erabDropRate)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="count" type="monotone" dataKey="erabDropCount" stroke="var(--color-erabDropCount)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            )}
+            {expandedSiteChart === 'volte-drop-rate' && (
+              <ChartContainer config={{ day: { label: 'Day' }, volteDropRate: { label: 'Drop rate (%)', color: 'var(--chart-1, #38BDF8)' }, volteDropCount: { label: 'Drop count', color: 'var(--chart-2, #2DD4BF)' } } satisfies ChartConfig} className="h-[420px] min-h-[420px] w-full">
+                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                  <YAxis yAxisId="rate" tickLine={false} axisLine={false} tickMargin={8} domain={[0, 0.7]} tickFormatter={(v) => `${v}%`} />
+                  <YAxis yAxisId="count" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line yAxisId="rate" type="monotone" dataKey="volteDropRate" stroke="var(--color-volteDropRate)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="count" type="monotone" dataKey="volteDropCount" stroke="var(--color-volteDropCount)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            )}
+            {expandedSiteChart === 's1-ho' && (
+              <ChartContainer config={{ day: { label: 'Day' }, s1HoSuccessRate: { label: 'Success rate (%)', color: 'var(--chart-1, #38BDF8)' }, s1HoAttempts: { label: 'Attempts', color: 'var(--chart-2, #2DD4BF)' } } satisfies ChartConfig} className="h-[420px] min-h-[420px] w-full">
+                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                  <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[96.5, 99]} tickFormatter={(v) => `${v}%`} />
+                  <YAxis yAxisId="attempts" orientation="right" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line yAxisId="sr" type="monotone" dataKey="s1HoSuccessRate" stroke="var(--color-s1HoSuccessRate)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="attempts" type="monotone" dataKey="s1HoAttempts" stroke="var(--color-s1HoAttempts)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            )}
+            {expandedSiteChart === 'handin-intra' && (
+              <ChartContainer config={{ day: { label: 'Day' }, handInIntra: { label: 'HandIn Intra', color: 'var(--chart-2, #2DD4BF)' }, handInIntraAttempts: { label: 'Intra attempts', color: 'var(--chart-4, #A78BFA)' }, handInIntraSr: { label: 'SR (%)', color: 'var(--chart-1, #38BDF8)' } } satisfies ChartConfig} className="h-[420px] min-h-[420px] w-full">
+                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                  <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[95, 99]} tickFormatter={(v) => `${v}%`} />
+                  <YAxis yAxisId="count" orientation="right" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line yAxisId="count" type="monotone" dataKey="handInIntra" stroke="var(--color-handInIntra)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="count" type="monotone" dataKey="handInIntraAttempts" stroke="var(--color-handInIntraAttempts)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="sr" type="monotone" dataKey="handInIntraSr" stroke="var(--color-handInIntraSr)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            )}
+            {expandedSiteChart === 'gtp-data-volume' && (
+              <ChartContainer config={{ day: { label: 'Day' }, gtpDlNumBytes: { label: 'SCE_LTE_GTP.DL.NumBytes', color: 'var(--chart-1, #38BDF8)' }, gtpUlNumBytes: { label: 'SCE_LTE_GTP.UL.NumBytes', color: 'var(--chart-2, #2DD4BF)' } } satisfies ChartConfig} className="h-[420px] min-h-[420px] w-full">
+                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${(Number(v) / 1_000_000_000).toFixed(0)} GB`} />
+                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line type="monotone" dataKey="gtpDlNumBytes" stroke="var(--color-gtpDlNumBytes)" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="gtpUlNumBytes" stroke="var(--color-gtpUlNumBytes)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            )}
+            {expandedSiteChart === 'hw-memory-usage' && (
+              <ChartContainer config={{ day: { label: 'Day' }, memory: { label: 'Memory usage (%)', color: 'var(--chart-2, #2DD4BF)' } } satisfies ChartConfig} className="h-[420px] min-h-[420px] w-full">
+                <LineChart accessibilityLayer data={RESOURCES_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line type="monotone" dataKey="memory" stroke="var(--color-memory)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ChartContainer>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+      <Sheet open={cellDetailSheetOpen} onOpenChange={setCellDetailSheetOpen}>
+        <SheetContent side="right" className="w-[94vw] sm:max-w-5xl lg:max-w-6xl flex flex-col h-full">
+          <SheetHeader className="shrink-0">
+            <SheetTitle>{selectedCell?.name ?? 'Cell details'}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-6 py-6">
+            {selectedCell ? (
+              <>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Cell ID</span>
+                        <span className="font-medium">{selectedCell.cellId}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Status</span>
+                        <DeviceStatus status={selectedCell.status === 'good' ? 'Connected' : 'Disconnected'} iconSize={14} className="text-sm" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Enabled</span>
+                        <span className="font-medium">{selectedCell.enabled ? 'Y' : 'N'}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Zones</span>
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="h-auto w-fit p-0 text-sm font-medium tabular-nums"
+                          onClick={() => {
+                            setActiveSection('zones');
+                            setCellDetailSheetOpen(false);
+                          }}
+                        >
+                          {selectedCell.zones}
+                        </Button>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Radio nodes</span>
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="h-auto w-fit p-0 text-sm font-medium tabular-nums"
+                          onClick={() => {
+                            setActiveSection('radio-nodes');
+                            setCellDetailSheetOpen(false);
+                          }}
+                        >
+                          {selectedCell.radioNodes}
+                        </Button>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">DL bandwidth</span>
+                        <span className="font-medium">{selectedCell.dlBandwidth}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">Time interval</span>
+                  <Select value={cellDetailInterval} onValueChange={(v) => setCellDetailInterval(v as (typeof CELL_DETAIL_INTERVALS)[number])}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Interval" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CELL_DETAIL_INTERVALS.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <section className="space-y-4">
+                  <h4 className="text-base font-semibold">Accessibility</h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>ERAB Establishment</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ChartContainer
+                          config={{
+                            time: { label: 'Time' },
+                            erabEstablishmentSr: { label: 'ERAB Establishment SR (%)', color: 'var(--chart-1, #38BDF8)' },
+                            erabEstablishmentAttempts: { label: 'ERAB Establishment Attempts', color: 'var(--chart-2, #2DD4BF)' },
+                          } satisfies ChartConfig}
+                          className="min-h-[220px] w-full"
+                        >
+                          <LineChart accessibilityLayer data={cellDetailChartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={10} />
+                            <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[95, 100]} tickFormatter={(v) => `${v}%`} />
+                            <YAxis yAxisId="attempts" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                            <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                            <ChartLegend content={<ChartLegendContent />} />
+                            <Line yAxisId="sr" type="monotone" dataKey="erabEstablishmentSr" stroke="var(--color-erabEstablishmentSr)" strokeWidth={2} dot={false} />
+                            <Line yAxisId="attempts" type="monotone" dataKey="erabEstablishmentAttempts" stroke="var(--color-erabEstablishmentAttempts)" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>VoLTE Establishment</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ChartContainer
+                          config={{
+                            time: { label: 'Time' },
+                            volteEstablishmentSr: { label: 'VoLTE Establishment SR (%)', color: 'var(--chart-1, #38BDF8)' },
+                            volteEstablishmentAttempts: { label: 'VoLTE Establishment Attempts', color: 'var(--chart-2, #2DD4BF)' },
+                          } satisfies ChartConfig}
+                          className="min-h-[220px] w-full"
+                        >
+                          <LineChart accessibilityLayer data={cellDetailChartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={10} />
+                            <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[95, 100]} tickFormatter={(v) => `${v}%`} />
+                            <YAxis yAxisId="attempts" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                            <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                            <ChartLegend content={<ChartLegendContent />} />
+                            <Line yAxisId="sr" type="monotone" dataKey="volteEstablishmentSr" stroke="var(--color-volteEstablishmentSr)" strokeWidth={2} dot={false} />
+                            <Line yAxisId="attempts" type="monotone" dataKey="volteEstablishmentAttempts" stroke="var(--color-volteEstablishmentAttempts)" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </section>
+                <section className="space-y-4">
+                  <h4 className="text-base font-semibold">Retainability</h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>ERABs drop</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ChartContainer
+                          config={{
+                            time: { label: 'Time' },
+                            erabsDropRate: { label: 'ERABs Drop Rate (%)', color: 'var(--chart-1, #38BDF8)' },
+                            erabsDrops: { label: 'ERABs Drops', color: 'var(--chart-4, #A78BFA)' },
+                          } satisfies ChartConfig}
+                          className="min-h-[220px] w-full"
+                        >
+                          <LineChart accessibilityLayer data={cellDetailChartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={10} />
+                            <YAxis yAxisId="rate" tickLine={false} axisLine={false} tickMargin={8} domain={[0, 2]} tickFormatter={(v) => `${v}%`} />
+                            <YAxis yAxisId="drops" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                            <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                            <ChartLegend content={<ChartLegendContent />} />
+                            <Line yAxisId="rate" type="monotone" dataKey="erabsDropRate" stroke="var(--color-erabsDropRate)" strokeWidth={2} dot={false} />
+                            <Line yAxisId="drops" type="monotone" dataKey="erabsDrops" stroke="var(--color-erabsDrops)" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>VoLTE drop</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ChartContainer
+                          config={{
+                            time: { label: 'Time' },
+                            volteDropRate: { label: 'VoLTE Drop Rate (%)', color: 'var(--chart-1, #38BDF8)' },
+                            volteDropCount: { label: 'VoLTE Drop Count', color: 'var(--chart-4, #A78BFA)' },
+                          } satisfies ChartConfig}
+                          className="min-h-[220px] w-full"
+                        >
+                          <LineChart accessibilityLayer data={cellDetailChartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={10} />
+                            <YAxis yAxisId="rate" tickLine={false} axisLine={false} tickMargin={8} domain={[0, 2]} tickFormatter={(v) => `${v}%`} />
+                            <YAxis yAxisId="count" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                            <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                            <ChartLegend content={<ChartLegendContent />} />
+                            <Line yAxisId="rate" type="monotone" dataKey="volteDropRate" stroke="var(--color-volteDropRate)" strokeWidth={2} dot={false} />
+                            <Line yAxisId="count" type="monotone" dataKey="volteDropCount" stroke="var(--color-volteDropCount)" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </section>
+                <section className="space-y-4">
+                  <h4 className="text-base font-semibold">Data volume</h4>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>SCE_LTECell_GTP.DL.NumBytes + SCE_LTECell_GTP.UL.NumBytes</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <ChartContainer
+                        config={{
+                          time: { label: 'Time' },
+                          sceLteCellGtpDlNumBytes: { label: 'SCE_LTECell_GTP.DL.NumBytes', color: 'var(--chart-1, #38BDF8)' },
+                          sceLteCellGtpUlNumBytes: { label: 'SCE_LTECell_GTP.UL.NumBytes', color: 'var(--chart-2, #2DD4BF)' },
+                        } satisfies ChartConfig}
+                        className="h-[220px] min-h-[220px] w-full"
+                      >
+                        <LineChart accessibilityLayer data={cellDetailChartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={10} />
+                          <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${(Number(v) / 1_000_000).toFixed(0)} MB`} />
+                          <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                          <ChartLegend content={<ChartLegendContent />} />
+                          <Line type="monotone" dataKey="sceLteCellGtpDlNumBytes" stroke="var(--color-sceLteCellGtpDlNumBytes)" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="sceLteCellGtpUlNumBytes" stroke="var(--color-sceLteCellGtpUlNumBytes)" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ChartContainer>
+                    </CardContent>
+                  </Card>
+                </section>
+                <section className="space-y-4">
+                  <h4 className="text-base font-semibold">Handover</h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>S1 HO</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ChartContainer
+                          config={{
+                            time: { label: 'Time' },
+                            s1HoSuccessRate: { label: 'S1 HO Success Rate (%)', color: 'var(--chart-1, #38BDF8)' },
+                            s1HoAttempts: { label: 'Attempts', color: 'var(--chart-2, #2DD4BF)' },
+                          } satisfies ChartConfig}
+                          className="min-h-[220px] w-full"
+                        >
+                          <LineChart accessibilityLayer data={cellDetailChartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={10} />
+                            <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[95, 100]} tickFormatter={(v) => `${v}%`} />
+                            <YAxis yAxisId="attempts" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                            <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                            <ChartLegend content={<ChartLegendContent />} />
+                            <Line yAxisId="sr" type="monotone" dataKey="s1HoSuccessRate" stroke="var(--color-s1HoSuccessRate)" strokeWidth={2} dot={false} />
+                            <Line yAxisId="attempts" type="monotone" dataKey="s1HoAttempts" stroke="var(--color-s1HoAttempts)" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>HandIn Intra</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ChartContainer
+                          config={{
+                            time: { label: 'Time' },
+                            handInIntra: { label: 'HandIn Intra', color: 'var(--chart-2, #2DD4BF)' },
+                            handInIntraAttempts: { label: 'Intra Attempts', color: 'var(--chart-4, #A78BFA)' },
+                            handInIntraSr: { label: 'SR (%)', color: 'var(--chart-1, #38BDF8)' },
+                          } satisfies ChartConfig}
+                          className="min-h-[220px] w-full"
+                        >
+                          <LineChart accessibilityLayer data={cellDetailChartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={10} />
+                            <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[95, 100]} tickFormatter={(v) => `${v}%`} />
+                            <YAxis yAxisId="count" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                            <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                            <ChartLegend content={<ChartLegendContent />} />
+                            <Line yAxisId="count" type="monotone" dataKey="handInIntra" stroke="var(--color-handInIntra)" strokeWidth={2} dot={false} />
+                            <Line yAxisId="count" type="monotone" dataKey="handInIntraAttempts" stroke="var(--color-handInIntraAttempts)" strokeWidth={2} dot={false} />
+                            <Line yAxisId="sr" type="monotone" dataKey="handInIntraSr" stroke="var(--color-handInIntraSr)" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </section>
+                <section className="space-y-4">
+                  <h4 className="text-base font-semibold">Availability</h4>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>LTE Cell Availability</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <ChartContainer
+                        config={{
+                          time: { label: 'Time' },
+                          availabilityPct: { label: 'LTE Cell Availability (%)', color: 'var(--chart-1, #38BDF8)' },
+                        } satisfies ChartConfig}
+                        className="h-[220px] min-h-[220px] w-full"
+                      >
+                        <LineChart accessibilityLayer data={cellDetailChartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={10} />
+                          <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[96, 100]} tickFormatter={(v) => `${v}%`} />
+                          <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                          <ChartLegend content={<ChartLegendContent />} />
+                          <Line type="monotone" dataKey="availabilityPct" name="LTE Cell Availability" stroke="var(--color-availabilityPct)" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ChartContainer>
+                    </CardContent>
+                  </Card>
+                </section>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Alarms</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-lg border bg-card overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Severity</TableHead>
+                            <TableHead>Timestamp</TableHead>
+                            <TableHead>Updated</TableHead>
+                            <TableHead>Source</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedCellAlarms.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                No alarms for this cell.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            selectedCellAlarms.map((row, index) => (
+                              <TableRow key={`${row.cellName}-${row.timestamp}-${index}`}>
+                                <TableCell>
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <Icon name={CELL_ALARM_SEVERITY_ICON[row.severity].name} size={16} className={CELL_ALARM_SEVERITY_ICON[row.severity].className} />
+                                    <span>{row.severity}</span>
+                                  </span>
+                                </TableCell>
+                                <TableCell>{row.timestamp}</TableCell>
+                                <TableCell>{row.updated}</TableCell>
+                                <TableCell>{row.source}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : null}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
     </TooltipProvider>
   );
