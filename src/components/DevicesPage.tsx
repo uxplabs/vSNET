@@ -394,7 +394,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="cursor-default">Multiregion ({effectiveRegions.length})</span>
+                      <span className="cursor-default">Regions ({effectiveRegions.length})</span>
                     </TooltipTrigger>
                     <TooltipContent side="right" className="max-w-xs">
                       <ul className="list-disc list-inside space-y-0.5 text-left">
