@@ -424,7 +424,7 @@ export function RegionsMap({
             icon={createDeviceIcon(focusedDeviceMarker.device, { large: true, highlighted: true })}
             eventHandlers={onDevicePinClick ? { click: () => onDevicePinClick(focusedDeviceMarker.device) } : undefined}
           >
-            <LeafletTooltip direction="top" offset={[0, -10]} opacity={1} sticky interactive>
+            <LeafletTooltip direction="auto" offset={[0, -10]} opacity={1} sticky interactive>
               <div className="min-w-[200px] text-xs text-slate-900 space-y-1">
                 <div className="font-semibold">{focusedDeviceMarker.device.device}</div>
                 <div className="flex items-center justify-between gap-3">
@@ -468,7 +468,7 @@ export function RegionsMap({
               })}
               eventHandlers={onDevicePinClick ? { click: () => onDevicePinClick(device) } : undefined}
             >
-              <LeafletTooltip direction="top" offset={[0, -8]} opacity={1} sticky interactive>
+              <LeafletTooltip direction="auto" offset={[0, -8]} opacity={1} sticky interactive>
                 <div className="min-w-[200px] text-xs text-slate-900 space-y-1">
                   <div className="font-semibold">{device.device}</div>
                   <div className="flex items-center justify-between gap-3">
@@ -560,7 +560,7 @@ export function RegionsMap({
                     {regionInfoContent}
                   </LeafletPopup>
                 ) : (
-                  <LeafletTooltip direction="top" offset={[0, -8]} opacity={1} sticky>
+                  <LeafletTooltip direction="auto" offset={[0, -8]} opacity={1} sticky>
                     {regionInfoContent}
                   </LeafletTooltip>
                 )}

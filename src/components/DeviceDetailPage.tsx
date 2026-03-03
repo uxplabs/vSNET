@@ -122,14 +122,158 @@ interface DeviceDetailPageProps {
 
 /** Mock data for Site > Accessibility line charts (x-axis: days). */
 const ACCESSIBILITY_CHART_DATA = [
-  { day: 'Jan 20', erabEstablishmentSr: 98.2, erabEstablishmentAttempts: 12400, volteEstablishmentSr: 99.1, volteEstablishmentAttempts: 3200, rrcSr: 99.5 },
-  { day: 'Jan 21', erabEstablishmentSr: 97.8, erabEstablishmentAttempts: 13100, volteEstablishmentSr: 98.8, volteEstablishmentAttempts: 3100, rrcSr: 99.3 },
-  { day: 'Jan 22', erabEstablishmentSr: 98.5, erabEstablishmentAttempts: 11900, volteEstablishmentSr: 99.2, volteEstablishmentAttempts: 3400, rrcSr: 99.6 },
-  { day: 'Jan 23', erabEstablishmentSr: 97.9, erabEstablishmentAttempts: 12800, volteEstablishmentSr: 98.9, volteEstablishmentAttempts: 3050, rrcSr: 99.4 },
-  { day: 'Jan 24', erabEstablishmentSr: 98.8, erabEstablishmentAttempts: 11500, volteEstablishmentSr: 99.4, volteEstablishmentAttempts: 3300, rrcSr: 99.7 },
-  { day: 'Jan 25', erabEstablishmentSr: 98.1, erabEstablishmentAttempts: 12200, volteEstablishmentSr: 99.0, volteEstablishmentAttempts: 3180, rrcSr: 99.5 },
-  { day: 'Jan 26', erabEstablishmentSr: 98.6, erabEstablishmentAttempts: 12000, volteEstablishmentSr: 99.3, volteEstablishmentAttempts: 3250, rrcSr: 99.6 },
-  { day: 'Jan 27', erabEstablishmentSr: 98.3, erabEstablishmentAttempts: 12600, volteEstablishmentSr: 99.1, volteEstablishmentAttempts: 3150, rrcSr: 99.4 },
+  {
+    day: 'Jan 20',
+    erabEstablishmentSr: 98.3,
+    erabEstablishmentAttempts: 14680,
+    volteEstablishmentSr: 99.15,
+    volteEstablishmentAttempts: 4520,
+    rrcSr: 99.56,
+    erabDropRate: 0.61,
+    erabDropCount: 90,
+    volteDropRate: 0.31,
+    volteDropCount: 14,
+    s1HoSuccessRate: 97.9,
+    s1HoAttempts: 3280,
+    handInIntra: 2860,
+    handInIntraAttempts: 2940,
+    handInIntraSr: 97.3,
+    gtpDlNumBytes: 1210000000000,
+    gtpUlNumBytes: 338000000000,
+  },
+  {
+    day: 'Jan 21',
+    erabEstablishmentSr: 97.7,
+    erabEstablishmentAttempts: 15840,
+    volteEstablishmentSr: 98.78,
+    volteEstablishmentAttempts: 4890,
+    rrcSr: 99.31,
+    erabDropRate: 0.85,
+    erabDropCount: 134,
+    volteDropRate: 0.44,
+    volteDropCount: 21,
+    s1HoSuccessRate: 97.1,
+    s1HoAttempts: 3560,
+    handInIntra: 3020,
+    handInIntraAttempts: 3140,
+    handInIntraSr: 96.2,
+    gtpDlNumBytes: 1295000000000,
+    gtpUlNumBytes: 362000000000,
+  },
+  {
+    day: 'Jan 22',
+    erabEstablishmentSr: 98.1,
+    erabEstablishmentAttempts: 15120,
+    volteEstablishmentSr: 99.02,
+    volteEstablishmentAttempts: 4730,
+    rrcSr: 99.45,
+    erabDropRate: 0.69,
+    erabDropCount: 104,
+    volteDropRate: 0.35,
+    volteDropCount: 16,
+    s1HoSuccessRate: 97.5,
+    s1HoAttempts: 3410,
+    handInIntra: 2960,
+    handInIntraAttempts: 3050,
+    handInIntraSr: 97.0,
+    gtpDlNumBytes: 1252000000000,
+    gtpUlNumBytes: 349000000000,
+  },
+  {
+    day: 'Jan 23',
+    erabEstablishmentSr: 97.6,
+    erabEstablishmentAttempts: 16240,
+    volteEstablishmentSr: 98.71,
+    volteEstablishmentAttempts: 5010,
+    rrcSr: 99.28,
+    erabDropRate: 0.91,
+    erabDropCount: 148,
+    volteDropRate: 0.49,
+    volteDropCount: 25,
+    s1HoSuccessRate: 96.9,
+    s1HoAttempts: 3720,
+    handInIntra: 3090,
+    handInIntraAttempts: 3230,
+    handInIntraSr: 95.7,
+    gtpDlNumBytes: 1338000000000,
+    gtpUlNumBytes: 374000000000,
+  },
+  {
+    day: 'Jan 24',
+    erabEstablishmentSr: 98.0,
+    erabEstablishmentAttempts: 15510,
+    volteEstablishmentSr: 98.96,
+    volteEstablishmentAttempts: 4860,
+    rrcSr: 99.42,
+    erabDropRate: 0.74,
+    erabDropCount: 115,
+    volteDropRate: 0.38,
+    volteDropCount: 18,
+    s1HoSuccessRate: 97.3,
+    s1HoAttempts: 3490,
+    handInIntra: 3005,
+    handInIntraAttempts: 3110,
+    handInIntraSr: 96.6,
+    gtpDlNumBytes: 1276000000000,
+    gtpUlNumBytes: 355000000000,
+  },
+  {
+    day: 'Jan 25',
+    erabEstablishmentSr: 98.9,
+    erabEstablishmentAttempts: 11780,
+    volteEstablishmentSr: 99.43,
+    volteEstablishmentAttempts: 3640,
+    rrcSr: 99.73,
+    erabDropRate: 0.42,
+    erabDropCount: 49,
+    volteDropRate: 0.22,
+    volteDropCount: 8,
+    s1HoSuccessRate: 98.4,
+    s1HoAttempts: 2760,
+    handInIntra: 2450,
+    handInIntraAttempts: 2510,
+    handInIntraSr: 97.6,
+    gtpDlNumBytes: 982000000000,
+    gtpUlNumBytes: 274000000000,
+  },
+  {
+    day: 'Jan 26',
+    erabEstablishmentSr: 99.0,
+    erabEstablishmentAttempts: 11240,
+    volteEstablishmentSr: 99.48,
+    volteEstablishmentAttempts: 3490,
+    rrcSr: 99.78,
+    erabDropRate: 0.39,
+    erabDropCount: 44,
+    volteDropRate: 0.19,
+    volteDropCount: 7,
+    s1HoSuccessRate: 98.6,
+    s1HoAttempts: 2640,
+    handInIntra: 2360,
+    handInIntraAttempts: 2410,
+    handInIntraSr: 97.9,
+    gtpDlNumBytes: 945000000000,
+    gtpUlNumBytes: 262000000000,
+  },
+  {
+    day: 'Jan 27',
+    erabEstablishmentSr: 98.2,
+    erabEstablishmentAttempts: 14960,
+    volteEstablishmentSr: 99.04,
+    volteEstablishmentAttempts: 4680,
+    rrcSr: 99.46,
+    erabDropRate: 0.66,
+    erabDropCount: 99,
+    volteDropRate: 0.33,
+    volteDropCount: 15,
+    s1HoSuccessRate: 97.7,
+    s1HoAttempts: 3390,
+    handInIntra: 2920,
+    handInIntraAttempts: 3000,
+    handInIntraSr: 96.9,
+    gtpDlNumBytes: 1239000000000,
+    gtpUlNumBytes: 346000000000,
+  },
 ];
 
 const RESOURCES_TIME_RANGES = ['Last 7 days'] as const;
@@ -752,6 +896,7 @@ function DeviceDetailPage({
     }
   }, [device.id, isDas]);
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
+  const [showSummaryMap, setShowSummaryMap] = React.useState(false);
   const [alarmsEventsTab, setAlarmsEventsTab] = React.useState('alarms');
   const [performanceTab, setPerformanceTab] = React.useState('site');
   const [tcHistSearch, setTcHistSearch] = React.useState('');
@@ -782,6 +927,15 @@ function DeviceDetailPage({
   const selectedRadioNodeMapIds = React.useMemo(
     () => selectedRadioNodes.map((row) => `${device.id}-rn-${row.index}`),
     [selectedRadioNodes, device.id],
+  );
+  const summaryMapDevices = React.useMemo<DeviceRow[]>(
+    () => [
+      {
+        ...device,
+        id: `${device.id}-summary`,
+      },
+    ],
+    [device],
   );
   const radioNodesMapDevices = React.useMemo<DeviceRow[]>(
     () =>
@@ -888,6 +1042,10 @@ function DeviceDetailPage({
     }, 150);
     return () => clearTimeout(t);
   }, [scrollToAlarms, onScrollToAlarmsDone]);
+
+  React.useEffect(() => {
+    setShowSummaryMap(false);
+  }, [device.id]);
 
   React.useEffect(() => {
     if (!scrollToNotes) return;
@@ -1253,6 +1411,35 @@ function DeviceDetailPage({
                           <span className="font-medium">{getDeviceCoordinates(device.region || 'Pacific Northwest', device.id).lng}</span>
                         </div>
                       </div>
+                      <div className="pt-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant={showSummaryMap ? 'default' : 'outline'}
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setShowSummaryMap((prev) => !prev)}
+                              aria-label={showSummaryMap ? 'Hide device location map' : 'Show device location map'}
+                            >
+                              <Icon name="map" size={16} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{showSummaryMap ? 'Hide map' : 'Show map'}</TooltipContent>
+                        </Tooltip>
+                      </div>
+                      {showSummaryMap && (
+                        <div className="rounded-lg border border-border/60 bg-muted/20 p-2">
+                          <RegionsMap
+                            region={device.region}
+                            regions={device.region ? [device.region] : undefined}
+                            devices={summaryMapDevices}
+                            singleRegionZoom={13}
+                            heightClassName="h-[280px]"
+                            fitToDevices
+                          />
+                        </div>
+                      )}
                     </div>
                     <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
@@ -1854,6 +2041,7 @@ function DeviceDetailPage({
                     </TabsList>
 
                     <TabsContent value="site" className="mt-6">
+                      <div className="space-y-10">
                       <section className="space-y-6">
                         <h3 className="text-lg font-semibold">Accessibility</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1866,19 +2054,20 @@ function DeviceDetailPage({
                               <ChartContainer
                                 config={{
                                   day: { label: 'Day' },
-                                  erabEstablishmentSr: { label: 'SR (%)', color: 'hsl(var(--chart-1, 214 95% 50%))' },
-                                  erabEstablishmentAttempts: { label: 'Attempts', color: 'hsl(var(--chart-2, 173 58% 39%))' },
+                                  erabEstablishmentSr: { label: 'SR (%)', color: 'var(--chart-1, #38BDF8)' },
+                                  erabEstablishmentAttempts: { label: 'Attempts', color: 'var(--chart-2, #2DD4BF)' },
                                 } satisfies ChartConfig}
                                 className="min-h-[200px] w-full"
                               >
                                 <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                   <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
-                                  <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                                  <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[97, 100]} tickFormatter={(v) => `${v}%`} />
+                                  <YAxis yAxisId="attempts" orientation="right" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                                   <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
                                   <ChartLegend content={<ChartLegendContent />} />
-                                  <Line type="monotone" dataKey="erabEstablishmentSr" stroke="var(--color-erabEstablishmentSr)" strokeWidth={2} dot={false} />
-                                  <Line type="monotone" dataKey="erabEstablishmentAttempts" stroke="var(--color-erabEstablishmentAttempts)" strokeWidth={2} dot={false} />
+                                  <Line yAxisId="sr" type="monotone" dataKey="erabEstablishmentSr" stroke="var(--color-erabEstablishmentSr)" strokeWidth={2} dot={false} />
+                                  <Line yAxisId="attempts" type="monotone" dataKey="erabEstablishmentAttempts" stroke="var(--color-erabEstablishmentAttempts)" strokeWidth={2} dot={false} />
                                 </LineChart>
                               </ChartContainer>
                             </CardContent>
@@ -1892,19 +2081,20 @@ function DeviceDetailPage({
                               <ChartContainer
                                 config={{
                                   day: { label: 'Day' },
-                                  volteEstablishmentSr: { label: 'SR (%)', color: 'hsl(var(--chart-1, 214 95% 50%))' },
-                                  volteEstablishmentAttempts: { label: 'Attempts', color: 'hsl(var(--chart-2, 173 58% 39%))' },
+                                  volteEstablishmentSr: { label: 'SR (%)', color: 'var(--chart-1, #38BDF8)' },
+                                  volteEstablishmentAttempts: { label: 'Attempts', color: 'var(--chart-2, #2DD4BF)' },
                                 } satisfies ChartConfig}
                                 className="min-h-[200px] w-full"
                               >
                                 <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                   <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
-                                  <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                                  <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[98.5, 99.6]} tickFormatter={(v) => `${v}%`} />
+                                  <YAxis yAxisId="attempts" orientation="right" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                                   <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
                                   <ChartLegend content={<ChartLegendContent />} />
-                                  <Line type="monotone" dataKey="volteEstablishmentSr" stroke="var(--color-volteEstablishmentSr)" strokeWidth={2} dot={false} />
-                                  <Line type="monotone" dataKey="volteEstablishmentAttempts" stroke="var(--color-volteEstablishmentAttempts)" strokeWidth={2} dot={false} />
+                                  <Line yAxisId="sr" type="monotone" dataKey="volteEstablishmentSr" stroke="var(--color-volteEstablishmentSr)" strokeWidth={2} dot={false} />
+                                  <Line yAxisId="attempts" type="monotone" dataKey="volteEstablishmentAttempts" stroke="var(--color-volteEstablishmentAttempts)" strokeWidth={2} dot={false} />
                                 </LineChart>
                               </ChartContainer>
                             </CardContent>
@@ -1918,7 +2108,7 @@ function DeviceDetailPage({
                               <ChartContainer
                                 config={{
                                   day: { label: 'Day' },
-                                  rrcSr: { label: 'RRC SR (%)', color: 'hsl(var(--chart-1, 214 95% 50%))' },
+                                  rrcSr: { label: 'RRC SR (%)', color: 'var(--chart-1, #38BDF8)' },
                                 } satisfies ChartConfig}
                                 className="min-h-[200px] w-full"
                               >
@@ -1935,6 +2125,153 @@ function DeviceDetailPage({
                           </Card>
                         </div>
                       </section>
+                      <section className="space-y-6">
+                        <h3 className="text-lg font-semibold">Retainability</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>ERAB drop rate</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <ChartContainer
+                                config={{
+                                  day: { label: 'Day' },
+                                  erabDropRate: { label: 'Drop rate (%)', color: 'var(--chart-1, #38BDF8)' },
+                                  erabDropCount: { label: 'Drop count', color: 'var(--chart-2, #2DD4BF)' },
+                                } satisfies ChartConfig}
+                                className="min-h-[200px] w-full"
+                              >
+                                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                                  <YAxis yAxisId="rate" tickLine={false} axisLine={false} tickMargin={8} domain={[0, 1.2]} tickFormatter={(v) => `${v}%`} />
+                                  <YAxis yAxisId="count" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                                  <ChartLegend content={<ChartLegendContent />} />
+                                  <Line yAxisId="rate" type="monotone" dataKey="erabDropRate" stroke="var(--color-erabDropRate)" strokeWidth={2} dot={false} />
+                                  <Line yAxisId="count" type="monotone" dataKey="erabDropCount" stroke="var(--color-erabDropCount)" strokeWidth={2} dot={false} />
+                                </LineChart>
+                              </ChartContainer>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>VoLTE drop rate</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <ChartContainer
+                                config={{
+                                  day: { label: 'Day' },
+                                  volteDropRate: { label: 'Drop rate (%)', color: 'var(--chart-1, #38BDF8)' },
+                                  volteDropCount: { label: 'Drop count', color: 'var(--chart-2, #2DD4BF)' },
+                                } satisfies ChartConfig}
+                                className="min-h-[200px] w-full"
+                              >
+                                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                                  <YAxis yAxisId="rate" tickLine={false} axisLine={false} tickMargin={8} domain={[0, 0.7]} tickFormatter={(v) => `${v}%`} />
+                                  <YAxis yAxisId="count" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                                  <ChartLegend content={<ChartLegendContent />} />
+                                  <Line yAxisId="rate" type="monotone" dataKey="volteDropRate" stroke="var(--color-volteDropRate)" strokeWidth={2} dot={false} />
+                                  <Line yAxisId="count" type="monotone" dataKey="volteDropCount" stroke="var(--color-volteDropCount)" strokeWidth={2} dot={false} />
+                                </LineChart>
+                              </ChartContainer>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </section>
+                      <section className="space-y-6">
+                        <h3 className="text-lg font-semibold">Handover</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>S1 HO success rate</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <ChartContainer
+                                config={{
+                                  day: { label: 'Day' },
+                                  s1HoSuccessRate: { label: 'Success rate (%)', color: 'var(--chart-1, #38BDF8)' },
+                                  s1HoAttempts: { label: 'Attempts', color: 'var(--chart-2, #2DD4BF)' },
+                                } satisfies ChartConfig}
+                                className="min-h-[200px] w-full"
+                              >
+                                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                                  <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[96.5, 99]} tickFormatter={(v) => `${v}%`} />
+                                  <YAxis yAxisId="attempts" orientation="right" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                                  <ChartLegend content={<ChartLegendContent />} />
+                                  <Line yAxisId="sr" type="monotone" dataKey="s1HoSuccessRate" stroke="var(--color-s1HoSuccessRate)" strokeWidth={2} dot={false} />
+                                  <Line yAxisId="attempts" type="monotone" dataKey="s1HoAttempts" stroke="var(--color-s1HoAttempts)" strokeWidth={2} dot={false} />
+                                </LineChart>
+                              </ChartContainer>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>HandIn Intra</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <ChartContainer
+                                config={{
+                                  day: { label: 'Day' },
+                                  handInIntra: { label: 'HandIn Intra', color: 'var(--chart-2, #2DD4BF)' },
+                                  handInIntraAttempts: { label: 'Intra attempts', color: 'var(--chart-4, #A78BFA)' },
+                                  handInIntraSr: { label: 'SR (%)', color: 'var(--chart-1, #38BDF8)' },
+                                } satisfies ChartConfig}
+                                className="min-h-[200px] w-full"
+                              >
+                                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                                  <YAxis yAxisId="sr" tickLine={false} axisLine={false} tickMargin={8} domain={[95, 99]} tickFormatter={(v) => `${v}%`} />
+                                  <YAxis yAxisId="count" orientation="right" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                                  <ChartLegend content={<ChartLegendContent />} />
+                                  <Line yAxisId="count" type="monotone" dataKey="handInIntra" stroke="var(--color-handInIntra)" strokeWidth={2} dot={false} />
+                                  <Line yAxisId="count" type="monotone" dataKey="handInIntraAttempts" stroke="var(--color-handInIntraAttempts)" strokeWidth={2} dot={false} />
+                                  <Line yAxisId="sr" type="monotone" dataKey="handInIntraSr" stroke="var(--color-handInIntraSr)" strokeWidth={2} dot={false} />
+                                </LineChart>
+                              </ChartContainer>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </section>
+                      <section className="space-y-6">
+                        <h3 className="text-lg font-semibold">Data volume</h3>
+                        <div className="grid grid-cols-1 gap-6">
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>SCE_LTE_GTP data volume</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <ChartContainer
+                                config={{
+                                  day: { label: 'Day' },
+                                  gtpDlNumBytes: { label: 'SCE_LTE_GTP.DL.NumBytes', color: 'var(--chart-1, #38BDF8)' },
+                                  gtpUlNumBytes: { label: 'SCE_LTE_GTP.UL.NumBytes', color: 'var(--chart-2, #2DD4BF)' },
+                                } satisfies ChartConfig}
+                                className="min-h-[220px] w-full"
+                              >
+                                <LineChart accessibilityLayer data={ACCESSIBILITY_CHART_DATA} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={10} />
+                                  <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${(Number(v) / 1_000_000_000).toFixed(0)} GB`} />
+                                  <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                                  <ChartLegend content={<ChartLegendContent />} />
+                                  <Line type="monotone" dataKey="gtpDlNumBytes" stroke="var(--color-gtpDlNumBytes)" strokeWidth={2} dot={false} />
+                                  <Line type="monotone" dataKey="gtpUlNumBytes" stroke="var(--color-gtpUlNumBytes)" strokeWidth={2} dot={false} />
+                                </LineChart>
+                              </ChartContainer>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </section>
+                      </div>
                     </TabsContent>
 
                     <TabsContent value="cell" className="mt-6 space-y-4">
@@ -2050,7 +2387,7 @@ function DeviceDetailPage({
                             <ChartContainer
                               config={{
                                 day: { label: 'Day' },
-                                cpu: { label: 'CPU (%)', color: 'hsl(var(--chart-1, 214 95% 50%))' },
+                                cpu: { label: 'CPU (%)', color: 'var(--chart-1, #38BDF8)' },
                               } satisfies ChartConfig}
                               className="min-h-[220px] w-full"
                             >
@@ -2073,7 +2410,7 @@ function DeviceDetailPage({
                             <ChartContainer
                               config={{
                                 day: { label: 'Day' },
-                                memory: { label: 'Memory (%)', color: 'hsl(var(--chart-2, 173 58% 39%))' },
+                                memory: { label: 'Memory (%)', color: 'var(--chart-2, #2DD4BF)' },
                               } satisfies ChartConfig}
                               className="min-h-[220px] w-full"
                             >
