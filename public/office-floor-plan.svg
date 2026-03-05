@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" width="900" height="620" font-family="monospace">
+
+  <rect x="40" y="40" width="200" height="160" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="140" y="118" text-anchor="middle" font-size="10" fill="#64748b" font-weight="600">CONFERENCE</text>
+  <text x="140" y="132" text-anchor="middle" font-size="10" fill="#64748b" font-weight="600">ROOM A</text>
+  <line x1="240" y1="40" x2="270" y2="40" stroke="#fff" stroke-width="4"/>
+  <path d="M 240 40 Q 240 70 270 40" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <rect x="40" y="200" width="80" height="60" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="80" y="234" text-anchor="middle" font-size="8" fill="#94a3b8" font-weight="600">STAIRS</text>
+  <line x1="48" y1="210" x2="112" y2="210" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="48" y1="218" x2="112" y2="218" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="48" y1="226" x2="112" y2="226" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="48" y1="234" x2="112" y2="234" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="48" y1="242" x2="112" y2="242" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="48" y1="250" x2="112" y2="250" stroke="#cbd5e1" stroke-width="1"/>
+
+  <rect x="240" y="40" width="380" height="220" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="430" y="155" text-anchor="middle" font-size="10" fill="#64748b" font-weight="600">OPEN OFFICE</text>
+
+  <rect x="560" y="200" width="60" height="60" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="590" y="234" text-anchor="middle" font-size="8" fill="#94a3b8" font-weight="600">ELEV</text>
+  <line x1="560" y1="200" x2="620" y2="260" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="620" y1="200" x2="560" y2="260" stroke="#cbd5e1" stroke-width="1"/>
+
+  <rect x="620" y="40" width="240" height="160" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="740" y="118" text-anchor="middle" font-size="10" fill="#64748b" font-weight="600">CONFERENCE</text>
+  <text x="740" y="132" text-anchor="middle" font-size="10" fill="#64748b" font-weight="600">ROOM B</text>
+  <line x1="620" y1="160" x2="620" y2="190" stroke="#fff" stroke-width="4"/>
+  <path d="M 620 160 Q 650 160 620 190" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <rect x="40" y="260" width="820" height="60" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="450" y="295" text-anchor="middle" font-size="10" fill="#94a3b8" font-weight="600" letter-spacing="4">C O R R I D O R</text>
+  <line x1="80" y1="290" x2="820" y2="290" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="8 6"/>
+
+  <rect x="40" y="320" width="160" height="160" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="120" y="403" text-anchor="middle" font-size="10" fill="#64748b" font-weight="600">SERVER</text>
+  <text x="120" y="417" text-anchor="middle" font-size="10" fill="#64748b" font-weight="600">ROOM</text>
+  <line x1="40" y1="320" x2="40" y2="350" stroke="#fff" stroke-width="4"/>
+  <path d="M 40 320 Q 70 320 40 350" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <rect x="200" y="320" width="200" height="160" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="300" y="403" text-anchor="middle" font-size="10" fill="#64748b" font-weight="600">BREAK ROOM</text>
+  <line x1="200" y1="320" x2="230" y2="320" stroke="#fff" stroke-width="4"/>
+  <path d="M 200 320 Q 200 350 230 320" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <rect x="400" y="320" width="120" height="80" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="460" y="364" text-anchor="middle" font-size="9" fill="#64748b" font-weight="600">OFFICE 1</text>
+  <line x1="400" y1="320" x2="430" y2="320" stroke="#fff" stroke-width="4"/>
+  <path d="M 400 320 Q 400 348 430 320" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <rect x="400" y="400" width="120" height="80" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="460" y="444" text-anchor="middle" font-size="9" fill="#64748b" font-weight="600">OFFICE 2</text>
+  <line x1="400" y1="400" x2="430" y2="400" stroke="#fff" stroke-width="4"/>
+  <path d="M 400 400 Q 400 428 430 400" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <rect x="520" y="320" width="120" height="80" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="580" y="364" text-anchor="middle" font-size="9" fill="#64748b" font-weight="600">OFFICE 3</text>
+  <line x1="520" y1="320" x2="550" y2="320" stroke="#fff" stroke-width="4"/>
+  <path d="M 520 320 Q 520 348 550 320" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <rect x="520" y="400" width="120" height="80" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="580" y="444" text-anchor="middle" font-size="9" fill="#64748b" font-weight="600">OFFICE 4</text>
+  <line x1="520" y1="400" x2="550" y2="400" stroke="#fff" stroke-width="4"/>
+  <path d="M 520 400 Q 520 428 550 400" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>
+
+  <rect x="640" y="320" width="100" height="80" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="690" y="358" text-anchor="middle" font-size="9" fill="#64748b" font-weight="600">RESTROOM M</text>
+
+  <rect x="640" y="400" width="100" height="80" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="690" y="438" text-anchor="middle" font-size="9" fill="#64748b" font-weight="600">RESTROOM F</text>
+
+  <rect x="740" y="320" width="120" height="260" fill="none" stroke="#334155" stroke-width="2"/>
+  <text x="800" y="452" text-anchor="middle" font-size="10" fill="#64748b" font-weight="600">RECEPTION</text>
+  <line x1="800" y1="580" x2="860" y2="580" stroke="#fff" stroke-width="5"/>
+  <path d="M 800 580 Q 800 550 860 580" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="830" y="598" text-anchor="middle" font-size="9" fill="#64748b">ENTRANCE</text>
+
+  <g transform="translate(856, 56)">
+    <circle cx="0" cy="0" r="16" fill="#fff" stroke="#334155" stroke-width="1.5"/>
+    <polygon points="0,-10 4,4 0,2 -4,4" fill="#334155"/>
+    <polygon points="0,10 4,-4 0,-2 -4,-4" fill="#cbd5e1"/>
+    <text x="0" y="-14" text-anchor="middle" font-size="8" fill="#334155" font-weight="700">N</text>
+  </g>
+
+  
+
+</svg>

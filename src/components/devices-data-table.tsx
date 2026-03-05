@@ -502,6 +502,7 @@ export type SidebarRegionFilter = 'all' | 'disconnected' | 'kpiSyncErrors' | 'in
 
 export interface DeviceTableFilters {
   sidebarRegion?: SidebarRegionFilter;
+  deviceGroupFilter?: DeviceGroup | 'All';
   regionFilter?: string;
   statusFilter?: string;
   search?: string;
@@ -525,6 +526,7 @@ interface DevicesDataTableProps {
   /** Selected regions from global nav - if multiple, show Region column */
   selectedRegions?: string[];
   sidebarRegion?: SidebarRegionFilter;
+  deviceGroupFilter?: DeviceGroup | 'All';
   /** Filter by specific region from table filter dropdown */
   regionFilter?: string;
   statusFilter?: string;
@@ -561,6 +563,9 @@ function applyDeviceFilters(devices: DeviceRow[], filters: DeviceTableFilters, s
     result = result.filter((d) => selectedRegions.includes(d.region));
   }
   result = filterBySidebarRegion(result, filters.sidebarRegion ?? 'all');
+  if (filters.deviceGroupFilter && filters.deviceGroupFilter !== 'All') {
+    result = result.filter((d) => d.deviceGroup === filters.deviceGroupFilter);
+  }
   if (filters.regionFilter && filters.regionFilter !== 'All') {
     result = result.filter((d) => d.region === filters.regionFilter);
   }
@@ -610,6 +615,7 @@ export function DevicesDataTable({
   clearSelectionTrigger,
   selectedRegions = [],
   sidebarRegion = 'all',
+  deviceGroupFilter = 'All',
   regionFilter = 'All',
   statusFilter = 'All',
   search = '',
@@ -678,6 +684,7 @@ export function DevicesDataTable({
     () => {
       const filtered = applyDeviceFilters(DEVICES_DATA, {
         sidebarRegion,
+        deviceGroupFilter,
         regionFilter,
         statusFilter,
         search,
@@ -700,6 +707,7 @@ export function DevicesDataTable({
     },
     [
       sidebarRegion,
+      deviceGroupFilter,
       regionFilter,
       statusFilter,
       search,

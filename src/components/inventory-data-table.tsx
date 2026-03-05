@@ -58,7 +58,7 @@ export interface InventoryRow {
   type: 'Radio node' | 'NR cell';
   technology: 'LTE' | 'NR';
   version: string;
-  state: 'Active' | 'Inactive' | 'Degraded';
+  state: 'Initialized' | 'Pre-operational' | 'Operational' | 'Degraded' | 'Locked' | 'Unlocked' | 'Shutting Down';
   radioNodeIndex: number;
   cellId: number;
 }
@@ -68,6 +68,7 @@ export interface InventoryRow {
 const MODELS = ['AIR 6449', 'AIR 6419', 'AIR 3246', 'AIR 1281', 'RBS 6601', 'RBS 6301'];
 const VERSIONS = ['v3.1.0', 'v3.0.2', 'v2.9.4', 'v3.2.1', 'v2.8.0'];
 const DL_BANDWIDTHS = ['5 MHz', '10 MHz', '15 MHz', '20 MHz', '40 MHz', '50 MHz', '100 MHz'];
+const INVENTORY_OPERATIONAL_STATES = ['Initialized', 'Pre-operational', 'Operational', 'Degraded', 'Locked', 'Unlocked', 'Shutting Down'] as const;
 const HOST_DEVICES = [
   'eNB-SEA-001', 'eNB-PDX-002', 'RN-PHX-003', 'eNB-SFO-004', 'RN-LAS-005',
   'eNB-NYC-006', 'RN-DEN-007', 'eNB-CHI-008', 'RN-ATL-009', 'eNB-MIA-010',
@@ -132,7 +133,7 @@ function generateInventoryData(): InventoryRow[] {
       type: i % 5 === 0 ? 'NR cell' : 'Radio node',
       technology: i % 3 === 0 ? 'NR' : 'LTE',
       version: VERSIONS[i % VERSIONS.length],
-      state: i % 7 === 0 ? 'Degraded' : i % 9 === 0 ? 'Inactive' : 'Active',
+      state: INVENTORY_OPERATIONAL_STATES[(i - 1) % INVENTORY_OPERATIONAL_STATES.length],
       radioNodeIndex: i,
       cellId: 1000 + i,
     });
@@ -149,11 +150,7 @@ export const INVENTORY_TECHNOLOGY_OPTIONS = ['All', 'LTE', 'NR'] as const;
 export const INVENTORY_MODEL_OPTIONS = ['All', ...MODELS] as const;
 export const INVENTORY_VERSION_OPTIONS = ['All', ...VERSIONS] as const;
 export const INVENTORY_ALARM_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'None'] as const;
-export const INVENTORY_STATE_OPTIONS = ['All', 'Active', 'Inactive', 'Degraded'] as const;
-
-function mapRadioNodeState(state: InventoryRow['state']): 'OSS init' | 'TK' {
-  return state === 'Active' ? 'OSS init' : 'TK';
-}
+export const INVENTORY_STATE_OPTIONS = ['All', ...INVENTORY_OPERATIONAL_STATES] as const;
 
 // ── Filtered count helper ──────────────────────────────────────
 
@@ -178,9 +175,7 @@ export function getFilteredInventoryCount(opts: {
     if (opts.versionFilter !== 'All' && row.version !== opts.versionFilter) return false;
     if (opts.alarmFilter !== 'All' && row.alarmType !== opts.alarmFilter) return false;
     if (opts.stateFilter && opts.stateFilter !== 'All') {
-      if (opts.viewFilter === 'radio-nodes') {
-        if (mapRadioNodeState(row.state) !== opts.stateFilter) return false;
-      } else if (row.state !== opts.stateFilter) return false;
+      if (row.state !== opts.stateFilter) return false;
     }
     if (opts.search.trim()) {
       const q = opts.search.toLowerCase();
@@ -411,7 +406,7 @@ function getColumns(viewFilter: string): ColumnDef<InventoryRow>[] {
       accessorKey: 'state',
       header: ({ column }) => <SortableHeader column={column}>State</SortableHeader>,
       cell: ({ row }) => {
-        const displayState = mapRadioNodeState(row.getValue('state') as InventoryRow['state']);
+        const displayState = row.getValue('state') as InventoryRow['state'];
         return <Badge variant="secondary">{displayState}</Badge>;
       },
     },
@@ -488,9 +483,7 @@ export function InventoryDataTable({
       if (versionFilter !== 'All' && row.version !== versionFilter) return false;
       if (alarmFilter !== 'All' && row.alarmType !== alarmFilter) return false;
       if (stateFilter !== 'All') {
-        if (viewFilter === 'radio-nodes') {
-          if (mapRadioNodeState(row.state) !== stateFilter) return false;
-        } else if (row.state !== stateFilter) return false;
+        if (row.state !== stateFilter) return false;
       }
       if (search.trim()) {
         const q = search.toLowerCase();

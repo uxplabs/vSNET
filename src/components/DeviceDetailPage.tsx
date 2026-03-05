@@ -29,6 +29,7 @@ import {
 } from './ui/select';
 import { FilterSelect } from './ui/filter-select';
 import type { DeviceGroup } from './devices-data-table';
+import { ALARM_TYPE_CONFIG } from './devices-data-table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -941,9 +942,14 @@ function DeviceDetailPage({
   initialSection,
   initialCreatedTemplate,
 }: DeviceDetailPageProps) {
+  const officeFloorPlanSrc = `${import.meta.env.BASE_URL}office-floor-plan.svg`;
+  const [floorPlanImgSrc, setFloorPlanImgSrc] = React.useState(officeFloorPlanSrc);
+  React.useEffect(() => {
+    setFloorPlanImgSrc(officeFloorPlanSrc);
+  }, [officeFloorPlanSrc]);
   const isDas = device.type === 'DAS';
   const SIDEBAR_ITEMS = isDas
-    ? (['Summary', 'Radio nodes', 'Inventory', 'SNMP details', 'Web terminal'] as const)
+    ? (['Summary', 'Remotes', 'Inventory', 'SNMP details', 'Web terminal'] as const)
     : ([
         'Summary',
         'Commissioning',
@@ -958,6 +964,7 @@ function DeviceDetailPage({
         'SSH terminal',
       ] as const);
   const toKey = (label: string) => label.toLowerCase().replace(/\s+/g, '-');
+  const radioNodesSectionKey = isDas ? 'remotes' : 'radio-nodes';
   const [activeSection, setActiveSection] = useState(initialSection ?? toKey(SIDEBAR_ITEMS[0]));
 
   React.useEffect(() => {
@@ -993,14 +1000,9 @@ function DeviceDetailPage({
   const [radioNodesIndexFilter, setRadioNodesIndexFilter] = useState('All');
   const [radioNodesStatusFilter, setRadioNodesStatusFilter] = useState('All');
   const [radioNodesModelFilter, setRadioNodesModelFilter] = useState('All');
-  const [selectedRadioNodes, setSelectedRadioNodes] = useState<RadioNodeRow[]>([]);
   const filteredRadioNodes = React.useMemo(
     () => filterRadioNodes(RADIO_NODES_DATA, radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter, radioNodesIndexFilter),
     [radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter, radioNodesIndexFilter],
-  );
-  const selectedRadioNodeMapIds = React.useMemo(
-    () => selectedRadioNodes.map((row) => `${device.id}-rn-${row.index}`),
-    [selectedRadioNodes, device.id],
   );
   const summaryMapDevices = React.useMemo<DeviceRow[]>(
     () => [
@@ -1055,9 +1057,21 @@ function DeviceDetailPage({
   const [cellDetailSheetOpen, setCellDetailSheetOpen] = useState(false);
   const [selectedCellName, setSelectedCellName] = useState<string | null>(null);
   const [cellDetailInterval, setCellDetailInterval] = useState<(typeof CELL_DETAIL_INTERVALS)[number]>(CELL_DETAIL_INTERVALS[0]);
+  const [remoteMapSheetOpen, setRemoteMapSheetOpen] = useState(false);
+  const [selectedRemoteRow, setSelectedRemoteRow] = useState<RadioNodeRow | null>(null);
+  const selectedRemoteMapDevices = React.useMemo<DeviceRow[]>(
+    () => {
+      if (!selectedRemoteRow) return [];
+      const remoteId = `${device.id}-rn-${selectedRemoteRow.index}`;
+      const remote = radioNodesMapDevices.find((d) => d.id === remoteId);
+      return remote ? [remote] : [];
+    },
+    [selectedRemoteRow, radioNodesMapDevices, device.id],
+  );
   const SIDEBAR_BADGE_COUNTS = React.useMemo<Record<string, number>>(() => ({
     'ip-interfaces': IP_INTERFACES_DATA.length,
     'radio-nodes': filteredRadioNodes.length,
+    remotes: filteredRadioNodes.length,
     'nr-cells': NR_CELLS_DATA.length,
     'zones': ZONES_DATA.length,
   }), [filteredRadioNodes.length]);
@@ -1333,7 +1347,7 @@ function DeviceDetailPage({
                   </div>
                 )}
                 <div>
-                  <p className="text-gray-400 mb-0.5">Radio nodes</p>
+                  <p className="text-gray-400 mb-0.5">{isDas ? 'Remotes' : 'Radio nodes'}</p>
                   <div className="flex items-center gap-1.5 text-white">
                     <Icon name="arrow_upward" size={14} className="text-green-400" />
                     <span className="font-semibold tabular-nums">12</span>
@@ -1444,6 +1458,37 @@ function DeviceDetailPage({
           <div className="flex-1 min-w-0 overflow-y-auto">
           {activeSection === 'summary' && (
           <div className="space-y-6">
+            {!isDas && showSummaryMap && (
+              <div className="rounded-lg border border-border/60 bg-muted/20 p-2">
+                <RegionsMap
+                  region={device.region}
+                  regions={device.region ? [device.region] : undefined}
+                  devices={summaryMapDevices}
+                  singleRegionZoom={13}
+                  heightClassName="h-[280px]"
+                  fitToDevices
+                />
+              </div>
+            )}
+            {!isDas && (
+              <div className="flex justify-end">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant={showSummaryMap ? 'default' : 'outline'}
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setShowSummaryMap((prev) => !prev)}
+                      aria-label={showSummaryMap ? 'Hide device location map' : 'Show device location map'}
+                    >
+                      <Icon name="map" size={16} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{showSummaryMap ? 'Hide map' : 'Show map'}</TooltipContent>
+                </Tooltip>
+              </div>
+            )}
             {/* Name/value pair section from device drawer */}
             <div>
             <Card>
@@ -1550,35 +1595,6 @@ function DeviceDetailPage({
                           <span className="font-medium">{getDeviceCoordinates(device.region || 'Pacific Northwest', device.id).lng}</span>
                         </div>
                       </div>
-                      <div className="pt-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant={showSummaryMap ? 'default' : 'outline'}
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setShowSummaryMap((prev) => !prev)}
-                              aria-label={showSummaryMap ? 'Hide device location map' : 'Show device location map'}
-                            >
-                              <Icon name="map" size={16} />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>{showSummaryMap ? 'Hide map' : 'Show map'}</TooltipContent>
-                        </Tooltip>
-                      </div>
-                      {showSummaryMap && (
-                        <div className="rounded-lg border border-border/60 bg-muted/20 p-2">
-                          <RegionsMap
-                            region={device.region}
-                            regions={device.region ? [device.region] : undefined}
-                            devices={summaryMapDevices}
-                            singleRegionZoom={13}
-                            heightClassName="h-[280px]"
-                            fitToDevices
-                          />
-                        </div>
-                      )}
                     </div>
                     <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
                     <div className="space-y-4">
@@ -2028,14 +2044,14 @@ function DeviceDetailPage({
             </Card>
           )}
 
-          {activeSection === 'radio-nodes' && (
+          {activeSection === radioNodesSectionKey && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-4 flex-wrap">
                 <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
                   <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
                     <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder="Search radio nodes..."
+                      placeholder={isDas ? 'Search remotes...' : 'Search radio nodes...'}
                       className="pl-9 w-full"
                       value={radioNodesSearch}
                       onChange={(e) => setRadioNodesSearch(e.target.value)}
@@ -2049,30 +2065,13 @@ function DeviceDetailPage({
                   <TooltipTrigger asChild>
                     <Button variant="outline" className="shrink-0 gap-1" onClick={() => setAddRadioNodeSheetOpen(true)}>
                       <Icon name="add" size={18} />
-                      Add radio node
+                      {isDas ? 'Add remote' : 'Add radio node'}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Add radio node</TooltipContent>
+                  <TooltipContent>{isDas ? 'Add remote' : 'Add radio node'}</TooltipContent>
                 </Tooltip>
               </CardHeader>
               <CardContent>
-                {device.type === 'DAS' && (
-                  <div className="mb-4">
-                    <RegionsMap
-                      region={device.region}
-                      regions={device.region ? [device.region] : undefined}
-                      devices={radioNodesMapDevices}
-                      singleRegionZoom={13}
-                      heightClassName="h-[300px]"
-                      devicePinSpreadScale={1}
-                      fitToDevices
-                      highlightedDeviceIds={selectedRadioNodeMapIds}
-                      fitToDeviceIds={selectedRadioNodeMapIds}
-                      deviceRoleById={radioNodesRoleByMapId}
-                      deviceLayoutProfile="dasHierarchy"
-                    />
-                  </div>
-                )}
                 <RadioNodesDataTable
                   search={radioNodesSearch}
                   onSearchChange={setRadioNodesSearch}
@@ -2081,7 +2080,7 @@ function DeviceDetailPage({
                   modelFilter={radioNodesModelFilter}
                   onModelFilterChange={setRadioNodesModelFilter}
                   indexFilter={radioNodesIndexFilter}
-                  onSelectionChange={setSelectedRadioNodes}
+                  onNameClick={isDas ? (row) => { setSelectedRemoteRow(row); setRemoteMapSheetOpen(true); } : undefined}
                 />
               </CardContent>
             </Card>
@@ -2118,7 +2117,7 @@ function DeviceDetailPage({
                   <TabsTrigger
                     key={building.id}
                     value={building.id}
-                    className="group relative h-auto min-w-[260px] items-start justify-start rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-left data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                    className="group relative h-auto min-w-[260px] items-start justify-start rounded-none border-b-2 border-transparent bg-transparent px-4 py-3 text-left data-[state=active]:border-primary data-[state=active]:bg-muted/40 data-[state=active]:shadow-none"
                   >
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -2160,14 +2159,6 @@ function DeviceDetailPage({
                       <div className="text-sm font-semibold">{building.name}</div>
                       <div className="text-xs text-muted-foreground">
                         {building.floors} floors, {building.remotes} remotes
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[11px]">
-                          {building.bound} bound
-                        </Badge>
-                        <Badge variant="secondary" className="text-[11px]">
-                          {building.unbound} unbound
-                        </Badge>
                       </div>
                     </div>
                   </TabsTrigger>
@@ -2223,9 +2214,34 @@ function DeviceDetailPage({
                           </Button>
                         </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {building.name} {selectedFloor ? `${selectedFloor.name}` : ''} floor view placeholder.
-                      </div>
+                      {selectedFloor?.id === `${building.id}-floor-12` ? (
+                        <div>
+                          <img
+                            src={floorPlanImgSrc}
+                            alt={`${building.name} ${selectedFloor.name} floor plan`}
+                            className="w-full h-auto dark:hidden"
+                            onError={() => {
+                              if (floorPlanImgSrc !== '/office-floor-plan.svg') {
+                                setFloorPlanImgSrc('/office-floor-plan.svg');
+                              }
+                            }}
+                          />
+                          <img
+                            src={floorPlanImgSrc}
+                            alt={`${building.name} ${selectedFloor.name} floor plan dark`}
+                            className="hidden w-full h-auto dark:block [filter:invert(1)_hue-rotate(180deg)_brightness(.9)_contrast(1.05)]"
+                            onError={() => {
+                              if (floorPlanImgSrc !== '/office-floor-plan.svg') {
+                                setFloorPlanImgSrc('/office-floor-plan.svg');
+                              }
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">
+                          {building.name} {selectedFloor ? `${selectedFloor.name}` : ''} floor view placeholder.
+                        </div>
+                      )}
                     </div>
                   </div>
                     );
@@ -3305,10 +3321,10 @@ function DeviceDetailPage({
                   </div>
                 )}
                 <ToggleGroup type="single" value={dasInventoryView} onValueChange={(v) => v && setDasInventoryView(v as 'list' | 'map')} size="sm" variant="outline">
-                  <ToggleGroupItem value="list" aria-label="List view">
+                  <ToggleGroupItem value="list" aria-label="Table view" title="Table view">
                     <Icon name="view_list" size={16} />
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="map" aria-label="Map view">
+                  <ToggleGroupItem value="map" aria-label="Graph view" title="Graph view">
                     <Icon name="account_tree" size={16} />
                   </ToggleGroupItem>
                 </ToggleGroup>
@@ -3869,7 +3885,7 @@ function DeviceDetailPage({
                           variant="link"
                           className="h-auto w-fit p-0 text-sm font-medium tabular-nums"
                           onClick={() => {
-                            setActiveSection('radio-nodes');
+                            setActiveSection(radioNodesSectionKey);
                             setCellDetailSheetOpen(false);
                           }}
                         >
@@ -4169,6 +4185,158 @@ function DeviceDetailPage({
                 </Card>
               </>
             ) : null}
+          </div>
+        </SheetContent>
+      </Sheet>
+      <Sheet open={remoteMapSheetOpen} onOpenChange={setRemoteMapSheetOpen}>
+        <SheetContent side="right" className="sm:max-w-lg flex flex-col h-full">
+          <SheetHeader className="shrink-0">
+            <SheetTitle>
+              {selectedRemoteRow ? `${selectedRemoteRow.index} - ${selectedRemoteRow.name}` : 'Details'}
+            </SheetTitle>
+            {selectedRemoteRow && (
+              <div className="flex items-center gap-2 text-sm">
+                <DeviceStatus
+                  status={selectedRemoteRow.status === 'Up' ? 'Connected' : 'Disconnected'}
+                  iconSize={14}
+                  className="text-sm"
+                />
+                <span className="text-muted-foreground">•</span>
+                <Icon
+                  name={selectedRemoteRow.enabled ? 'check_circle' : 'cancel'}
+                  size={16}
+                  className={selectedRemoteRow.enabled ? 'text-success' : 'text-muted-foreground'}
+                  aria-label={selectedRemoteRow.enabled ? 'Enabled' : 'Disabled'}
+                />
+              </div>
+            )}
+          </SheetHeader>
+          <div className="flex-1 min-h-0 pt-4 space-y-4 overflow-y-auto">
+            {selectedRemoteRow && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-sm font-semibold">Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Support bands</span>
+                      <span className="font-medium">{selectedRemoteRow.supportBands}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Ethernet ID</span>
+                      <span className="font-medium font-mono">{selectedRemoteRow.ethernetId}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Model</span>
+                      <span className="font-medium">{selectedRemoteRow.model}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Serial number</span>
+                      <span className="font-medium font-mono">{selectedRemoteRow.serialNumber}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-sm font-semibold">Location</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="h-[360px] min-h-[360px]">
+                  <RegionsMap
+                    region={device.region}
+                    regions={device.region ? [device.region] : undefined}
+                    devices={selectedRemoteMapDevices}
+                    singleRegionZoom={13}
+                    heightClassName="h-full"
+                    devicePinSpreadScale={1}
+                    fitToDevices
+                    highlightedDeviceIds={selectedRemoteRow ? [`${device.id}-rn-${selectedRemoteRow.index}`] : []}
+                    fitToDeviceIds={selectedRemoteRow ? [`${device.id}-rn-${selectedRemoteRow.index}`] : undefined}
+                    deviceRoleById={radioNodesRoleByMapId}
+                    deviceLayoutProfile="dasHierarchy"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  Alarms
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs font-medium">
+                    {selectedRemoteRow?.alarms ?? 0}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-2">
+                <div className="overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="h-8 px-2">Severity</TableHead>
+                        <TableHead className="h-8 px-2">Timestamp</TableHead>
+                        <TableHead className="h-8 px-2">Updated</TableHead>
+                        <TableHead className="h-8 px-2">Source</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(selectedRemoteRow?.alarms ?? 0) > 0 ? (
+                        <TableRow>
+                          <TableCell className="py-1.5 px-2">
+                            <span className="inline-flex items-center gap-1.5 text-xs">
+                              <Icon
+                                name={ALARM_TYPE_CONFIG[selectedRemoteRow?.alarmType ?? 'None'].name}
+                                size={14}
+                                className={ALARM_TYPE_CONFIG[selectedRemoteRow?.alarmType ?? 'None'].className}
+                              />
+                              {selectedRemoteRow?.alarmType}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-1.5 px-2 text-xs tabular-nums">Feb 27, 2026 10:12</TableCell>
+                          <TableCell className="py-1.5 px-2 text-xs tabular-nums">2 min ago</TableCell>
+                          <TableCell className="py-1.5 px-2 text-xs">{selectedRemoteRow?.name}</TableCell>
+                        </TableRow>
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
+                            No active alarms.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-sm font-semibold">Notes</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {notes.length > 0 ? (
+                  <div className="space-y-4 max-h-[240px] overflow-y-auto">
+                    {notes.map((note) => (
+                      <div key={note.id} className="flex flex-col gap-1 w-full items-start">
+                        <div className="flex items-center w-2/3 min-w-0">
+                          <div className="rounded-2xl rounded-tl-sm bg-muted/60 px-3 py-2 text-base text-foreground w-max max-w-full break-words shrink-0 min-w-0">
+                            {note.content}
+                          </div>
+                        </div>
+                        <div className="w-2/3 min-w-0 text-left pl-3">
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            {note.author} · {note.datetime}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No notes.</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </SheetContent>
       </Sheet>

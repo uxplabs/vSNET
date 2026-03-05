@@ -26,7 +26,7 @@ import { ActivityLogDataTable } from './activity-log-data-table';
 import { ReportsDataTable, getFilteredReportCount } from './reports-data-table';
 import { PerformanceDataTable, getFilteredPerformanceCount } from './performance-data-table';
 import { ThresholdCrossingAlertsDataTable, getFilteredThresholdCount, THRESHOLD_KPI_OPTIONS } from './threshold-crossing-alerts-data-table';
-import { InventoryDataTable, getFilteredInventoryCount, INVENTORY_STATUS_OPTIONS, INVENTORY_TECHNOLOGY_OPTIONS, INVENTORY_MODEL_OPTIONS } from './inventory-data-table';
+import { InventoryDataTable, getFilteredInventoryCount, INVENTORY_STATUS_OPTIONS, INVENTORY_TECHNOLOGY_OPTIONS, INVENTORY_MODEL_OPTIONS, INVENTORY_STATE_OPTIONS } from './inventory-data-table';
 import { ChevronDown } from 'lucide-react';
 import { NORTH_AMERICAN_REGIONS } from '@/constants/regions';
 import { ErrorBoundary } from './error-boundary';
@@ -97,7 +97,6 @@ const REPORT_TASK_OPTIONS = ['All', 'Alarm report', 'Config backup', 'KPI sync',
 const REPORT_CREATED_OPTIONS = ['All', 'Today', 'This week', 'This month', 'All time'] as const;
 const PERFORMANCE_LTE_OPTIONS = ['All', 'SN'] as const;
 const PERFORMANCE_TIME_OPTIONS = ['All', 'Last 15 min', 'Last 6 hours', 'Last 24 hours'] as const;
-
 const allDeviceCounts = getDeviceSidebarCounts(DEVICES_DATA);
 const allDeviceCountsByRegion = getDeviceSidebarCountsByRegion(DEVICES_DATA);
 
@@ -111,6 +110,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const handleMainTabChange = onMainTabChange ?? setInternalTab;
   const [selectedRegion, setSelectedRegion] = useState<RegionOption>('all');
   const [selectedGroup, setSelectedGroup] = useState<DeviceGroupOption | null>(null);
+  const [selectedGroupRegion, setSelectedGroupRegion] = useState<string | null>(null);
 
   // When a fixed region is set (single-region account), lock sidebar to that region
   const effectiveRegions = fixedRegion ? [fixedRegion] : regions;
@@ -198,7 +198,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [eventSelectedCount, setEventSelectedCount] = useState(0);
   const [eventClearSelectionTrigger, setEventClearSelectionTrigger] = useState(0);
   const clearDeviceFilters = () => {
-    setSearch(''); setRegionFilter('All'); setStatusFilter('All'); setSelectedRegion('all'); setConfigStatusFilter('All'); setTypeFilter('All'); setVersionFilter('All'); setAlarmsFilter('All'); setLabelsFilter('All');
+    setSearch(''); setRegionFilter('All'); setStatusFilter('All'); setSelectedRegion('all'); setSelectedGroup(null); setSelectedGroupRegion(null); setConfigStatusFilter('All'); setTypeFilter('All'); setVersionFilter('All'); setAlarmsFilter('All'); setLabelsFilter('All');
   };
   const clearEventsFilters = () => {
     setEventsSearch(''); setRegionFilter('All'); setEventsTypeFilter('All'); setEventsSeverityFilter('All'); setEventsSourceFilter('All');
@@ -223,6 +223,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   };
   const filteredDevicesForMap = useMemo(() => getFilteredDevices({
     sidebarRegion: selectedRegion,
+    deviceGroupFilter: selectedGroup ?? 'All',
     regionFilter,
     statusFilter,
     search,
@@ -231,7 +232,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
     versionFilter,
     alarmsFilter,
     labelsFilter,
-  }, regions), [selectedRegion, regionFilter, statusFilter, search, configStatusFilter, typeFilter, versionFilter, alarmsFilter, labelsFilter, regions]);
+  }, regions), [selectedRegion, selectedGroup, regionFilter, statusFilter, search, configStatusFilter, typeFilter, versionFilter, alarmsFilter, labelsFilter, regions]);
 
   const deviceMapData = useMemo(() => {
     const byRegion = new Map(
@@ -342,6 +343,43 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
     else if (selectedRegion === 'kpiSyncErrors') setSelectedRegion('all');
   };
 
+  const resetDeviceTableFiltersFromSidebar = () => {
+    setSearch('');
+    setRegionFilter('All');
+    setStatusFilter('All');
+    setConfigStatusFilter('All');
+    setTypeFilter('All');
+    setVersionFilter('All');
+    setAlarmsFilter('All');
+    setLabelsFilter('All');
+    setSelectedGroup(null);
+    setSelectedGroupRegion(null);
+  };
+
+  const handleSidebarRegionTabClick = (nextRegion: RegionOption) => {
+    resetDeviceTableFiltersFromSidebar();
+    setSelectedRegion(nextRegion);
+  };
+
+  const activateDeviceGroup = (groupName: DeviceGroupOption, regionName?: string) => {
+    setSelectedGroup(groupName);
+    setSelectedRegion('all');
+    if (regionName) {
+      setSelectedGroupRegion(regionName);
+      setRegionFilter(regionName);
+    } else {
+      setSelectedGroupRegion(null);
+      if (!fixedRegion && isAllRegions) setRegionFilter('All');
+    }
+  };
+
+  const activateAllRegionDevices = (regionName: string) => {
+    setSelectedGroup(null);
+    setSelectedRegion('all');
+    setSelectedGroupRegion(regionName);
+    setRegionFilter(regionName);
+  };
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <Navbar01
@@ -413,7 +451,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={selectedRegion === 'all'}>
-                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('all')}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => handleSidebarRegionTabClick('all')}>
                       <Icon name="devices" size={18} />
                       <span>All devices</span>
                       <SidebarMenuBadge>{allDevicesInSelectedRegionsCount}</SidebarMenuBadge>
@@ -422,7 +460,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={selectedRegion === 'disconnected'}>
-                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('disconnected')}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => handleSidebarRegionTabClick('disconnected')}>
                       <Icon name="link_off" size={18} />
                       <span>Disconnected</span>
                       <SidebarMenuBadge>{deviceCounts.region.disconnected}</SidebarMenuBadge>
@@ -431,7 +469,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={selectedRegion === 'kpiSyncErrors'}>
-                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('kpiSyncErrors')}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => handleSidebarRegionTabClick('kpiSyncErrors')}>
                       <Icon name="sync_problem" size={18} />
                       <span>KPI sync errors</span>
                       <SidebarMenuBadge>{deviceCounts.region.kpiSyncErrors}</SidebarMenuBadge>
@@ -440,7 +478,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={selectedRegion === 'inMaintenance'}>
-                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('inMaintenance')}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => handleSidebarRegionTabClick('inMaintenance')}>
                       <Icon name="build" size={18} />
                       <span>In maintenance</span>
                       <SidebarMenuBadge>{deviceCounts.region.inMaintenance}</SidebarMenuBadge>
@@ -449,7 +487,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={selectedRegion === 'offline'}>
-                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('offline')}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => handleSidebarRegionTabClick('offline')}>
                       <Icon name="power_settings_new" size={18} />
                       <span>Offline</span>
                       <SidebarMenuBadge>{deviceCounts.region.offline}</SidebarMenuBadge>
@@ -458,7 +496,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={selectedRegion === 'configMismatch'}>
-                    <button type="button" className="flex w-full items-center gap-2" onClick={() => setSelectedRegion('configMismatch')}>
+                    <button type="button" className="flex w-full items-center gap-2" onClick={() => handleSidebarRegionTabClick('configMismatch')}>
                       <Icon name="compare_arrows" size={18} />
                       <span>Config mismatch</span>
                       <SidebarMenuBadge>{deviceCounts.region.configMismatch}</SidebarMenuBadge>
@@ -492,13 +530,64 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                             <SidebarMenuSub>
                               {(['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
                                 <SidebarMenuSubItem key={`${reg}-${groupName}`}>
-                                  <SidebarMenuSubButton asChild isActive={selectedGroup === groupName}>
-                                    <button type="button" onClick={() => setSelectedGroup(groupName)}>
+                                  <SidebarMenuSubButton asChild isActive={selectedGroup === groupName && selectedGroupRegion === reg}>
+                                    <button type="button" className="flex w-full items-center gap-2" onClick={() => activateDeviceGroup(groupName, reg)}>
                                       <span>{groupName}</span>
+                                      <span className="ml-auto text-xs tabular-nums text-sidebar-foreground/70">{counts.groups[groupName]}</span>
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <span
+                                            role="button"
+                                            tabIndex={0}
+                                            className="inline-flex h-6 w-6 items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+                                            aria-label={`${groupName} options`}
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                            }}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                              }
+                                            }}
+                                          >
+                                            <Icon name="more_vert" size={14} />
+                                          </span>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent
+                                          align="end"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                            Add device
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                            Edit group
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            className="text-destructive"
+                                            onSelect={(e) => e.preventDefault()}
+                                          >
+                                            Delete group
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
                                     </button>
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                               ))}
+                              <SidebarMenuSubItem>
+                                <SidebarMenuSubButton
+                                  asChild
+                                  isActive={selectedGroup === null && selectedGroupRegion === reg && regionFilter === reg}
+                                >
+                                  <button type="button" className="flex w-full items-center gap-2" onClick={() => activateAllRegionDevices(reg)}>
+                                    <span>All region devices</span>
+                                    <span className="ml-auto text-xs tabular-nums text-sidebar-foreground/70">{counts.region.all}</span>
+                                  </button>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
                               <SidebarMenuSubItem>
                                 <SidebarMenuSubButton asChild>
                                   <button type="button" className="text-sidebar-foreground/50 hover:text-sidebar-foreground">
@@ -516,10 +605,50 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 ) : (
                   (['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
                     <SidebarMenuItem key={groupName}>
-                      <SidebarMenuButton asChild isActive={selectedGroup === groupName}>
-                        <button type="button" onClick={() => setSelectedGroup(groupName)}>
+                      <SidebarMenuButton asChild isActive={selectedGroup === groupName && selectedGroupRegion === null}>
+                        <button type="button" className="flex w-full items-center gap-2" onClick={() => activateDeviceGroup(groupName)}>
                           <Icon name="folder" size={18} />
                           <span>{groupName}</span>
+                          <SidebarMenuBadge>{deviceCounts.groups[groupName]}</SidebarMenuBadge>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+                                aria-label={`${groupName} options`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }
+                                }}
+                              >
+                                <Icon name="more_vert" size={14} />
+                              </span>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                Add device
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                Edit group
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                Delete group
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </button>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -678,6 +807,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 ) : (() => {
                         const count = getFilteredDeviceCount({
                           sidebarRegion: selectedRegion,
+                          deviceGroupFilter: selectedGroup ?? 'All',
                           regionFilter,
                           statusFilter,
                           search,
@@ -695,6 +825,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                         if (versionFilter !== 'All') activeFilters.push({ key: 'version', label: `Version: ${versionFilter}`, onClear: () => setVersionFilter('All') });
                         if (alarmsFilter !== 'All') activeFilters.push({ key: 'alarms', label: `Alarms: ${alarmsFilter}`, onClear: () => setAlarmsFilter('All') });
                         if (labelsFilter !== 'All') activeFilters.push({ key: 'labels', label: `Labels: ${labelsFilter}`, onClear: () => setLabelsFilter('All') });
+                        if (selectedGroup) activeFilters.push({ key: 'group', label: `Group: ${selectedGroup}`, onClear: () => { setSelectedGroup(null); setSelectedGroupRegion(null); if (!fixedRegion && isAllRegions) setRegionFilter('All'); } });
                         if (search.trim()) activeFilters.push({ key: 'search', label: `Search: "${search.trim()}"`, onClear: () => setSearch('') });
                         const hasActive = activeFilters.length > 0;
                         return (
@@ -748,6 +879,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                   <DevicesDataTable
                     selectedRegions={regions}
                     sidebarRegion={selectedRegion}
+                    deviceGroupFilter={selectedGroup ?? 'All'}
                     regionFilter={regionFilter}
                     statusFilter={statusFilter}
                     search={search}
@@ -1027,21 +1159,8 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                         { key: 'model', width: 130, content: <FilterSelect value={rnModelFilter} onValueChange={setRnModelFilter} label="Model" options={INVENTORY_MODEL_OPTIONS} className="w-full" /> },
                         {
                           key: 'state',
-                          width: 200,
-                          content: (
-                            <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm w-full overflow-hidden">
-                              {(['All', 'OSS init', 'TK'] as const).map((s) => (
-                                <button
-                                  key={s}
-                                  type="button"
-                                  onClick={() => setRnStateFilter(s)}
-                                  className={`px-3 h-9 text-sm font-medium transition-colors flex-1 ${rnStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                                >
-                                  {s}
-                                </button>
-                              ))}
-                            </div>
-                          ),
+                          width: 140,
+                          content: <FilterSelect value={rnStateFilter} onValueChange={setRnStateFilter} label="State" options={INVENTORY_STATE_OPTIONS} className="w-full" />,
                         },
                       ]}
                     />
@@ -1052,21 +1171,8 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                         { key: 'technology', width: 130, content: <FilterSelect value={cellsTechnologyFilter} onValueChange={setCellsTechnologyFilter} label="Technology" options={INVENTORY_TECHNOLOGY_OPTIONS} className="w-full" /> },
                         {
                           key: 'state',
-                          width: 240,
-                          content: (
-                            <div className="inline-flex items-center rounded-md border border-input bg-transparent shadow-sm w-full overflow-hidden">
-                              {(['All', 'Active', 'Inactive', 'Degraded'] as const).map((s) => (
-                                <button
-                                  key={s}
-                                  type="button"
-                                  onClick={() => setCellsStateFilter(s)}
-                                  className={`px-3 h-9 text-sm font-medium transition-colors flex-1 ${cellsStateFilter === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                                >
-                                  {s}
-                                </button>
-                              ))}
-                            </div>
-                          ),
+                          width: 150,
+                          content: <FilterSelect value={cellsStateFilter} onValueChange={setCellsStateFilter} label="State" options={INVENTORY_STATE_OPTIONS} className="w-full" />,
                         },
                       ]}
                     />

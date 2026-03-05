@@ -39,7 +39,8 @@ const STATUS_OPTIONS = ['All', 'Connected', 'Disconnected'] as const;
 const MODEL_OPTIONS = ['All', 'ABAB123', 'FGH456'] as const;
 const INDEX_OPTIONS = ['All', ...RADIO_NODES_DATA.map((row) => String(row.index))] as const;
 
-const columns: ColumnDef<RadioNodeRow>[] = [
+function getColumns(onNameClick?: (row: RadioNodeRow) => void): ColumnDef<RadioNodeRow>[] {
+  return [
   {
     id: 'select',
     header: ({ table }) => (
@@ -69,7 +70,11 @@ const columns: ColumnDef<RadioNodeRow>[] = [
     accessorKey: 'name',
     header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
     cell: ({ row }) => (
-      <DeviceLink value={row.getValue('name') as string} maxLength={20} />
+      <DeviceLink
+        value={row.getValue('name') as string}
+        maxLength={20}
+        onClick={onNameClick ? () => onNameClick(row.original) : undefined}
+      />
     ),
     meta: { className: 'max-w-[12rem]' },
   },
@@ -153,7 +158,8 @@ const columns: ColumnDef<RadioNodeRow>[] = [
     ),
     meta: { className: 'min-w-[10rem]' },
   },
-];
+  ];
+}
 
 export function filterRadioNodes(
   data: RadioNodeRow[],
@@ -204,6 +210,8 @@ export interface RadioNodesDataTableProps {
   onModelFilterChange: (value: string) => void;
   indexFilter?: string;
   onSelectionChange?: (selectedRows: RadioNodeRow[]) => void;
+  onRowClick?: (row: RadioNodeRow) => void;
+  onNameClick?: (row: RadioNodeRow) => void;
 }
 
 export function RadioNodesDataTable({
@@ -212,7 +220,10 @@ export function RadioNodesDataTable({
   modelFilter,
   indexFilter = 'All',
   onSelectionChange,
+  onRowClick,
+  onNameClick,
 }: RadioNodesDataTableProps) {
+  const columns = React.useMemo(() => getColumns(onNameClick), [onNameClick]);
   const filteredData = React.useMemo(
     () => filterRadioNodes(RADIO_NODES_DATA, search, statusFilter, modelFilter, indexFilter),
     [search, statusFilter, modelFilter, indexFilter]
@@ -225,6 +236,7 @@ export function RadioNodesDataTable({
         data={filteredData}
         onSelectionChange={onSelectionChange}
         getRowId={(row) => String(row.index)}
+        onRowClick={onRowClick}
       />
     </TooltipProvider>
   );

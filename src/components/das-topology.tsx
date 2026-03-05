@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DeviceStatus } from "@/components/ui/device-status";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import { Tree, type TreeNode } from "@/components/ui/tree";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 // ─── DAS hierarchy types (Inventory-aligned) ──────────────────────────────────
 const T = {
@@ -45,7 +47,7 @@ const TYPE_META = {
   [T.INFO]: { label: "Info", desc: "Telemetry/Alarm detail", family: "DAS", tier: "detail", color: "#64748b", glow: "#64748b" },
 };
 
-const MODULE_TABS = ["MRU Alarms", "Module Info", "PAM Alarms", "Alarms", "RF Parameters", "Comment(N/A)"] as const;
+const MODULE_TABS = ["Module Info", "PAM Alarms", "Alarms", "RF Parameters", "Comment(N/A)"] as const;
 
 const historyAlarms = [
   { label: "Inconsistent Version", status: "ok" },
@@ -340,7 +342,8 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
     const stackNode = nodes.find((n) => n.type === T.STACK);
     return stackNode?.id ?? nodes[0]?.id ?? null;
   });
-  const [moduleTab, setModuleTab] = useState<(typeof MODULE_TABS)[number]>("MRU Alarms");
+  const [moduleTab, setModuleTab] = useState<(typeof MODULE_TABS)[number]>("Module Info");
+  const [moduleSheetOpen, setModuleSheetOpen] = useState(false);
   const search = searchQuery.trim();
   const [hovered, setHovered]       = useState(null);
   const [hovLink, setHovLink]       = useState(null);
@@ -449,7 +452,7 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
   return (
     <TooltipProvider>
     <div className="flex flex-col gap-6" style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif" }}>
-      <Card className="bg-slate-950 text-slate-100 border-slate-800 flex flex-col h-[680px] overflow-hidden">
+      <Card className="bg-slate-950 text-slate-100 border-slate-800 flex flex-col h-[calc(100vh-9rem)] overflow-hidden">
       <div className="flex items-center gap-5 px-4 py-2 bg-slate-900 border-b border-slate-800 flex-wrap shadow-xl">
         <span className="text-xs text-slate-400">
           {total} devices {hidden>0 && <span className="text-indigo-400">· {hidden} hidden</span>}
@@ -495,6 +498,15 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
           <Button variant="outline" size="sm" onClick={() => setXf({x:70,y:30,scale:1})} className="h-7 text-xs">
             Reset
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setModuleSheetOpen(true)}
+            disabled={!selectedNode}
+          >
+            Module details
+          </Button>
           </div>
         </div>
       </div>
@@ -512,6 +524,7 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
               onToggle={toggleCollapse}
               onNodeClick={(node) => {
                 setSelectedNodeId(node.id);
+                setModuleSheetOpen(true);
               }}
               onNodeMouseEnter={(node) => setHovered(node.id)}
               onNodeMouseLeave={() => setHovered(null)}
@@ -564,7 +577,12 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
                   <DasNodeShape node={node} pos={pos} showLabel={showLabels}
                     onHover={setHovered} onLeave={()=>setHovered(null)}
                     hovered={hovered} collapsed={collapsed}
-                    hasChildren={hasKids} onSelect={setSelectedNodeId} selected={selectedNodeId}
+                    hasChildren={hasKids}
+                    onSelect={(id) => {
+                      setSelectedNodeId(id);
+                      setModuleSheetOpen(true);
+                    }}
+                    selected={selectedNodeId}
                     animatingIds={animating}/>
                 </g>
               );
@@ -632,167 +650,229 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
         </div>
       </div>
       </Card>
-      <Card className="overflow-hidden">
-          <Tabs value={moduleTab} onValueChange={(v) => setModuleTab(v as (typeof MODULE_TABS)[number])}>
-            <div className="px-3 pt-3 pb-2 border-b bg-muted/30 text-xs text-muted-foreground">
-              {selectedNode ? (
-                <span className="inline-flex items-center gap-2">
-                  <Badge className="text-[10px] px-1.5 h-4 border border-slate-600 bg-slate-800 text-slate-200">
-                    {TYPE_META[selectedNode.type]?.label ?? selectedNode.type}
-                  </Badge>
-                  <span className="font-semibold text-foreground">{selectedNode.label}</span>
-                </span>
-              ) : (
-                <span>Select a topology module to view alarms and module cards.</span>
-              )}
-            </div>
-            <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
-              {MODULE_TABS.map((tab) => (
-                <TabsTrigger key={tab} value={tab} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-xs">
-                  {tab}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <div className="p-3">
-              <TabsContent value="MRU Alarms" className="m-0">
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[44px] px-3 py-2 text-xs">Status</TableHead>
-                        <TableHead className="px-3 py-2 text-xs">Alarm</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {historyAlarms.map((alarm) => (
-                        <TableRow key={alarm.label}>
-                          <TableCell className="px-3 py-2"><AlarmDot status={alarm.status} /></TableCell>
-                          <TableCell className="px-3 py-2 text-xs">{alarm.label}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-              <TabsContent value="PAM Alarms" className="m-0">
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="px-3 py-2 text-xs">Alarm</TableHead>
-                        {pamBands.map((band) => (
-                          <TableHead key={band} className="px-2 py-2 text-xs text-center">{band}</TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pamRows.map((row) => (
-                        <TableRow key={row.label}>
-                          <TableCell className="px-3 py-2 text-xs">{row.label}</TableCell>
-                          {row.cols.map((status, idx) => (
-                            <TableCell key={`${row.label}-${idx}`} className="px-2 py-2 text-center">
-                              <div className="inline-flex items-center justify-center"><AlarmDot status={status} /></div>
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-              <TabsContent value="Alarms" className="m-0">
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="px-3 py-2 text-xs">Physical alarm</TableHead>
-                        <TableHead className="px-3 py-2 text-xs text-center w-[120px]">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {physicalAlarms.map((alarm) => (
-                        <TableRow key={alarm}>
-                          <TableCell className="px-3 py-2 text-xs">{alarm}</TableCell>
-                          <TableCell className="px-3 py-2 text-center">
-                            <div className="inline-flex items-center justify-center"><AlarmDot status="ok" /></div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-              <TabsContent value="Module Info" className="m-0">
-                {selectedNode ? (
-                  <div className="rounded-md border p-3 text-xs space-y-1">
-                    <div><span className="text-muted-foreground">Label:</span> {selectedNode.label}</div>
-                    <div><span className="text-muted-foreground">Type:</span> {TYPE_META[selectedNode.type]?.desc ?? selectedNode.type}</div>
-                    <div><span className="text-muted-foreground">Status:</span> {selectedNode.status}</div>
-                    {selectedNode.location && <div><span className="text-muted-foreground">Location:</span> {selectedNode.location}</div>}
-                    {selectedNode.protocol && <div><span className="text-muted-foreground">Protocol:</span> {selectedNode.protocol}</div>}
+      <Sheet open={moduleSheetOpen} onOpenChange={setModuleSheetOpen}>
+        <SheetContent side="right" className="w-[94vw] sm:max-w-5xl lg:max-w-6xl flex flex-col h-full">
+          <SheetHeader className="shrink-0">
+            <SheetTitle>
+              {selectedNode ? selectedNode.label : "Module details"}
+            </SheetTitle>
+            {selectedNode ? (
+              <div className="flex items-center gap-2 text-sm">
+                <Badge variant="secondary" className="h-5 px-2 text-[11px]">
+                  {TYPE_META[selectedNode.type]?.label ?? selectedNode.type}
+                </Badge>
+                <span className="text-muted-foreground">•</span>
+                <DeviceStatus status={mapStatusToInventory(selectedNode.status)} iconSize={14} className="text-sm" />
+              </div>
+            ) : null}
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-4 py-4">
+            {selectedNode ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Type</span>
+                      <div>
+                        <Badge variant="secondary" className="h-5 px-2 text-[11px]">
+                          {TYPE_META[selectedNode.type]?.label ?? selectedNode.type}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Status</span>
+                      <span className="font-medium capitalize">{selectedNode.status}</span>
+                    </div>
+                    {selectedNode.model && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Model</span>
+                        <span className="font-medium">{selectedNode.model}</span>
+                      </div>
+                    )}
+                    {selectedNode.location && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Location</span>
+                        <span className="font-medium">{selectedNode.location}</span>
+                      </div>
+                    )}
+                    {selectedNode.protocol && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Protocol</span>
+                        <span className="font-medium">{selectedNode.protocol}</span>
+                      </div>
+                    )}
+                    {selectedNode.band && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Band</span>
+                        <span className="font-medium">{selectedNode.band}</span>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="text-xs text-muted-foreground">No module selected.</div>
-                )}
-              </TabsContent>
-              <TabsContent value="RF Parameters" className="m-0">
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[140px] px-3 py-2 text-xs">Band</TableHead>
-                        {RF_BANDS.map((band) => (
-                          <TableHead key={band} className="px-3 py-2 text-xs text-left">{band}</TableHead>
+                </CardContent>
+              </Card>
+            ) : null}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold">MRU Alarms</h4>
+                  <div className="rounded-md border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[44px] px-3 py-2 text-xs">Status</TableHead>
+                          <TableHead className="px-3 py-2 text-xs">Alarm</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {historyAlarms.map((alarm) => (
+                          <TableRow key={alarm.label}>
+                            <TableCell className="px-3 py-2"><AlarmDot status={alarm.status} /></TableCell>
+                            <TableCell className="px-3 py-2 text-xs">{alarm.label}</TableCell>
+                          </TableRow>
                         ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">PAM S/N</TableCell>
-                        {RF_PAM_SERIALS.map((serial, idx) => (
-                          <TableCell key={`sn-${idx}`} className="px-3 py-2 text-xs">{serial}</TableCell>
-                        ))}
-                      </TableRow>
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">DL Power</TableCell>
-                        {RF_DL_POWER.map((value, idx) => (
-                          <TableCell key={`dl-${idx}`} className="px-3 py-2 text-xs text-slate-500">{value}</TableCell>
-                        ))}
-                      </TableRow>
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">Service State</TableCell>
-                        {RF_SERVICE_STATE.map((value, idx) => (
-                          <TableCell key={`svc-${idx}`} className="px-3 py-2"><RFStandardSelect value={value} options={RF_SERVICE_STATE_OPTIONS} /></TableCell>
-                        ))}
-                      </TableRow>
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">Out Power</TableCell>
-                        {RF_OUT_POWER.map((value, idx) => (
-                          <TableCell key={`out-${idx}`} className="px-3 py-2"><RFStandardSelect value={value} options={RF_OUT_POWER_OPTIONS} /></TableCell>
-                        ))}
-                      </TableRow>
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">UL Limiter</TableCell>
-                        {RF_UL_LIMITER.map((value, idx) => (
-                          <TableCell key={`ul-${idx}`} className="px-3 py-2"><RFStandardSelect value={value} options={RF_UL_LIMITER_OPTIONS} /></TableCell>
-                        ))}
-                      </TableRow>
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">Source Info</TableCell>
-                        {RF_BANDS.map((_, idx) => (
-                          <TableCell key={`info-${idx}`} className="px-3 py-2"><RFInfoButton /></TableCell>
-                        ))}
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
-              </TabsContent>
-              <TabsContent value="Comment(N/A)" className="m-0">
-                <div className="text-xs text-muted-foreground">Comment(N/A) content placeholder.</div>
-              </TabsContent>
-            </div>
-          </Tabs>
-      </Card>
+              </CardContent>
+            </Card>
+            <Card className="overflow-hidden">
+              <Tabs value={moduleTab} onValueChange={(v) => setModuleTab(v as (typeof MODULE_TABS)[number])}>
+                <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
+                  {MODULE_TABS.map((tab) => (
+                    <TabsTrigger key={tab} value={tab} className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-xs">
+                      {tab}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                <div className="p-3">
+                  <TabsContent value="PAM Alarms" className="m-0">
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="px-3 py-2 text-xs">Alarm</TableHead>
+                            {pamBands.map((band) => (
+                              <TableHead key={band} className="px-2 py-2 text-xs text-center">{band}</TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {pamRows.map((row) => (
+                            <TableRow key={row.label}>
+                              <TableCell className="px-3 py-2 text-xs">{row.label}</TableCell>
+                              {row.cols.map((status, idx) => (
+                                <TableCell key={`${row.label}-${idx}`} className="px-2 py-2 text-center">
+                                  <div className="inline-flex items-center justify-center"><AlarmDot status={status} /></div>
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="Alarms" className="m-0">
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="px-3 py-2 text-xs">Physical alarm</TableHead>
+                            <TableHead className="px-3 py-2 text-xs text-center w-[120px]">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {physicalAlarms.map((alarm) => (
+                            <TableRow key={alarm}>
+                              <TableCell className="px-3 py-2 text-xs">{alarm}</TableCell>
+                              <TableCell className="px-3 py-2 text-center">
+                                <div className="inline-flex items-center justify-center"><AlarmDot status="ok" /></div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="Module Info" className="m-0">
+                    {selectedNode ? (
+                      <div className="rounded-md border p-3 text-xs space-y-1">
+                        <div><span className="text-muted-foreground">Label:</span> {selectedNode.label}</div>
+                        <div className="inline-flex items-center gap-2">
+                          <span className="text-muted-foreground">Type:</span>
+                          <Badge variant="secondary" className="h-5 px-2 text-[11px]">
+                            {TYPE_META[selectedNode.type]?.label ?? selectedNode.type}
+                          </Badge>
+                        </div>
+                        <div><span className="text-muted-foreground">Status:</span> {selectedNode.status}</div>
+                        {selectedNode.location && <div><span className="text-muted-foreground">Location:</span> {selectedNode.location}</div>}
+                        {selectedNode.protocol && <div><span className="text-muted-foreground">Protocol:</span> {selectedNode.protocol}</div>}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">No module selected.</div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="RF Parameters" className="m-0">
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead className="w-[140px] px-3 py-2 text-xs">Band</TableHead>
+                            {RF_BANDS.map((band) => (
+                              <TableHead key={band} className="px-3 py-2 text-xs text-left">{band}</TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell className="px-3 py-2 text-xs text-muted-foreground">PAM S/N</TableCell>
+                            {RF_PAM_SERIALS.map((serial, idx) => (
+                              <TableCell key={`sn-${idx}`} className="px-3 py-2 text-xs">{serial}</TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell className="px-3 py-2 text-xs text-muted-foreground">DL Power</TableCell>
+                            {RF_DL_POWER.map((value, idx) => (
+                              <TableCell key={`dl-${idx}`} className="px-3 py-2 text-xs text-slate-500">{value}</TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell className="px-3 py-2 text-xs text-muted-foreground">Service State</TableCell>
+                            {RF_SERVICE_STATE.map((value, idx) => (
+                              <TableCell key={`svc-${idx}`} className="px-3 py-2"><RFStandardSelect value={value} options={RF_SERVICE_STATE_OPTIONS} /></TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell className="px-3 py-2 text-xs text-muted-foreground">Out Power</TableCell>
+                            {RF_OUT_POWER.map((value, idx) => (
+                              <TableCell key={`out-${idx}`} className="px-3 py-2"><RFStandardSelect value={value} options={RF_OUT_POWER_OPTIONS} /></TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell className="px-3 py-2 text-xs text-muted-foreground">UL Limiter</TableCell>
+                            {RF_UL_LIMITER.map((value, idx) => (
+                              <TableCell key={`ul-${idx}`} className="px-3 py-2"><RFStandardSelect value={value} options={RF_UL_LIMITER_OPTIONS} /></TableCell>
+                            ))}
+                          </TableRow>
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell className="px-3 py-2 text-xs text-muted-foreground">Source Info</TableCell>
+                            {RF_BANDS.map((_, idx) => (
+                              <TableCell key={`info-${idx}`} className="px-3 py-2"><RFInfoButton /></TableCell>
+                            ))}
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="Comment(N/A)" className="m-0">
+                    <div className="text-xs text-muted-foreground">Comment(N/A) content placeholder.</div>
+                  </TabsContent>
+                </div>
+              </Tabs>
+            </Card>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
     </TooltipProvider>
   );
