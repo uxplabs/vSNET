@@ -949,7 +949,7 @@ function DeviceDetailPage({
   }, [officeFloorPlanSrc]);
   const isDas = device.type === 'DAS';
   const SIDEBAR_ITEMS = isDas
-    ? (['Summary', 'Remotes', 'Inventory', 'SNMP details', 'Web terminal'] as const)
+    ? (['Summary', 'Radio units', 'Inventory', 'SNMP details', 'Web terminal'] as const)
     : ([
         'Summary',
         'Commissioning',
@@ -964,8 +964,9 @@ function DeviceDetailPage({
         'SSH terminal',
       ] as const);
   const toKey = (label: string) => label.toLowerCase().replace(/\s+/g, '-');
-  const radioNodesSectionKey = isDas ? 'remotes' : 'radio-nodes';
-  const [activeSection, setActiveSection] = useState(initialSection ?? toKey(SIDEBAR_ITEMS[0]));
+  const radioNodesSectionKey = isDas ? 'radio-units' : 'radio-nodes';
+  const normalizedInitialSection = isDas && initialSection === 'remotes' ? 'radio-units' : initialSection;
+  const [activeSection, setActiveSection] = useState(normalizedInitialSection ?? toKey(SIDEBAR_ITEMS[0]));
 
   React.useEffect(() => {
     const keys = SIDEBAR_ITEMS.map(toKey);
@@ -1068,10 +1069,112 @@ function DeviceDetailPage({
     },
     [selectedRemoteRow, radioNodesMapDevices, device.id],
   );
+  const selectedRemoteBandPowerData = React.useMemo(
+    () => {
+      const indexSeed = selectedRemoteRow?.index ?? 1;
+      return [
+        {
+          time: '10:00',
+          band700: 14 + indexSeed * 0.3,
+          cellEsmr: 17 + indexSeed * 0.2,
+          pcs: 20 + indexSeed * 0.25,
+          aw53: 18 + indexSeed * 0.2,
+          ulBand700: 8 + indexSeed * 0.2,
+          ulCellEsmr: 10 + indexSeed * 0.2,
+          ulPcs: 12 + indexSeed * 0.2,
+          ulAw53: 11 + indexSeed * 0.15,
+        },
+        {
+          time: '10:15',
+          band700: 15 + indexSeed * 0.3,
+          cellEsmr: 17.5 + indexSeed * 0.2,
+          pcs: 20.5 + indexSeed * 0.25,
+          aw53: 18.4 + indexSeed * 0.2,
+          ulBand700: 8.3 + indexSeed * 0.2,
+          ulCellEsmr: 10.2 + indexSeed * 0.2,
+          ulPcs: 12.4 + indexSeed * 0.2,
+          ulAw53: 11.2 + indexSeed * 0.15,
+        },
+        {
+          time: '10:30',
+          band700: 14.6 + indexSeed * 0.3,
+          cellEsmr: 18 + indexSeed * 0.2,
+          pcs: 21 + indexSeed * 0.25,
+          aw53: 18.9 + indexSeed * 0.2,
+          ulBand700: 8.1 + indexSeed * 0.2,
+          ulCellEsmr: 10.6 + indexSeed * 0.2,
+          ulPcs: 12.7 + indexSeed * 0.2,
+          ulAw53: 11.4 + indexSeed * 0.15,
+        },
+        {
+          time: '10:45',
+          band700: 15.2 + indexSeed * 0.3,
+          cellEsmr: 18.4 + indexSeed * 0.2,
+          pcs: 20.8 + indexSeed * 0.25,
+          aw53: 19.1 + indexSeed * 0.2,
+          ulBand700: 8.5 + indexSeed * 0.2,
+          ulCellEsmr: 10.9 + indexSeed * 0.2,
+          ulPcs: 12.6 + indexSeed * 0.2,
+          ulAw53: 11.6 + indexSeed * 0.15,
+        },
+        {
+          time: '11:00',
+          band700: 15.5 + indexSeed * 0.3,
+          cellEsmr: 18.1 + indexSeed * 0.2,
+          pcs: 21.3 + indexSeed * 0.25,
+          aw53: 19.4 + indexSeed * 0.2,
+          ulBand700: 8.7 + indexSeed * 0.2,
+          ulCellEsmr: 10.7 + indexSeed * 0.2,
+          ulPcs: 12.9 + indexSeed * 0.2,
+          ulAw53: 11.8 + indexSeed * 0.15,
+        },
+      ];
+    },
+    [selectedRemoteRow?.index],
+  );
+  const selectedRemoteBandLatest = React.useMemo(
+    () => selectedRemoteBandPowerData[selectedRemoteBandPowerData.length - 1] ?? null,
+    [selectedRemoteBandPowerData],
+  );
+  const renderBandStatsLegend = React.useCallback(
+    (props: any) => {
+      const payload = (props?.payload ?? []).filter((item: any) => item.type !== 'none');
+      if (!payload.length || !selectedRemoteBandLatest) return null;
+
+      return (
+        <div className="pt-2">
+          <div className="grid grid-cols-2 rounded-md border border-border/60 bg-muted/20 sm:grid-cols-4">
+            {payload.map((item: any) => {
+              const dataKey = String(item.dataKey ?? '');
+              const latestValue = (selectedRemoteBandLatest as Record<string, unknown>)[dataKey];
+              const numericValue = typeof latestValue === 'number' ? latestValue : null;
+
+              return (
+                <div
+                  key={dataKey}
+                  className="flex min-w-0 flex-col gap-1 border-r border-b border-border/40 px-2 py-1.5 text-xs last:border-r-0 sm:[&:nth-child(2)]:border-r sm:[&:nth-child(2)]:border-border/40 sm:[&:nth-child(n+3)]:border-b-0"
+                >
+                  <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                    <span className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: item.color }} />
+                    <span className="truncate">{item.value}</span>
+                  </span>
+                  <span className="font-mono font-semibold tabular-nums text-foreground">
+                    {numericValue !== null ? `${numericValue.toFixed(1)} dBm` : '--'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    },
+    [selectedRemoteBandLatest],
+  );
   const SIDEBAR_BADGE_COUNTS = React.useMemo<Record<string, number>>(() => ({
     'ip-interfaces': IP_INTERFACES_DATA.length,
     'radio-nodes': filteredRadioNodes.length,
     remotes: filteredRadioNodes.length,
+    'radio-units': filteredRadioNodes.length,
     'nr-cells': NR_CELLS_DATA.length,
     'zones': ZONES_DATA.length,
   }), [filteredRadioNodes.length]);
@@ -1347,7 +1450,7 @@ function DeviceDetailPage({
                   </div>
                 )}
                 <div>
-                  <p className="text-gray-400 mb-0.5">{isDas ? 'Remotes' : 'Radio nodes'}</p>
+                  <p className="text-gray-400 mb-0.5">{isDas ? 'Radio units' : 'Radio nodes'}</p>
                   <div className="flex items-center gap-1.5 text-white">
                     <Icon name="arrow_upward" size={14} className="text-green-400" />
                     <span className="font-semibold tabular-nums">12</span>
@@ -2051,7 +2154,7 @@ function DeviceDetailPage({
                   <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
                     <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder={isDas ? 'Search remotes...' : 'Search radio nodes...'}
+                      placeholder={isDas ? 'Search radio units...' : 'Search radio nodes...'}
                       className="pl-9 w-full"
                       value={radioNodesSearch}
                       onChange={(e) => setRadioNodesSearch(e.target.value)}
@@ -2065,10 +2168,10 @@ function DeviceDetailPage({
                   <TooltipTrigger asChild>
                     <Button variant="outline" className="shrink-0 gap-1" onClick={() => setAddRadioNodeSheetOpen(true)}>
                       <Icon name="add" size={18} />
-                      {isDas ? 'Add remote' : 'Add radio node'}
+                      {isDas ? 'Add radio unit' : 'Add radio node'}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{isDas ? 'Add remote' : 'Add radio node'}</TooltipContent>
+                  <TooltipContent>{isDas ? 'Add radio unit' : 'Add radio node'}</TooltipContent>
                 </Tooltip>
               </CardHeader>
               <CardContent>
@@ -2158,7 +2261,7 @@ function DeviceDetailPage({
                     <div className="space-y-2">
                       <div className="text-sm font-semibold">{building.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {building.floors} floors, {building.remotes} remotes
+                        {building.floors} floors, {building.remotes} radio units
                       </div>
                     </div>
                   </TabsTrigger>
@@ -4220,13 +4323,55 @@ function DeviceDetailPage({
                 <CardContent className="pt-4">
                   <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                     <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Support bands</span>
+                      <span className="text-muted-foreground">Name</span>
+                      <span className="font-medium">{selectedRemoteRow.name}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Managed object</span>
+                      <span className="font-medium font-mono">{`${device.id}/radio-units/${selectedRemoteRow.index}`}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Equipment type</span>
+                      <span className="font-medium">{selectedRemoteRow.role}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Band</span>
                       <span className="font-medium">{selectedRemoteRow.supportBands}</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Ethernet ID</span>
-                      <span className="font-medium font-mono">{selectedRemoteRow.ethernetId}</span>
+                      <span className="text-muted-foreground">Equipment index</span>
+                      <span className="font-medium tabular-nums">{selectedRemoteRow.index}</span>
                     </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Temperature</span>
+                      <span className="font-medium tabular-nums">{(35.2 + selectedRemoteRow.index * 0.6).toFixed(1)} C</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {selectedRemoteRow && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-sm font-semibold">Network information</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">IP address</span>
+                      <span className="font-medium font-mono">{device.ipAddress}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {selectedRemoteRow && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-sm font-semibold">Hardware information</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Model</span>
                       <span className="font-medium">{selectedRemoteRow.model}</span>
@@ -4235,6 +4380,65 @@ function DeviceDetailPage({
                       <span className="text-muted-foreground">Serial number</span>
                       <span className="font-medium font-mono">{selectedRemoteRow.serialNumber}</span>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {selectedRemoteRow && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-sm font-semibold">Band information</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-6">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">DL power</p>
+                    <ChartContainer
+                      config={{
+                        time: { label: 'Time' },
+                        band700: { label: '700', color: 'var(--chart-1)' },
+                        cellEsmr: { label: 'CELL/E SMR', color: 'var(--chart-2)' },
+                        pcs: { label: 'PCS', color: 'var(--chart-3)' },
+                        aw53: { label: 'AW53', color: 'var(--chart-4)' },
+                      } satisfies ChartConfig}
+                      className="h-[200px] min-h-[200px] w-full"
+                    >
+                      <LineChart accessibilityLayer data={selectedRemoteBandPowerData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} />
+                        <YAxis tickLine={false} axisLine={false} width={36} />
+                        <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                        <ChartLegend content={renderBandStatsLegend} />
+                        <Line dataKey="band700" type="monotone" stroke="var(--color-band700)" strokeWidth={2} dot={false} />
+                        <Line dataKey="cellEsmr" type="monotone" stroke="var(--color-cellEsmr)" strokeWidth={2} dot={false} />
+                        <Line dataKey="pcs" type="monotone" stroke="var(--color-pcs)" strokeWidth={2} dot={false} />
+                        <Line dataKey="aw53" type="monotone" stroke="var(--color-aw53)" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ChartContainer>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">UL power</p>
+                    <ChartContainer
+                      config={{
+                        time: { label: 'Time' },
+                        ulBand700: { label: '700', color: 'var(--chart-1)' },
+                        ulCellEsmr: { label: 'CELL/E SMR', color: 'var(--chart-2)' },
+                        ulPcs: { label: 'PCS', color: 'var(--chart-3)' },
+                        ulAw53: { label: 'AW53', color: 'var(--chart-4)' },
+                      } satisfies ChartConfig}
+                      className="h-[200px] min-h-[200px] w-full"
+                    >
+                      <LineChart accessibilityLayer data={selectedRemoteBandPowerData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} />
+                        <YAxis tickLine={false} axisLine={false} width={36} />
+                        <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+                        <ChartLegend content={renderBandStatsLegend} />
+                        <Line dataKey="ulBand700" type="monotone" stroke="var(--color-ulBand700)" strokeWidth={2} dot={false} />
+                        <Line dataKey="ulCellEsmr" type="monotone" stroke="var(--color-ulCellEsmr)" strokeWidth={2} dot={false} />
+                        <Line dataKey="ulPcs" type="monotone" stroke="var(--color-ulPcs)" strokeWidth={2} dot={false} />
+                        <Line dataKey="ulAw53" type="monotone" stroke="var(--color-ulAw53)" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ChartContainer>
                   </div>
                 </CardContent>
               </Card>

@@ -111,6 +111,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
   const [selectedRegion, setSelectedRegion] = useState<RegionOption>('all');
   const [selectedGroup, setSelectedGroup] = useState<DeviceGroupOption | null>(null);
   const [selectedGroupRegion, setSelectedGroupRegion] = useState<string | null>(null);
+  const [expandedRegionFolders, setExpandedRegionFolders] = useState<Record<string, boolean>>({});
 
   // When a fixed region is set (single-region account), lock sidebar to that region
   const effectiveRegions = fixedRegion ? [fixedRegion] : regions;
@@ -373,7 +374,7 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
     }
   };
 
-  const activateAllRegionDevices = (regionName: string) => {
+  const activateRegionDevices = (regionName: string) => {
     setSelectedGroup(null);
     setSelectedRegion('all');
     setSelectedGroupRegion(regionName);
@@ -515,24 +516,47 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                 {isAllRegions || (effectiveRegions && effectiveRegions.length > 1) ? (
                   sidebarRegionList.map((reg) => {
                     const counts = deviceCountsByRegion[reg];
+                    const isRegionFolderExpanded = expandedRegionFolders[reg] ?? false;
                     if (!counts) return null;
                     return (
-                      <Collapsible key={reg} asChild className="group/collapsible">
+                      <Collapsible
+                        key={reg}
+                        className="group/collapsible"
+                        open={isRegionFolderExpanded}
+                        onOpenChange={(open) => {
+                          setExpandedRegionFolders((prev) => ({ ...prev, [reg]: open }));
+                        }}
+                      >
                         <SidebarMenuItem>
-                          <CollapsibleTrigger asChild>
-                            <SidebarMenuButton tooltip={reg}>
-                              <Icon name="lan" size={18} />
-                              <span>{reg}</span>
-                              <ChevronDown className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                          <div className="flex items-center gap-1">
+                            <SidebarMenuButton
+                              asChild
+                              tooltip={reg}
+                              className="min-w-0 flex-1"
+                              isActive={selectedGroup === null && selectedGroupRegion === reg && regionFilter === reg}
+                            >
+                              <button type="button" className="flex w-full items-center gap-2" onClick={() => activateRegionDevices(reg)}>
+                                <Icon name="lan" size={18} />
+                                <span>{reg}</span>
+                              </button>
                             </SidebarMenuButton>
-                          </CollapsibleTrigger>
+                            <CollapsibleTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                                aria-label={isRegionFolderExpanded ? `Collapse ${reg}` : `Expand ${reg}`}
+                              >
+                                <ChevronDown className={`size-4 transition-transform duration-200 ${isRegionFolderExpanded ? 'rotate-180' : ''}`} />
+                              </button>
+                            </CollapsibleTrigger>
+                          </div>
                           <CollapsibleContent>
                             <SidebarMenuSub>
                               {(['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
                                 <SidebarMenuSubItem key={`${reg}-${groupName}`}>
                                   <SidebarMenuSubButton asChild isActive={selectedGroup === groupName && selectedGroupRegion === reg}>
-                                    <button type="button" className="flex w-full items-center gap-2" onClick={() => activateDeviceGroup(groupName, reg)}>
-                                      <span>{groupName}</span>
+                                    <button type="button" className="flex w-full min-w-0 items-center gap-2" onClick={() => activateDeviceGroup(groupName, reg)}>
+                                      <span className="truncate">{groupName}</span>
                                       <span className="ml-auto text-xs tabular-nums text-sidebar-foreground/70">{counts.groups[groupName]}</span>
                                       <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -578,17 +602,6 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                                 </SidebarMenuSubItem>
                               ))}
                               <SidebarMenuSubItem>
-                                <SidebarMenuSubButton
-                                  asChild
-                                  isActive={selectedGroup === null && selectedGroupRegion === reg && regionFilter === reg}
-                                >
-                                  <button type="button" className="flex w-full items-center gap-2" onClick={() => activateAllRegionDevices(reg)}>
-                                    <span>All region devices</span>
-                                    <span className="ml-auto text-xs tabular-nums text-sidebar-foreground/70">{counts.region.all}</span>
-                                  </button>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                              <SidebarMenuSubItem>
                                 <SidebarMenuSubButton asChild>
                                   <button type="button" className="text-sidebar-foreground/50 hover:text-sidebar-foreground">
                                     <Icon name="add" size={16} />
@@ -603,56 +616,66 @@ function DevicesPage({ appName = 'AMS', onSignOut, onNavigate, mainTab: mainTabP
                     );
                   })
                 ) : (
-                  (['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
-                    <SidebarMenuItem key={groupName}>
-                      <SidebarMenuButton asChild isActive={selectedGroup === groupName && selectedGroupRegion === null}>
-                        <button type="button" className="flex w-full items-center gap-2" onClick={() => activateDeviceGroup(groupName)}>
-                          <Icon name="folder" size={18} />
-                          <span>{groupName}</span>
-                          <SidebarMenuBadge>{deviceCounts.groups[groupName]}</SidebarMenuBadge>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <span
-                                role="button"
-                                tabIndex={0}
-                                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
-                                aria-label={`${groupName} options`}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
+                  <>
+                    {(['Core network', 'Radio access', 'Edge devices', 'Test environment'] as const).map((groupName) => (
+                      <SidebarMenuItem key={groupName}>
+                        <SidebarMenuButton asChild isActive={selectedGroup === groupName && selectedGroupRegion === null}>
+                          <button type="button" className="flex w-full min-w-0 items-center gap-2" onClick={() => activateDeviceGroup(groupName)}>
+                            <Icon name="folder" size={18} />
+                            <span className="truncate">{groupName}</span>
+                            <span className="ml-auto text-xs tabular-nums text-sidebar-foreground/70">{deviceCounts.groups[groupName]}</span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+                                  aria-label={`${groupName} options`}
+                                  onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                  }
-                                }}
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }
+                                  }}
+                                >
+                                  <Icon name="more_vert" size={14} />
+                                </span>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                <Icon name="more_vert" size={14} />
-                              </span>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                Add device
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                Edit group
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onSelect={(e) => e.preventDefault()}
-                              >
-                                Delete group
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                  Add device
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                  Edit group
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onSelect={(e) => e.preventDefault()}
+                                >
+                                  Delete group
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </button>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild>
+                        <button type="button" className="text-sidebar-foreground/50 hover:text-sidebar-foreground">
+                          <Icon name="add" size={16} />
+                          <span>Add group</span>
                         </button>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  ))
+                  </>
                 )}
               </SidebarMenu>
             </SidebarGroupContent>
