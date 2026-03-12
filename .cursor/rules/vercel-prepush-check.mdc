@@ -1,0 +1,15 @@
+---
+description: Run Vercel-compatible build check before commit/push requests
+alwaysApply: true
+---
+
+# Vercel Build Check Before GitHub Commit/Push
+
+When the user asks to "commit to github", "push to github", or otherwise requests a commit/push workflow:
+
+- Run a production build check first (Vercel-style validation), typically `npm run build` from the project root.
+- If the build fails, do not commit/push yet.
+- Report the build errors clearly and offer to fix them first.
+- Only proceed with commit/push after build passes (or if the user explicitly asks to proceed despite failure).
+
+This rule applies to all commit/push workflows in this project.

@@ -8,7 +8,7 @@ import { DeviceStatus } from './ui/device-status';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
-import { DasTopology, getDasTopologyInventoryRows } from './das-topology';
+import { DasTopology, getDasTopologyInventoryRows, getDasTopologyPathToNode, type DasTopologyNodeSelection } from './das-topology';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
   Table,
@@ -20,6 +20,7 @@ import {
 } from './ui/table';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
+import { DeviceLink } from './ui/device-link';
 import {
   Select,
   SelectContent,
@@ -386,6 +387,8 @@ const CELL_PERFORMANCE_ROWS = [
 ] as const;
 
 const CELL_DETAIL_INTERVALS = ['15 min'] as const;
+const REMOTE_MODULE_TABS = ['Module Info', 'PAM Alarms', 'Alarms', 'RF Parameters', 'Comment(N/A)'] as const;
+const REMOTE_RF_TABLE_COLUMNS = ['700', 'CELL/ESMR', 'PCS', 'AWS3'] as const;
 const CELL_ALARM_ROWS = [
   { cellName: 'Cell-1', timestamp: 'Jan 27, 10:15', updated: 'Jan 27, 10:22', severity: 'Major', source: 'RAN' },
   { cellName: 'Cell-1', timestamp: 'Jan 27, 11:30', updated: 'Jan 27, 11:37', severity: 'Minor', source: 'Scheduler' },
@@ -947,9 +950,10 @@ function DeviceDetailPage({
   React.useEffect(() => {
     setFloorPlanImgSrc(officeFloorPlanSrc);
   }, [officeFloorPlanSrc]);
+  const remoteUnitMapBackgroundSrc = `${import.meta.env.BASE_URL}radio-unit-floor-plan.png`;
   const isDas = device.type === 'DAS';
   const SIDEBAR_ITEMS = isDas
-    ? (['Summary', 'Radio units', 'Inventory', 'SNMP details', 'Web terminal'] as const)
+    ? (['Summary', 'HCM info', 'Radio units', 'Inventory', 'SNMP details', 'Web terminal'] as const)
     : ([
         'Summary',
         'Commissioning',
@@ -1014,32 +1018,6 @@ function DeviceDetailPage({
     ],
     [device],
   );
-  const radioNodesMapDevices = React.useMemo<DeviceRow[]>(
-    () =>
-      filteredRadioNodes.map((node) => ({
-        id: `${device.id}-rn-${node.index}`,
-        device: node.name,
-        type: 'RCP',
-        notes: node.description,
-        status: node.status === 'Up' ? 'Connected' : 'Disconnected',
-        alarms: node.alarms,
-        alarmType: node.alarmType,
-        configStatus: 'Synchronized',
-        version: device.version,
-        ipAddress: device.ipAddress,
-        deviceGroup: 'Radio access',
-        region: device.region,
-        labels: [],
-      })),
-    [filteredRadioNodes, device],
-  );
-  const radioNodesRoleByMapId = React.useMemo<Record<string, string>>(
-    () =>
-      Object.fromEntries(
-        filteredRadioNodes.map((node) => [`${device.id}-rn-${node.index}`, node.role]),
-      ),
-    [filteredRadioNodes, device.id],
-  );
   const [addRadioNodeSheetOpen, setAddRadioNodeSheetOpen] = useState(false);
   const [configMismatchSheetOpen, setConfigMismatchSheetOpen] = useState(false);
   const [createdTemplateName, setCreatedTemplateName] = useState<string | null>(initialCreatedTemplate ?? null);
@@ -1059,83 +1037,263 @@ function DeviceDetailPage({
   const [selectedCellName, setSelectedCellName] = useState<string | null>(null);
   const [cellDetailInterval, setCellDetailInterval] = useState<(typeof CELL_DETAIL_INTERVALS)[number]>(CELL_DETAIL_INTERVALS[0]);
   const [remoteMapSheetOpen, setRemoteMapSheetOpen] = useState(false);
+  const [remoteSheetHydrated, setRemoteSheetHydrated] = useState(false);
+  const [remoteSummaryExpanded, setRemoteSummaryExpanded] = useState(false);
+  const [remoteModuleTab, setRemoteModuleTab] = useState<(typeof REMOTE_MODULE_TABS)[number]>(REMOTE_MODULE_TABS[1]);
   const [selectedRemoteRow, setSelectedRemoteRow] = useState<RadioNodeRow | null>(null);
-  const selectedRemoteMapDevices = React.useMemo<DeviceRow[]>(
-    () => {
-      if (!selectedRemoteRow) return [];
-      const remoteId = `${device.id}-rn-${selectedRemoteRow.index}`;
-      const remote = radioNodesMapDevices.find((d) => d.id === remoteId);
-      return remote ? [remote] : [];
-    },
-    [selectedRemoteRow, radioNodesMapDevices, device.id],
-  );
+  const [selectedRemoteTopologyPath, setSelectedRemoteTopologyPath] = useState<DasTopologyNodeSelection[] | null>(null);
+  React.useEffect(() => {
+    setRemoteSummaryExpanded(false);
+  }, [selectedRemoteRow?.index]);
+  React.useEffect(() => {
+    if (!remoteMapSheetOpen) {
+      setRemoteSheetHydrated(false);
+      return;
+    }
+    let rafOne = 0;
+    let rafTwo = 0;
+    setRemoteSheetHydrated(false);
+    rafOne = window.requestAnimationFrame(() => {
+      rafTwo = window.requestAnimationFrame(() => {
+        setRemoteSheetHydrated(true);
+      });
+    });
+    return () => {
+      if (rafOne) window.cancelAnimationFrame(rafOne);
+      if (rafTwo) window.cancelAnimationFrame(rafTwo);
+    };
+  }, [remoteMapSheetOpen]);
+  const selectedRemoteFloorplanMarkerStyle = React.useMemo<React.CSSProperties>(() => {
+    const index = selectedRemoteRow?.index ?? 1;
+    const markerPositions = [
+      { left: '38%', top: '34%' },
+      { left: '56%', top: '34%' },
+      { left: '47%', top: '46%' },
+      { left: '33%', top: '58%' },
+      { left: '63%', top: '58%' },
+    ];
+    return markerPositions[(index - 1) % markerPositions.length];
+  }, [selectedRemoteRow?.index]);
   const selectedRemoteBandPowerData = React.useMemo(
     () => {
       const indexSeed = selectedRemoteRow?.index ?? 1;
-      return [
-        {
-          time: '10:00',
-          band700: 14 + indexSeed * 0.3,
-          cellEsmr: 17 + indexSeed * 0.2,
-          pcs: 20 + indexSeed * 0.25,
-          aw53: 18 + indexSeed * 0.2,
-          ulBand700: 8 + indexSeed * 0.2,
-          ulCellEsmr: 10 + indexSeed * 0.2,
-          ulPcs: 12 + indexSeed * 0.2,
-          ulAw53: 11 + indexSeed * 0.15,
-        },
-        {
-          time: '10:15',
-          band700: 15 + indexSeed * 0.3,
-          cellEsmr: 17.5 + indexSeed * 0.2,
-          pcs: 20.5 + indexSeed * 0.25,
-          aw53: 18.4 + indexSeed * 0.2,
-          ulBand700: 8.3 + indexSeed * 0.2,
-          ulCellEsmr: 10.2 + indexSeed * 0.2,
-          ulPcs: 12.4 + indexSeed * 0.2,
-          ulAw53: 11.2 + indexSeed * 0.15,
-        },
-        {
-          time: '10:30',
-          band700: 14.6 + indexSeed * 0.3,
-          cellEsmr: 18 + indexSeed * 0.2,
-          pcs: 21 + indexSeed * 0.25,
-          aw53: 18.9 + indexSeed * 0.2,
-          ulBand700: 8.1 + indexSeed * 0.2,
-          ulCellEsmr: 10.6 + indexSeed * 0.2,
-          ulPcs: 12.7 + indexSeed * 0.2,
-          ulAw53: 11.4 + indexSeed * 0.15,
-        },
-        {
-          time: '10:45',
-          band700: 15.2 + indexSeed * 0.3,
-          cellEsmr: 18.4 + indexSeed * 0.2,
-          pcs: 20.8 + indexSeed * 0.25,
-          aw53: 19.1 + indexSeed * 0.2,
-          ulBand700: 8.5 + indexSeed * 0.2,
-          ulCellEsmr: 10.9 + indexSeed * 0.2,
-          ulPcs: 12.6 + indexSeed * 0.2,
-          ulAw53: 11.6 + indexSeed * 0.15,
-        },
-        {
-          time: '11:00',
-          band700: 15.5 + indexSeed * 0.3,
-          cellEsmr: 18.1 + indexSeed * 0.2,
-          pcs: 21.3 + indexSeed * 0.25,
-          aw53: 19.4 + indexSeed * 0.2,
-          ulBand700: 8.7 + indexSeed * 0.2,
-          ulCellEsmr: 10.7 + indexSeed * 0.2,
-          ulPcs: 12.9 + indexSeed * 0.2,
-          ulAw53: 11.8 + indexSeed * 0.15,
-        },
-      ];
+      const totalSteps = 48; // 24h at 30-minute intervals
+      return Array.from({ length: totalSteps + 1 }, (_, idx) => {
+        const progress = idx / totalSteps;
+        const hoursAgo = (totalSteps - idx) * 0.5;
+        const waveA = Math.sin(progress * Math.PI * 2);
+        const waveB = Math.cos(progress * Math.PI * 3);
+        const trend = progress * 0.9;
+        const timeLabel =
+          hoursAgo === 0
+            ? 'Now'
+            : hoursAgo < 1
+              ? '30m'
+              : Number.isInteger(hoursAgo)
+                ? `${hoursAgo}h`
+                : `${Math.floor(hoursAgo)}h 30m`;
+
+        return {
+          time: timeLabel,
+          band700: Number((14 + indexSeed * 0.3 + trend + waveA * 0.45 + waveB * 0.15).toFixed(2)),
+          cellEsmr: Number((17 + indexSeed * 0.2 + trend + waveA * 0.4 - waveB * 0.2).toFixed(2)),
+          pcs: Number((20 + indexSeed * 0.25 + trend + waveA * 0.5 + waveB * 0.1).toFixed(2)),
+          aw53: Number((18 + indexSeed * 0.2 + trend + waveA * 0.35 - waveB * 0.12).toFixed(2)),
+          ulBand700: Number((8 + indexSeed * 0.2 + trend * 0.35 + waveA * 0.28 + waveB * 0.08).toFixed(2)),
+          ulCellEsmr: Number((10 + indexSeed * 0.2 + trend * 0.35 + waveA * 0.25 - waveB * 0.1).toFixed(2)),
+          ulPcs: Number((12 + indexSeed * 0.2 + trend * 0.35 + waveA * 0.3 + waveB * 0.06).toFixed(2)),
+          ulAw53: Number((11 + indexSeed * 0.15 + trend * 0.35 + waveA * 0.22 - waveB * 0.09).toFixed(2)),
+        };
+      });
     },
     [selectedRemoteRow?.index],
   );
+  const handleDasTopologyNodeSelect = React.useCallback((node: DasTopologyNodeSelection) => {
+    const normalizedLabel = node.label.toLowerCase();
+    const existing = RADIO_NODES_DATA.find((row) => row.name.toLowerCase() === normalizedLabel);
+    const role: RadioNodeRow['role'] =
+      normalizedLabel.includes('riu') ? 'RIU'
+        : normalizedLabel.includes('dcu') ? 'DCU'
+          : normalizedLabel.includes('deu') ? 'DEU'
+            : normalizedLabel.includes('hru') ? 'dHRU'
+              : normalizedLabel.includes('lru') ? 'dLRU'
+                : 'dMRU';
+    const status: RadioNodeRow['status'] = node.status === 'offline' ? 'Down' : 'Up';
+    const alarmType: RadioNodeRow['alarmType'] = status === 'Down' ? 'Major' : 'None';
+    const fallbackIndex = (Math.abs(node.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % 90) + 10;
+    const fallbackRow: RadioNodeRow = {
+      index: fallbackIndex,
+      name: node.label,
+      role,
+      description: node.location ?? 'Topology path',
+      status,
+      enabled: status === 'Up',
+      alarms: status === 'Down' ? 1 : 0,
+      alarmType,
+      supportBands: '700, CELL/ESMR, PCS, AWS3',
+      ethernetId: `00:1a:2b:3c:4d:${String(fallbackIndex).padStart(2, '0')}`,
+      model: node.model ?? 'FGH456',
+      serialNumber: `RN-${String(fallbackIndex).padStart(6, '0')}`,
+    };
+
+    setSelectedRemoteRow(existing ?? fallbackRow);
+    setSelectedRemoteTopologyPath(getDasTopologyPathToNode(node.id));
+    setRemoteMapSheetOpen(true);
+  }, []);
   const selectedRemoteBandLatest = React.useMemo(
     () => selectedRemoteBandPowerData[selectedRemoteBandPowerData.length - 1] ?? null,
     [selectedRemoteBandPowerData],
   );
+  const selectedRemoteRfRows = React.useMemo(
+    () => {
+      const dl700 = selectedRemoteBandLatest?.band700 ?? 0;
+      const dlCellEsmr = selectedRemoteBandLatest?.cellEsmr ?? 0;
+      const dlPcs = selectedRemoteBandLatest?.pcs ?? 0;
+      const dlAws3 = selectedRemoteBandLatest?.aw53 ?? 0;
+      const ul700 = selectedRemoteBandLatest?.ulBand700 ?? 0;
+      const ulCellEsmr = selectedRemoteBandLatest?.ulCellEsmr ?? 0;
+      const ulPcs = selectedRemoteBandLatest?.ulPcs ?? 0;
+      const ulAws3 = selectedRemoteBandLatest?.ulAw53 ?? 0;
+
+      return [
+        { parameter: 'UL Limiter', showTrend: false, showDot: false, values: ['Off', 'Off', 'Off', 'Off'] },
+        { parameter: 'Service State', showTrend: false, showDot: false, values: ['On', 'Off', 'Off', 'Off'] },
+        {
+          parameter: 'Out Power',
+          showTrend: false,
+          showDot: false,
+          values: [
+            `${dl700.toFixed(2)} dBm`,
+            `${dlCellEsmr.toFixed(2)} dBm`,
+            `${dlPcs.toFixed(2)} dBm`,
+            `${dlAws3.toFixed(2)} dBm`,
+          ],
+        },
+        {
+          parameter: 'DL Power',
+          showTrend: true,
+          showDot: true,
+          values: [
+            `${dl700.toFixed(2)} dBm`,
+            `${dlCellEsmr.toFixed(2)} dBm`,
+            `${dlPcs.toFixed(2)} dBm`,
+            `${dlAws3.toFixed(2)} dBm`,
+          ],
+        },
+        {
+          parameter: 'UL Power Detector',
+          showTrend: true,
+          showDot: true,
+          values: [
+            `${ul700.toFixed(2)} dBm`,
+            `${ulCellEsmr.toFixed(2)} dBm`,
+            `${ulPcs.toFixed(2)} dBm`,
+            `${ulAws3.toFixed(2)} dBm`,
+          ],
+        },
+      ] as const;
+    },
+    [selectedRemoteBandLatest, selectedRemoteRow?.index],
+  );
+  const selectedRemoteMruAlarmRows = React.useMemo(
+    () => [
+      { name: 'Inconsistent Version', status: 'ok' as const },
+      { name: 'Over Temperature', status: 'ok' as const },
+      { name: 'Service 700', status: selectedRemoteRow?.alarmType === 'Critical' ? 'critical' as const : 'ok' as const },
+      { name: 'Service CELL/ESMR', status: selectedRemoteRow?.alarmType === 'Critical' ? 'critical' as const : 'ok' as const },
+      { name: 'Service AWS3', status: selectedRemoteRow?.alarmType === 'Major' ? 'warning' as const : 'ok' as const },
+      { name: 'Service PCS', status: selectedRemoteRow?.alarmType === 'Major' ? 'warning' as const : 'ok' as const },
+      { name: 'Adjustment Fault', status: 'ok' as const },
+      { name: 'HW Failure', status: selectedRemoteRow?.status === 'Down' ? 'warning' as const : 'ok' as const },
+    ],
+    [selectedRemoteRow?.alarmType, selectedRemoteRow?.status],
+  );
+  const selectedRemoteTopologyChain = React.useMemo(() => {
+    const typeSubtitleMap: Record<string, string> = {
+      stack: 'Main stack',
+      extension: 'Extension',
+      ihu: 'Head-end',
+      oim: 'Optical interface',
+      mru: 'Remote unit',
+      och_unit: 'Optical channel unit',
+      och_bank: 'Optical channel bank',
+      rim: 'RIM module',
+      fmm: 'FMM module',
+      hcm: 'HCM module',
+      info: 'Info node',
+    };
+
+    if (selectedRemoteTopologyPath && selectedRemoteTopologyPath.length > 0) {
+      return selectedRemoteTopologyPath.map((node) => ({
+        label: node.label,
+        subtitle: node.location || typeSubtitleMap[node.type] || 'Topology node',
+      }));
+    }
+
+    const role = selectedRemoteRow?.role;
+    if (!role) {
+      return [
+        { label: 'IHU', subtitle: 'Head-end' },
+        { label: 'MRU1', subtitle: 'Primary remote' },
+      ];
+    }
+    if (role === 'RIU') {
+      return [
+        { label: 'IHU', subtitle: 'Head-end' },
+        { label: selectedRemoteRow?.name ?? 'RIU', subtitle: 'Radio interface unit' },
+      ];
+    }
+    if (role === 'DCU') {
+      return [
+        { label: 'IHU', subtitle: 'Head-end' },
+        { label: 'RIU 1', subtitle: 'Radio interface unit' },
+        { label: selectedRemoteRow?.name ?? 'DCU', subtitle: 'Distribution cabinet unit' },
+      ];
+    }
+    if (role === 'DEU') {
+      return [
+        { label: 'IHU', subtitle: 'Head-end' },
+        { label: 'RIU 1', subtitle: 'Radio interface unit' },
+        { label: 'DCU 1', subtitle: 'Distribution cabinet unit' },
+        { label: selectedRemoteRow?.name ?? 'DEU', subtitle: 'Distribution edge unit' },
+      ];
+    }
+    return [
+      { label: 'IHU', subtitle: 'Head-end' },
+      { label: 'OIM10', subtitle: 'Optical interface' },
+      { label: 'MRU1', subtitle: 'Primary remote' },
+      { label: selectedRemoteRow?.name ?? 'MRU', subtitle: 'Radio unit' },
+    ];
+  }, [selectedRemoteTopologyPath, selectedRemoteRow?.name, selectedRemoteRow?.role]);
+  const selectedRemotePamAlarmRows = React.useMemo(
+    () => [
+      {
+        alarm: 'DL Out Pwr Low',
+        cols: ['warning', 'warning', 'ok', 'ok'],
+      },
+      {
+        alarm: 'UL In Pwr High',
+        cols: ['ok', 'ok', selectedRemoteRow?.alarmType === 'Major' ? 'warning' : 'ok', 'ok'],
+      },
+      {
+        alarm: 'Over Power',
+        cols: ['ok', selectedRemoteRow?.alarmType === 'Critical' ? 'critical' : 'ok', 'ok', 'ok'],
+      },
+      {
+        alarm: 'VSWR',
+        cols: ['ok', 'ok', 'ok', selectedRemoteRow?.status === 'Down' ? 'warning' : 'ok'],
+      },
+    ] as const,
+    [selectedRemoteRow?.alarmType, selectedRemoteRow?.status],
+  );
+  const renderRemoteAlarmDot = React.useCallback((status: 'ok' | 'warning' | 'critical') => {
+    const className = status === 'critical'
+      ? 'bg-destructive'
+      : status === 'warning'
+        ? 'bg-warning'
+        : 'bg-success';
+    return <span className={`inline-block h-2.5 w-2.5 rounded-full border border-slate-900/40 ${className}`} />;
+  }, []);
   const renderBandStatsLegend = React.useCallback(
     (props: any) => {
       const payload = (props?.payload ?? []).filter((item: any) => item.type !== 'none');
@@ -1170,6 +1328,32 @@ function DeviceDetailPage({
     },
     [selectedRemoteBandLatest],
   );
+  const hcmInfoValues = React.useMemo(() => {
+    const ipv4Parts = device.ipAddress.split('.');
+    const localSubnetMask = '255.255.255.0';
+    const lanSubnetMask = '255.255.254.0';
+    const lanGateway = ipv4Parts.length === 4 ? `${ipv4Parts[0]}.${ipv4Parts[1]}.${ipv4Parts[2]}.1` : '192.168.10.1';
+    const lanIpv6Address = 'fe80::2a0:5ff:fe12:3456';
+    const lanIpv6SubnetMask = '/64';
+
+    return {
+      localDhcpMode: 'Disabled',
+      localIpAddress: device.ipAddress,
+      localSubnetMask,
+      lanDhcpMode: 'Enabled',
+      lanIpAddress: lanGateway,
+      lanSubnetMask,
+      lanDefaultGateway: lanGateway,
+      lanIpv6DhcpMode: 'Enabled',
+      lanIpv6Address,
+      lanIpv6SubnetMask,
+      agcMode: 'Auto',
+      tddAllocationMode: 'Dynamic',
+      tddCpType: 'Normal CP',
+      tddSubFrameAllocation: '2:2',
+      tddCenterFrequency: '3.55 GHz',
+    };
+  }, [device.ipAddress]);
   const SIDEBAR_BADGE_COUNTS = React.useMemo<Record<string, number>>(() => ({
     'ip-interfaces': IP_INTERFACES_DATA.length,
     'radio-nodes': filteredRadioNodes.length,
@@ -1953,6 +2137,167 @@ function DeviceDetailPage({
           </div>
           )}
 
+          {activeSection === 'hcm-info' && isDas && (
+            <div className="space-y-6">
+              <Card>
+                <CardContent className="pt-6 space-y-8">
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-foreground">Local IP settings</h4>
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Local DHCP mode</span>
+                        <span className="font-medium">{hcmInfoValues.localDhcpMode}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Local IP address</span>
+                        <span className="font-medium font-mono">{hcmInfoValues.localIpAddress}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Local subnet mask</span>
+                        <span className="font-medium font-mono">{hcmInfoValues.localSubnetMask}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
+
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-foreground">LAN IP settings</h4>
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">LAN DHCP mode</span>
+                        <span className="font-medium">{hcmInfoValues.lanDhcpMode}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">LAN IP address</span>
+                        <span className="font-medium font-mono">{hcmInfoValues.lanIpAddress}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">LAN subnet mask</span>
+                        <span className="font-medium font-mono">{hcmInfoValues.lanSubnetMask}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">LAN default gateway</span>
+                        <span className="font-medium font-mono">{hcmInfoValues.lanDefaultGateway}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">LAN IPv6 DHCP mode</span>
+                        <span className="font-medium">{hcmInfoValues.lanIpv6DhcpMode}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">LAN IPv6 address</span>
+                        <span className="font-medium font-mono">{hcmInfoValues.lanIpv6Address}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">LAN IPv6 subnet mask</span>
+                        <span className="font-medium font-mono">{hcmInfoValues.lanIpv6SubnetMask}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
+
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-foreground">Settings</h4>
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">AGC mode</span>
+                        <span className="font-medium">{hcmInfoValues.agcMode}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
+
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-foreground">TDD configuration</h4>
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">TDD allocation mode</span>
+                        <span className="font-medium">{hcmInfoValues.tddAllocationMode}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">TDD CP type</span>
+                        <span className="font-medium">{hcmInfoValues.tddCpType}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">TDD sub frame allocation</span>
+                        <span className="font-medium">{hcmInfoValues.tddSubFrameAllocation}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">TDD center frequency</span>
+                        <span className="font-medium">{hcmInfoValues.tddCenterFrequency}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="my-8 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
+
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-foreground">Alarms</h4>
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">Overall status</span>
+                        <span className="inline-flex items-center gap-2 font-medium text-success">
+                          <span className="h-2.5 w-2.5 rounded-full bg-success" />
+                          Cleared
+                        </span>
+                      </div>
+                    </div>
+                    <div className="overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="h-8 px-2">Status</TableHead>
+                            <TableHead className="h-8 px-2">Alarm name</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="py-1.5 px-2 text-xs">
+                              <span className="inline-flex items-center gap-2 text-success">
+                                <span className="h-2.5 w-2.5 rounded-full bg-success" />
+                                Cleared
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs">Over Power</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="py-1.5 px-2 text-xs">
+                              <span className="inline-flex items-center gap-2 text-success">
+                                <span className="h-2.5 w-2.5 rounded-full bg-success" />
+                                Cleared
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs">UL In Pwr High</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="py-1.5 px-2 text-xs">
+                              <span className="inline-flex items-center gap-2 text-success">
+                                <span className="h-2.5 w-2.5 rounded-full bg-success" />
+                                Cleared
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs">VSWR High</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="py-1.5 px-2 text-xs">
+                              <span className="inline-flex items-center gap-2 text-success">
+                                <span className="h-2.5 w-2.5 rounded-full bg-success" />
+                                Cleared
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs">LNA Gain Imbalance</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {activeSection === 'commissioning' && (() => {
             const commissioningRows = [
               { step: 1, name: 'Upgrade', col2: [{ label: 'Current version', value: 'v2.1' }, { label: 'New version', value: 'v2.2' }], actions: ['Download', 'Upgrade'], highlight: false },
@@ -2183,7 +2528,7 @@ function DeviceDetailPage({
                   modelFilter={radioNodesModelFilter}
                   onModelFilterChange={setRadioNodesModelFilter}
                   indexFilter={radioNodesIndexFilter}
-                  onNameClick={isDas ? (row) => { setSelectedRemoteRow(row); setRemoteMapSheetOpen(true); } : undefined}
+                  onNameClick={isDas ? (row) => { setSelectedRemoteRow(row); setSelectedRemoteTopologyPath(null); setRemoteMapSheetOpen(true); } : undefined}
                 />
               </CardContent>
             </Card>
@@ -3449,7 +3794,21 @@ function DeviceDetailPage({
                         <TableBody>
                           {filteredDasInventory.map((item) => (
                             <TableRow key={item.serial}>
-                              <TableCell className="px-4 py-3 font-medium">{item.name}</TableCell>
+                              <TableCell className="px-4 py-3 font-medium">
+                                <DeviceLink
+                                  value={item.name}
+                                  maxLength={28}
+                                  onClick={() => {
+                                    handleDasTopologyNodeSelect({
+                                      id: item.id,
+                                      label: item.name,
+                                      status: item.status.toLowerCase(),
+                                      type: item.type,
+                                      model: item.serial,
+                                    });
+                                  }}
+                                />
+                              </TableCell>
                               <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.type}</TableCell>
                               <TableCell className="px-4 py-3">
                                 <DeviceStatus status={item.status} iconSize={14} />
@@ -3469,6 +3828,7 @@ function DeviceDetailPage({
                   searchQuery={dasTopologySearch}
                   statusFilter={dasTopologyStatusFilter}
                   typeFilter={dasTopologyTypeFilter}
+                  onNodeSelect={handleDasTopologyNodeSelect}
                 />
               )}
             </div>
@@ -4292,7 +4652,7 @@ function DeviceDetailPage({
         </SheetContent>
       </Sheet>
       <Sheet open={remoteMapSheetOpen} onOpenChange={setRemoteMapSheetOpen}>
-        <SheetContent side="right" className="sm:max-w-lg flex flex-col h-full">
+        <SheetContent side="right" className="w-[94vw] sm:max-w-5xl lg:max-w-6xl flex flex-col h-full">
           <SheetHeader className="shrink-0">
             <SheetTitle>
               {selectedRemoteRow ? `${selectedRemoteRow.index} - ${selectedRemoteRow.name}` : 'Details'}
@@ -4315,18 +4675,26 @@ function DeviceDetailPage({
             )}
           </SheetHeader>
           <div className="flex-1 min-h-0 pt-4 space-y-4 overflow-y-auto">
+            {remoteSheetHydrated ? (
+              <>
             {selectedRemoteRow && (
               <Card>
                 <CardHeader className="pb-4">
                   <CardTitle className="text-sm font-semibold">Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Name</span>
                       <span className="font-medium">{selectedRemoteRow.name}</span>
                     </div>
                     <div className="flex flex-col gap-1">
+                      <span className="text-muted-foreground">Location</span>
+                      <span className="font-medium">{selectedRemoteRow.description}</span>
+                    </div>
+                    {remoteSummaryExpanded && (
+                      <>
+                        <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Managed object</span>
                       <span className="font-medium font-mono">{`${device.id}/radio-units/${selectedRemoteRow.index}`}</span>
                     </div>
@@ -4336,7 +4704,7 @@ function DeviceDetailPage({
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Band</span>
-                      <span className="font-medium">{selectedRemoteRow.supportBands}</span>
+                      <span className="font-medium">{REMOTE_RF_TABLE_COLUMNS.join(', ')}</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-muted-foreground">Equipment index</span>
@@ -4346,39 +4714,106 @@ function DeviceDetailPage({
                       <span className="text-muted-foreground">Temperature</span>
                       <span className="font-medium tabular-nums">{(35.2 + selectedRemoteRow.index * 0.6).toFixed(1)} C</span>
                     </div>
+                        <div className="sm:col-span-3">
+                          <div className="my-2 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
+                        </div>
+                        <div className="sm:col-span-3">
+                          <h4 className="text-sm font-semibold text-foreground mb-2">Network information</h4>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">IP address</span>
+                          <span className="font-medium font-mono">{device.ipAddress}</span>
+                        </div>
+                        <div className="sm:col-span-3">
+                          <div className="my-2 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
+                        </div>
+                        <div className="sm:col-span-3">
+                          <h4 className="text-sm font-semibold text-foreground mb-2">Hardware information</h4>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Model</span>
+                          <span className="font-medium">{selectedRemoteRow.model}</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Serial number</span>
+                          <span className="font-medium font-mono">{selectedRemoteRow.serialNumber}</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Software version</span>
+                          <span className="font-medium">{device.version}</span>
+                        </div>
+                        <div className="sm:col-span-3">
+                          <div className="my-2 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
+                        </div>
+                        <div className="sm:col-span-3">
+                          <h4 className="text-sm font-semibold text-foreground mb-2">Maintenance information</h4>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Last update</span>
+                          <span className="font-medium">Feb 27, 2026 10:12</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Uptime (seconds)</span>
+                          <span className="font-medium tabular-nums">{(86400 + (selectedRemoteRow.index * 7200)).toLocaleString()}</span>
+                        </div>
+                        <div className="sm:col-span-3">
+                          <div className="my-2 h-px w-full rounded-full bg-gradient-to-r from-transparent via-border to-transparent" />
+                        </div>
+                        <div className="sm:col-span-3">
+                          <h4 className="text-sm font-semibold text-foreground mb-2">Version information</h4>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground">Software version</span>
+                          <span className="font-medium">{device.version}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-3 h-7 text-xs w-full justify-center"
+                    onClick={() => setRemoteSummaryExpanded((prev) => !prev)}
+                  >
+                    {remoteSummaryExpanded ? 'Show less' : 'See more'}
+                    <Icon name={remoteSummaryExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'} size={16} className="ml-1" />
+                  </Button>
                 </CardContent>
               </Card>
             )}
             {selectedRemoteRow && (
               <Card>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-sm font-semibold">Network information</CardTitle>
+                  <CardTitle className="text-sm font-semibold">Topology</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">IP address</span>
-                      <span className="font-medium font-mono">{device.ipAddress}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            {selectedRemoteRow && (
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-sm font-semibold">Hardware information</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Model</span>
-                      <span className="font-medium">{selectedRemoteRow.model}</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">Serial number</span>
-                      <span className="font-medium font-mono">{selectedRemoteRow.serialNumber}</span>
+                  <div className="overflow-x-auto">
+                    <div className="inline-flex min-w-full items-center gap-2">
+                      {selectedRemoteTopologyChain.map((node, index) => {
+                        const isCurrentDevice = index === selectedRemoteTopologyChain.length - 1;
+                        return (
+                          <React.Fragment key={`${node.label}-${index}`}>
+                            <div
+                              className={`min-w-[170px] rounded-md border px-3 py-2 ${
+                                isCurrentDevice
+                                  ? 'border-primary/90 bg-primary/15 ring-2 ring-primary/30 shadow-md'
+                                  : 'bg-card'
+                              }`}
+                            >
+                              <div className="inline-flex items-center gap-2">
+                                <span className={`h-2.5 w-2.5 rounded-full ${isCurrentDevice ? 'bg-primary' : 'bg-success'}`} />
+                                <span className="text-sm font-medium">{node.label}</span>
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">{node.subtitle}</p>
+                            </div>
+                            {index < selectedRemoteTopologyChain.length - 1 && (
+                              <div className="inline-flex items-center text-muted-foreground">
+                                <Icon name="chevron_right" size={18} />
+                              </div>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
                     </div>
                   </div>
                 </CardContent>
@@ -4390,15 +4825,48 @@ function DeviceDetailPage({
                   <CardTitle className="text-sm font-semibold">Band information</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-6">
+                  <div className="rounded-md border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="px-3 py-2 text-xs">Parameter</TableHead>
+                          {REMOTE_RF_TABLE_COLUMNS.map((column) => (
+                            <TableHead key={column} className="px-2 py-2 text-xs">{column}</TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedRemoteRfRows.map((row) => (
+                          <TableRow key={row.parameter}>
+                            <TableCell className="px-3 py-2 text-xs font-medium">
+                              <span>{row.parameter}</span>
+                            </TableCell>
+                            {row.values.map((value, index) => (
+                              <TableCell key={`${row.parameter}-${index}`} className="px-2 py-2 text-xs">
+                                {row.showDot ? (
+                                  <span className="inline-flex items-center gap-1.5 tabular-nums">
+                                    <span className="h-2.5 w-2.5 rounded-full bg-success" />
+                                    <span>{value}</span>
+                                  </span>
+                                ) : (
+                                  <span className="tabular-nums">{value}</span>
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">DL power</p>
                     <ChartContainer
                       config={{
                         time: { label: 'Time' },
                         band700: { label: '700', color: 'var(--chart-1)' },
-                        cellEsmr: { label: 'CELL/E SMR', color: 'var(--chart-2)' },
+                        cellEsmr: { label: 'CELL/ESMR', color: 'var(--chart-2)' },
                         pcs: { label: 'PCS', color: 'var(--chart-3)' },
-                        aw53: { label: 'AW53', color: 'var(--chart-4)' },
+                        aw53: { label: 'AWS3', color: 'var(--chart-4)' },
                       } satisfies ChartConfig}
                       className="h-[200px] min-h-[200px] w-full"
                     >
@@ -4408,10 +4876,10 @@ function DeviceDetailPage({
                         <YAxis tickLine={false} axisLine={false} width={36} />
                         <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
                         <ChartLegend content={renderBandStatsLegend} />
-                        <Line dataKey="band700" type="monotone" stroke="var(--color-band700)" strokeWidth={2} dot={false} />
-                        <Line dataKey="cellEsmr" type="monotone" stroke="var(--color-cellEsmr)" strokeWidth={2} dot={false} />
-                        <Line dataKey="pcs" type="monotone" stroke="var(--color-pcs)" strokeWidth={2} dot={false} />
-                        <Line dataKey="aw53" type="monotone" stroke="var(--color-aw53)" strokeWidth={2} dot={false} />
+                        <Line name="700" dataKey="band700" type="monotone" stroke="var(--color-band700)" strokeWidth={2} dot={false} />
+                        <Line name="CELL/ESMR" dataKey="cellEsmr" type="monotone" stroke="var(--color-cellEsmr)" strokeWidth={2} dot={false} />
+                        <Line name="PCS" dataKey="pcs" type="monotone" stroke="var(--color-pcs)" strokeWidth={2} dot={false} />
+                        <Line name="AWS3" dataKey="aw53" type="monotone" stroke="var(--color-aw53)" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ChartContainer>
                   </div>
@@ -4421,9 +4889,9 @@ function DeviceDetailPage({
                       config={{
                         time: { label: 'Time' },
                         ulBand700: { label: '700', color: 'var(--chart-1)' },
-                        ulCellEsmr: { label: 'CELL/E SMR', color: 'var(--chart-2)' },
+                        ulCellEsmr: { label: 'CELL/ESMR', color: 'var(--chart-2)' },
                         ulPcs: { label: 'PCS', color: 'var(--chart-3)' },
-                        ulAw53: { label: 'AW53', color: 'var(--chart-4)' },
+                        ulAw53: { label: 'AWS3', color: 'var(--chart-4)' },
                       } satisfies ChartConfig}
                       className="h-[200px] min-h-[200px] w-full"
                     >
@@ -4433,114 +4901,183 @@ function DeviceDetailPage({
                         <YAxis tickLine={false} axisLine={false} width={36} />
                         <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
                         <ChartLegend content={renderBandStatsLegend} />
-                        <Line dataKey="ulBand700" type="monotone" stroke="var(--color-ulBand700)" strokeWidth={2} dot={false} />
-                        <Line dataKey="ulCellEsmr" type="monotone" stroke="var(--color-ulCellEsmr)" strokeWidth={2} dot={false} />
-                        <Line dataKey="ulPcs" type="monotone" stroke="var(--color-ulPcs)" strokeWidth={2} dot={false} />
-                        <Line dataKey="ulAw53" type="monotone" stroke="var(--color-ulAw53)" strokeWidth={2} dot={false} />
+                        <Line name="700" dataKey="ulBand700" type="monotone" stroke="var(--color-ulBand700)" strokeWidth={2} dot={false} />
+                        <Line name="CELL/ESMR" dataKey="ulCellEsmr" type="monotone" stroke="var(--color-ulCellEsmr)" strokeWidth={2} dot={false} />
+                        <Line name="PCS" dataKey="ulPcs" type="monotone" stroke="var(--color-ulPcs)" strokeWidth={2} dot={false} />
+                        <Line name="AWS3" dataKey="ulAw53" type="monotone" stroke="var(--color-ulAw53)" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ChartContainer>
                   </div>
                 </CardContent>
               </Card>
             )}
+            {selectedRemoteRow && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-sm font-semibold">MRU Alarms</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="rounded-md border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[44px] px-3 py-2 text-xs">Status</TableHead>
+                          <TableHead className="px-3 py-2 text-xs">Alarm</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedRemoteMruAlarmRows.map((alarm) => (
+                          <TableRow key={alarm.name}>
+                            <TableCell className="px-3 py-2">{renderRemoteAlarmDot(alarm.status)}</TableCell>
+                            <TableCell className="px-3 py-2 text-xs">{alarm.name}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {selectedRemoteRow && (
+              <Card>
+                <CardContent className="pt-4">
+                  <Tabs value={remoteModuleTab} onValueChange={(value) => setRemoteModuleTab(value as (typeof REMOTE_MODULE_TABS)[number])}>
+                    <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
+                      {REMOTE_MODULE_TABS.map((tab) => (
+                        <TabsTrigger
+                          key={tab}
+                          value={tab}
+                          className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 text-xs"
+                        >
+                          {tab}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+
+                    <TabsContent value="Module Info" className="m-0 pt-3">
+                      <div className="rounded-md border p-3 text-xs space-y-1">
+                        <div><span className="text-muted-foreground">Label:</span> {selectedRemoteRow.name}</div>
+                        <div><span className="text-muted-foreground">Type:</span> {selectedRemoteRow.role}</div>
+                        <div><span className="text-muted-foreground">Status:</span> {selectedRemoteRow.status === 'Up' ? 'Online' : 'Offline'}</div>
+                        <div><span className="text-muted-foreground">Band:</span> {selectedRemoteRow.supportBands}</div>
+                        <div><span className="text-muted-foreground">Model:</span> {selectedRemoteRow.model}</div>
+                        <div><span className="text-muted-foreground">Serial:</span> {selectedRemoteRow.serialNumber}</div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="PAM Alarms" className="m-0 pt-3">
+                      <div className="rounded-md border overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="px-3 py-2 text-xs">Alarm</TableHead>
+                              <TableHead className="px-2 py-2 text-xs text-center">700</TableHead>
+                              <TableHead className="px-2 py-2 text-xs text-center">CELL/ESMR AWS3</TableHead>
+                              <TableHead className="px-2 py-2 text-xs text-center">PCS</TableHead>
+                              <TableHead className="px-2 py-2 text-xs text-center">WCS</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedRemotePamAlarmRows.map((row) => (
+                              <TableRow key={row.alarm}>
+                                <TableCell className="px-3 py-2 text-xs">{row.alarm}</TableCell>
+                                {row.cols.map((status, idx) => (
+                                  <TableCell key={`${row.alarm}-${idx}`} className="px-2 py-2 text-center">
+                                    <div className="inline-flex items-center justify-center">{renderRemoteAlarmDot(status as 'ok' | 'warning' | 'critical')}</div>
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="Alarms" className="m-0 pt-3">
+                      <div className="rounded-md border overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[44px] px-3 py-2 text-xs">Status</TableHead>
+                              <TableHead className="px-3 py-2 text-xs">Physical alarm</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedRemoteMruAlarmRows.map((alarm) => (
+                              <TableRow key={`module-${alarm.name}`}>
+                                <TableCell className="px-3 py-2">{renderRemoteAlarmDot(alarm.status)}</TableCell>
+                                <TableCell className="px-3 py-2 text-xs">{alarm.name}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="RF Parameters" className="m-0 pt-3">
+                      <div className="rounded-md border p-3 text-xs space-y-1">
+                        <div><span className="text-muted-foreground">DL output power:</span> 34 dBm</div>
+                        <div><span className="text-muted-foreground">UL input power:</span> 12 dBm</div>
+                        <div><span className="text-muted-foreground">Service state:</span> On</div>
+                        <div><span className="text-muted-foreground">Limiter:</span> Enabled</div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="Comment(N/A)" className="m-0 pt-3">
+                      <div className="rounded-md border p-3 text-xs text-muted-foreground">No comments available.</div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            )}
             <Card>
               <CardHeader className="pb-4">
                 <CardTitle className="text-sm font-semibold">Location</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="h-[360px] min-h-[360px]">
-                  <RegionsMap
-                    region={device.region}
-                    regions={device.region ? [device.region] : undefined}
-                    devices={selectedRemoteMapDevices}
-                    singleRegionZoom={13}
-                    heightClassName="h-full"
-                    devicePinSpreadScale={1}
-                    fitToDevices
-                    highlightedDeviceIds={selectedRemoteRow ? [`${device.id}-rn-${selectedRemoteRow.index}`] : []}
-                    fitToDeviceIds={selectedRemoteRow ? [`${device.id}-rn-${selectedRemoteRow.index}`] : undefined}
-                    deviceRoleById={radioNodesRoleByMapId}
-                    deviceLayoutProfile="dasHierarchy"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  Alarms
-                  <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs font-medium">
-                    {selectedRemoteRow?.alarms ?? 0}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4 space-y-2">
-                <div className="overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="h-8 px-2">Severity</TableHead>
-                        <TableHead className="h-8 px-2">Timestamp</TableHead>
-                        <TableHead className="h-8 px-2">Updated</TableHead>
-                        <TableHead className="h-8 px-2">Source</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(selectedRemoteRow?.alarms ?? 0) > 0 ? (
-                        <TableRow>
-                          <TableCell className="py-1.5 px-2">
-                            <span className="inline-flex items-center gap-1.5 text-xs">
-                              <Icon
-                                name={ALARM_TYPE_CONFIG[selectedRemoteRow?.alarmType ?? 'None'].name}
-                                size={14}
-                                className={ALARM_TYPE_CONFIG[selectedRemoteRow?.alarmType ?? 'None'].className}
-                              />
-                              {selectedRemoteRow?.alarmType}
-                            </span>
-                          </TableCell>
-                          <TableCell className="py-1.5 px-2 text-xs tabular-nums">Feb 27, 2026 10:12</TableCell>
-                          <TableCell className="py-1.5 px-2 text-xs tabular-nums">2 min ago</TableCell>
-                          <TableCell className="py-1.5 px-2 text-xs">{selectedRemoteRow?.name}</TableCell>
-                        </TableRow>
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground py-4">
-                            No active alarms.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-sm font-semibold">Notes</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {notes.length > 0 ? (
-                  <div className="space-y-4 max-h-[240px] overflow-y-auto">
-                    {notes.map((note) => (
-                      <div key={note.id} className="flex flex-col gap-1 w-full items-start">
-                        <div className="flex items-center w-2/3 min-w-0">
-                          <div className="rounded-2xl rounded-tl-sm bg-muted/60 px-3 py-2 text-base text-foreground w-max max-w-full break-words shrink-0 min-w-0">
-                            {note.content}
-                          </div>
-                        </div>
-                        <div className="w-2/3 min-w-0 text-left pl-3">
-                          <span className="text-[10px] text-muted-foreground tabular-nums">
-                            {note.author} · {note.datetime}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No notes.</p>
+                {selectedRemoteRow && (
+                  <p className="text-xs text-muted-foreground">{selectedRemoteRow.description}</p>
                 )}
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="relative h-[360px] min-h-[360px] w-full overflow-hidden bg-white p-3">
+                  <img
+                    src={remoteUnitMapBackgroundSrc}
+                    alt="Radio unit floor plan map background"
+                    className="h-full w-full object-contain"
+                  />
+                  {selectedRemoteRow && (
+                    <div
+                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                      style={selectedRemoteFloorplanMarkerStyle}
+                    >
+                      <div className="inline-flex items-center gap-1 rounded-full border bg-background/95 px-2 py-0.5 shadow-sm">
+                        <Icon name="place" size={16} className="text-destructive" />
+                        <span className="text-[11px] font-medium leading-none">{selectedRemoteRow.name}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
+              </>
+            ) : (
+              <div className="space-y-4 pr-1">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="h-24 animate-pulse rounded-md bg-muted/40" />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="h-40 animate-pulse rounded-md bg-muted/40" />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="h-72 animate-pulse rounded-md bg-muted/40" />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>

@@ -218,12 +218,33 @@ function generateTopology() {
 
 export function getDasTopologyInventoryRows() {
   const { nodes } = generateTopology();
+  const typeSerialPrefix: Record<string, string> = {
+    stack: "STK",
+    extension: "EXT",
+    ihu: "IHU",
+    hcm: "HCM",
+    rim: "RIM",
+    fmm: "FMM",
+    oim: "OIM",
+    mru: "MRU",
+    och_unit: "OCU",
+    och_bank: "OCB",
+    info: "INF",
+  };
+  const makeSerial = (nodeId: string, nodeType: string) => {
+    const base = nodeId.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const yy = 22 + (base % 4); // 22-25
+    const ww = (base % 52) + 1;
+    const batch = (base * 97) % 10000;
+    const prefix = typeSerialPrefix[nodeType] ?? "DAS";
+    return `${prefix}-${String(yy)}${String(ww).padStart(2, "0")}-${String(batch).padStart(4, "0")}`;
+  };
   return nodes.map((n) => ({
     id: n.id,
     name: n.label,
     type: TYPE_META[n.type]?.desc || n.type,
     status: mapStatusToInventory(n.status),
-    serial: n.model || n.id.toUpperCase(),
+    serial: makeSerial(n.id, n.type),
   }));
 }
 
@@ -333,7 +354,63 @@ function DasNodeShape({ node, pos, showLabel, onHover, onLeave, hovered, collaps
   );
 }
 
-export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter = "All" }: { searchQuery?: string; statusFilter?: string; typeFilter?: string }) {
+export interface DasTopologyNodeSelection {
+  id: string;
+  label: string;
+  status: string;
+  type: string;
+  model?: string;
+  location?: string;
+  protocol?: string;
+  band?: string;
+}
+
+export function getDasTopologyPathToNode(nodeId: string): DasTopologyNodeSelection[] {
+  const { nodes, links } = generateTopology();
+  const nodeById = Object.fromEntries(nodes.map((node) => [node.id, node]));
+  if (!nodeById[nodeId]) return [];
+
+  const parents: Record<string, string | null> = {};
+  nodes.forEach((node) => {
+    parents[node.id] = null;
+  });
+  links.forEach((link) => {
+    parents[link.target] = link.source;
+  });
+
+  const pathIds: string[] = [];
+  let cursor: string | null = nodeId;
+  while (cursor) {
+    pathIds.unshift(cursor);
+    cursor = parents[cursor] ?? null;
+  }
+
+  return pathIds
+    .map((id) => nodeById[id])
+    .filter(Boolean)
+    .map((node) => ({
+      id: node.id,
+      label: node.label,
+      status: node.status,
+      type: node.type,
+      model: node.model,
+      location: node.location,
+      protocol: node.protocol,
+      band: node.band,
+    }));
+}
+
+export function DasTopology({
+  searchQuery = "",
+  statusFilter = "All",
+  typeFilter = "All",
+  onNodeSelect,
+}: {
+  searchQuery?: string;
+  statusFilter?: string;
+  typeFilter?: string;
+  onNodeSelect?: (node: DasTopologyNodeSelection) => void;
+}) {
   const { nodes, links } = useMemo(() => generateTopology(), []);
   const [collapsed, setCollapsed]   = useState(new Set());
   const [animating, setAnimating]   = useState(new Set());
@@ -382,6 +459,25 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
     () => Object.fromEntries(nodes.map((n) => [n.id, n])),
     [nodes]
   );
+  const handleNodeSelection = useCallback((nodeId: string) => {
+    setSelectedNodeId(nodeId);
+    const node = nodeById[nodeId];
+    if (!node) return;
+    if (onNodeSelect) {
+      onNodeSelect({
+        id: node.id,
+        label: node.label,
+        status: node.status,
+        type: node.type,
+        model: node.model,
+        location: node.location,
+        protocol: node.protocol,
+        band: node.band,
+      });
+      return;
+    }
+    setModuleSheetOpen(true);
+  }, [nodeById, onNodeSelect]);
 
   const filteredLinks = useMemo(
     () => visLinks.filter((l) => filterMatchIds.has(l.source) && filterMatchIds.has(l.target)),
@@ -498,15 +594,17 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
           <Button variant="outline" size="sm" onClick={() => setXf({x:70,y:30,scale:1})} className="h-7 text-xs">
             Reset
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => setModuleSheetOpen(true)}
-            disabled={!selectedNode}
-          >
-            Module details
-          </Button>
+          {!onNodeSelect && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setModuleSheetOpen(true)}
+              disabled={!selectedNode}
+            >
+              Module details
+            </Button>
+          )}
           </div>
         </div>
       </div>
@@ -523,8 +621,7 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
               isCollapsed={(id) => collapsed.has(id)}
               onToggle={toggleCollapse}
               onNodeClick={(node) => {
-                setSelectedNodeId(node.id);
-                setModuleSheetOpen(true);
+                handleNodeSelection(node.id);
               }}
               onNodeMouseEnter={(node) => setHovered(node.id)}
               onNodeMouseLeave={() => setHovered(null)}
@@ -579,8 +676,7 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
                     hovered={hovered} collapsed={collapsed}
                     hasChildren={hasKids}
                     onSelect={(id) => {
-                      setSelectedNodeId(id);
-                      setModuleSheetOpen(true);
+                      handleNodeSelection(id);
                     }}
                     selected={selectedNodeId}
                     animatingIds={animating}/>
@@ -650,6 +746,7 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
         </div>
       </div>
       </Card>
+      {!onNodeSelect && (
       <Sheet open={moduleSheetOpen} onOpenChange={setModuleSheetOpen}>
         <SheetContent side="right" className="w-[94vw] sm:max-w-5xl lg:max-w-6xl flex flex-col h-full">
           <SheetHeader className="shrink-0">
@@ -873,6 +970,7 @@ export function DasTopology({ searchQuery = "", statusFilter = "All", typeFilter
           </div>
         </SheetContent>
       </Sheet>
+      )}
     </div>
     </TooltipProvider>
   );
