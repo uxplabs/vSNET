@@ -18,8 +18,14 @@ import PerformancePage from './components/PerformancePage'
 import DesignSystemPage from './components/DesignSystemPage'
 import WebTerminalPage from './components/WebTerminalPage'
 import type { DeviceRow } from './components/devices-data-table'
+import { NORTH_AMERICAN_REGIONS } from './constants/regions'
 
 type Page = 'dashboard' | 'devices' | 'device-detail' | 'tasks' | 'administration' | 'performance' | 'design-system'
+
+function getDefaultRegionsForUser(email: string): string[] {
+  if (email.toLowerCase() === 'udoe@acme.com') return [...NORTH_AMERICAN_REGIONS];
+  return ['Pacific Northwest'];
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -28,7 +34,14 @@ function App() {
   const [devicesStatusFilter, setDevicesStatusFilter] = useState<string>('All')
   const [devicesConfigStatusFilter, setDevicesConfigStatusFilter] = useState<string>('All')
   const [devicesRegionFilter, setDevicesRegionFilter] = useState<string>('All')
-  const [regions, setRegions] = useState<string[]>(['Pacific Northwest'])
+  const [regions, setRegions] = useState<string[]>(() => {
+    try {
+      const user = (localStorage.getItem('ams-current-user') ?? '').toLowerCase();
+      return getDefaultRegionsForUser(user);
+    } catch {
+      return ['Pacific Northwest'];
+    }
+  })
   const region = regions[0] ?? 'Pacific Northwest'
 
   // Per-user region restrictions
@@ -163,8 +176,16 @@ function App() {
       <>
         <LoginPage
           appName="AMS"
-          onLogin={async (username) => { try { localStorage.setItem('ams-current-user', username); } catch {} setIsAuthenticated(true); }}
-          onLoginWithSSO={async () => { try { localStorage.setItem('ams-current-user', 'sso-user'); } catch {} setIsAuthenticated(true); }}
+          onLogin={async (username) => {
+            try { localStorage.setItem('ams-current-user', username); } catch {}
+            setRegions(getDefaultRegionsForUser(username));
+            setIsAuthenticated(true);
+          }}
+          onLoginWithSSO={async () => {
+            try { localStorage.setItem('ams-current-user', 'sso-user'); } catch {}
+            setRegions(getDefaultRegionsForUser('sso-user'));
+            setIsAuthenticated(true);
+          }}
         />
         <Toaster />
       </>

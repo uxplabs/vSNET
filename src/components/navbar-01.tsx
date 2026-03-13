@@ -122,7 +122,7 @@ const Navbar01 = ({
   };
 
   const isAll = regions.length > 0 && allRegionNames.every((r) => regions.includes(r));
-  const regionDisplayList = isAll ? ['All'] : regions;
+  const regionDisplayList = isAll ? ['All regions'] : regions;
   const regionTriggerLabel =
     regionDisplayList.length === 0
       ? 'No regions'
