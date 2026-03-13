@@ -87,24 +87,24 @@ const REGION_PREFIXES: Record<string, string[]> = {
   'Mid-Atlantic': ['eNB-DCA', 'RN-DCA', 'eNB-BAL', 'RN-BAL'],
   'Eastern Canada': ['eNB-TOR', 'RN-TOR', 'eNB-MTL', 'RN-MTL'],
 };
-// DAS prefixes per region (used when the device type is DAS)
-const REGION_DAS_PREFIXES: Record<string, string[]> = {
-  'Pacific Northwest': ['DAS-SEA', 'DAS-PDX'],
-  'Northern California': ['DAS-SFO', 'DAS-OAK'],
-  'Southern California': ['DAS-LAX', 'DAS-SAN'],
-  'Desert Southwest': ['DAS-PHX', 'DAS-LAS'],
-  'Mountain West': ['DAS-DEN', 'DAS-SLC'],
-  'Great Plains': ['DAS-OMA', 'DAS-KC'],
-  'Texas': ['DAS-DAL', 'DAS-AUS'],
-  'Gulf Coast': ['DAS-HOU', 'DAS-NOL'],
-  'Southeast': ['DAS-ATL', 'DAS-CLT'],
-  'Florida': ['DAS-MIA', 'DAS-TPA'],
-  'Midwest': ['DAS-CHI', 'DAS-IND'],
-  'Great Lakes': ['DAS-DET', 'DAS-CLE'],
-  'Northeast': ['DAS-NYC', 'DAS-PHL'],
-  'New England': ['DAS-BOS', 'DAS-PVD'],
-  'Mid-Atlantic': ['DAS-DCA', 'DAS-BAL'],
-  'Eastern Canada': ['DAS-TOR', 'DAS-MTL'],
+// MA-series prefixes per region (used for MA3000/MA6200/MA6000 device types)
+const REGION_MA_PREFIXES: Record<string, Record<'MA3000' | 'MA6200' | 'MA6000', string[]>> = {
+  'Pacific Northwest': { MA3000: ['MA3000-SEA', 'MA3000-PDX'], MA6200: ['MA6200-SEA', 'MA6200-PDX'], MA6000: ['MA6000-SEA', 'MA6000-PDX'] },
+  'Northern California': { MA3000: ['MA3000-SFO', 'MA3000-OAK'], MA6200: ['MA6200-SFO', 'MA6200-OAK'], MA6000: ['MA6000-SFO', 'MA6000-OAK'] },
+  'Southern California': { MA3000: ['MA3000-LAX', 'MA3000-SAN'], MA6200: ['MA6200-LAX', 'MA6200-SAN'], MA6000: ['MA6000-LAX', 'MA6000-SAN'] },
+  'Desert Southwest': { MA3000: ['MA3000-PHX', 'MA3000-LAS'], MA6200: ['MA6200-PHX', 'MA6200-LAS'], MA6000: ['MA6000-PHX', 'MA6000-LAS'] },
+  'Mountain West': { MA3000: ['MA3000-DEN', 'MA3000-SLC'], MA6200: ['MA6200-DEN', 'MA6200-SLC'], MA6000: ['MA6000-DEN', 'MA6000-SLC'] },
+  'Great Plains': { MA3000: ['MA3000-OMA', 'MA3000-KC'], MA6200: ['MA6200-OMA', 'MA6200-KC'], MA6000: ['MA6000-OMA', 'MA6000-KC'] },
+  'Texas': { MA3000: ['MA3000-DAL', 'MA3000-AUS'], MA6200: ['MA6200-DAL', 'MA6200-AUS'], MA6000: ['MA6000-DAL', 'MA6000-AUS'] },
+  'Gulf Coast': { MA3000: ['MA3000-HOU', 'MA3000-NOL'], MA6200: ['MA6200-HOU', 'MA6200-NOL'], MA6000: ['MA6000-HOU', 'MA6000-NOL'] },
+  'Southeast': { MA3000: ['MA3000-ATL', 'MA3000-CLT'], MA6200: ['MA6200-ATL', 'MA6200-CLT'], MA6000: ['MA6000-ATL', 'MA6000-CLT'] },
+  'Florida': { MA3000: ['MA3000-MIA', 'MA3000-TPA'], MA6200: ['MA6200-MIA', 'MA6200-TPA'], MA6000: ['MA6000-MIA', 'MA6000-TPA'] },
+  'Midwest': { MA3000: ['MA3000-CHI', 'MA3000-IND'], MA6200: ['MA6200-CHI', 'MA6200-IND'], MA6000: ['MA6000-CHI', 'MA6000-IND'] },
+  'Great Lakes': { MA3000: ['MA3000-DET', 'MA3000-CLE'], MA6200: ['MA6200-DET', 'MA6200-CLE'], MA6000: ['MA6000-DET', 'MA6000-CLE'] },
+  'Northeast': { MA3000: ['MA3000-NYC', 'MA3000-PHL'], MA6200: ['MA6200-NYC', 'MA6200-PHL'], MA6000: ['MA6000-NYC', 'MA6000-PHL'] },
+  'New England': { MA3000: ['MA3000-BOS', 'MA3000-PVD'], MA6200: ['MA6200-BOS', 'MA6200-PVD'], MA6000: ['MA6000-BOS', 'MA6000-PVD'] },
+  'Mid-Atlantic': { MA3000: ['MA3000-DCA', 'MA3000-BAL'], MA6200: ['MA6200-DCA', 'MA6200-BAL'], MA6000: ['MA6000-DCA', 'MA6000-BAL'] },
+  'Eastern Canada': { MA3000: ['MA3000-TOR', 'MA3000-MTL'], MA6200: ['MA6200-TOR', 'MA6200-MTL'], MA6000: ['MA6000-TOR', 'MA6000-MTL'] },
 };
 // Deterministic type selector that distributes types across all regions
 // Uses a simple hash to break alignment with the 16-region cycle
@@ -113,19 +113,20 @@ function getDeviceType(i: number): string {
   let h = i;
   h = ((h >>> 0) * 2654435761) >>> 0; // Knuth multiplicative hash
   const r = h % 100;
-  // ~50% SN, ~15% CU, ~10% RCP, ~10% DAS, remaining SN
-  if (r < 50) return 'SN';
-  if (r < 65) return 'CU';
-  if (r < 75) return 'RCP';
-  if (r < 85) return 'DAS';
-  return 'SN';
+  // ~45% SN, ~15% CU, ~10% RCP, ~10% MA3000, ~10% MA6200, ~10% MA6000
+  if (r < 45) return 'SN';
+  if (r < 60) return 'CU';
+  if (r < 70) return 'RCP';
+  if (r < 80) return 'MA3000';
+  if (r < 90) return 'MA6200';
+  return 'MA6000';
 }
 // Deterministic pseudo-random status: ~72% Connected, ~10% Disconnected, ~18% In maintenance
-// DAS devices are ~90% Connected
+// MA-series devices are ~90% Connected
 function getDeviceStatus(i: number, deviceType?: string): string {
   // Use a different multiplier than getDeviceType to avoid correlation
   const hash = ((i * 1597334677) >>> 0) % 100;
-  if (deviceType === 'DAS') {
+  if (deviceType === 'MA3000' || deviceType === 'MA6200' || deviceType === 'MA6000') {
     if (hash < 90) return 'Connected';
     if (hash < 95) return 'Disconnected';
     return 'In maintenance';
@@ -154,8 +155,8 @@ function generateDevices(count: number): DeviceRow[] {
     const region = NORTH_AMERICAN_REGIONS[i % NORTH_AMERICAN_REGIONS.length];
     let prefix: string;
     let num: string;
-    if (deviceType === 'DAS') {
-      const dasPrefixes = REGION_DAS_PREFIXES[region] ?? ['DAS-UNK'];
+    if (deviceType === 'MA3000' || deviceType === 'MA6200' || deviceType === 'MA6000') {
+      const dasPrefixes = REGION_MA_PREFIXES[region]?.[deviceType] ?? [`${deviceType}-UNK`];
       if (!dasRegionCounters[region]) dasRegionCounters[region] = 0;
       dasRegionCounters[region]++;
       prefix = dasPrefixes[(dasRegionCounters[region] - 1) % dasPrefixes.length];

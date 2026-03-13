@@ -167,7 +167,7 @@ export function DeviceDrawer({ device, open, onOpenChange, onNavigateToDetails }
   if (!device) return null;
 
   const hasNotes = !!device.notes?.trim();
-  const isDas = device.type === 'DAS';
+  const isDas = device.type === 'MA3000' || device.type === 'MA6200' || device.type === 'MA6000';
 
   const scrollToNotes = () => {
     if (hasNotes && notesSectionRef.current) {

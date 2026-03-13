@@ -45,7 +45,7 @@ const SCOPE_OPTIONS = ['All', 'Global', 'Local'] as const;
 const GOLDEN_DEVICE_TYPE_OPTIONS = ['All', 'SN', 'CU', 'RCP'] as const;
 const GOLDEN_STATUS_OPTIONS = ['All', 'Pass', 'Fail'] as const;
 
-const CONFIG_NODE_TYPE_OPTIONS = ['SN', 'CU', 'VCU', 'RCP', 'DAS'] as const;
+const CONFIG_NODE_TYPE_OPTIONS = ['SN', 'CU', 'VCU', 'RCP', 'MA3000'] as const;
 const CONFIG_TECHNOLOGY_OPTIONS = ['LTE', '5G NR', 'NB-IoT', 'LTE-M', 'DSS'] as const;
 
 

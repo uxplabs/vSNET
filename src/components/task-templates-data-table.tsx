@@ -35,7 +35,7 @@ export const TASK_TEMPLATES_DATA: TaskTemplateRow[] = [
   { id: '1', name: 'Config backup template', golden: true, imageConstraints: 'v2.x, v3.x', domain: 'All devices', deviceType: 'SN' },
   { id: '2', name: 'KPI sync template', golden: false, imageConstraints: 'v3.0+', domain: 'Pacific Northwest', deviceType: 'CU' },
   { id: '3', name: 'Report generation template', golden: true, imageConstraints: 'v2.1+', domain: 'Core network', deviceType: 'RCP' },
-  { id: '4', name: 'Firmware check template', golden: false, imageConstraints: 'v2.2, v3.x', domain: 'Radio access', deviceType: 'DAS' },
+  { id: '4', name: 'Firmware check template', golden: false, imageConstraints: 'v2.2, v3.x', domain: 'Radio access', deviceType: 'MA3000' },
   { id: '5', name: 'Health check template', golden: true, imageConstraints: 'v3.x', domain: 'Edge devices', deviceType: 'VCU' },
 ];
 

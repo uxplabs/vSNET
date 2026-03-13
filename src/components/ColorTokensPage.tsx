@@ -529,7 +529,7 @@ function ColorTokensPage() {
                     </svg>
                   </div>
                   <div className="flex flex-col gap-2">
-                    {['SN (35%)', 'CU (25%)', 'RCP (20%)', 'DAS (12%)', 'Other (8%)'].map((label, i) => (
+                    {['SN (35%)', 'CU (25%)', 'RCP (20%)', 'MA3000 (12%)', 'Other (8%)'].map((label, i) => (
                       <div key={label} className="flex items-center gap-2 text-sm">
                         <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ backgroundColor: `var(--chart-${i + 1})` }} />
                         <span className="text-muted-foreground">{label}</span>

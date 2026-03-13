@@ -951,7 +951,7 @@ function DeviceDetailPage({
     setFloorPlanImgSrc(officeFloorPlanSrc);
   }, [officeFloorPlanSrc]);
   const remoteUnitMapBackgroundSrc = `${import.meta.env.BASE_URL}radio-unit-floor-plan.png`;
-  const isDas = device.type === 'DAS';
+  const isDas = device.type === 'MA3000' || device.type === 'MA6200' || device.type === 'MA6000';
   const SIDEBAR_ITEMS = isDas
     ? (['Summary', 'HCM info', 'Radio units', 'Inventory', 'SNMP details', 'Web terminal'] as const)
     : ([
@@ -1005,9 +1005,25 @@ function DeviceDetailPage({
   const [radioNodesIndexFilter, setRadioNodesIndexFilter] = useState('All');
   const [radioNodesStatusFilter, setRadioNodesStatusFilter] = useState('All');
   const [radioNodesModelFilter, setRadioNodesModelFilter] = useState('All');
+  const radioNodesSourceData = React.useMemo(
+    () => {
+      if (isDas && device.device === 'MA3000-HOU-001') {
+        return RADIO_NODES_DATA.map((node) => {
+          if (node.role !== 'dMRU') return node;
+          return {
+            ...node,
+            name: node.name.replace('dMRU', 'MRU'),
+            description: node.description.replace('Remote medium-power unit', 'Remote unit'),
+          };
+        });
+      }
+      return RADIO_NODES_DATA;
+    },
+    [isDas, device.device],
+  );
   const filteredRadioNodes = React.useMemo(
-    () => filterRadioNodes(RADIO_NODES_DATA, radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter, radioNodesIndexFilter),
-    [radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter, radioNodesIndexFilter],
+    () => filterRadioNodes(radioNodesSourceData, radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter, radioNodesIndexFilter),
+    [radioNodesSourceData, radioNodesSearch, radioNodesStatusFilter, radioNodesModelFilter, radioNodesIndexFilter],
   );
   const summaryMapDevices = React.useMemo<DeviceRow[]>(
     () => [
@@ -1041,6 +1057,7 @@ function DeviceDetailPage({
   const [remoteSummaryExpanded, setRemoteSummaryExpanded] = useState(false);
   const [remoteModuleTab, setRemoteModuleTab] = useState<(typeof REMOTE_MODULE_TABS)[number]>(REMOTE_MODULE_TABS[1]);
   const [selectedRemoteRow, setSelectedRemoteRow] = useState<RadioNodeRow | null>(null);
+  const currentTopologyNodeRef = React.useRef<HTMLDivElement | null>(null);
   const [selectedRemoteTopologyPath, setSelectedRemoteTopologyPath] = useState<DasTopologyNodeSelection[] | null>(null);
   React.useEffect(() => {
     setRemoteSummaryExpanded(false);
@@ -1230,6 +1247,50 @@ function DeviceDetailPage({
       }));
     }
 
+    if (device.device === 'MA3000-HOU-001') {
+      const selectedLabel = (selectedRemoteRow?.name ?? 'MRU-1').replace(/\s+/g, '-');
+      const baseChain = [
+        { label: 'Stack - HCM', subtitle: 'Root stack' },
+        { label: 'Extension - ONE Cl...', subtitle: 'Extension' },
+        { label: 'IHU-22-20-49-0201', subtitle: 'Chassis' },
+      ];
+      const role = selectedRemoteRow?.role;
+      if (role === 'RIU') {
+        return [
+          ...baseChain,
+          { label: 'RIM1 - VZW 700 Path...', subtitle: 'RIU branch' },
+          { label: selectedLabel, subtitle: 'Radio interface unit' },
+        ];
+      }
+      if (role === 'DCU') {
+        return [
+          ...baseChain,
+          { label: 'FMM9', subtitle: 'Fiber matrix branch' },
+          { label: selectedLabel, subtitle: 'Distribution cabinet unit' },
+        ];
+      }
+      if (role === 'DEU') {
+        return [
+          ...baseChain,
+          { label: 'OIM11', subtitle: 'Optical branch' },
+          { label: selectedLabel, subtitle: 'Distribution edge unit' },
+        ];
+      }
+      if (role === 'dLRU') {
+        return [
+          ...baseChain,
+          { label: 'OIM12', subtitle: 'Optical branch' },
+          { label: selectedLabel, subtitle: 'Low-power remote unit' },
+        ];
+      }
+      return [
+        ...baseChain,
+        { label: 'HIU-1', subtitle: 'HIU branch' },
+        { label: 'OIM-10', subtitle: 'Optical interface' },
+        { label: selectedLabel, subtitle: 'Remote unit' },
+      ];
+    }
+
     const role = selectedRemoteRow?.role;
     if (!role) {
       return [
@@ -1264,7 +1325,22 @@ function DeviceDetailPage({
       { label: 'MRU1', subtitle: 'Primary remote' },
       { label: selectedRemoteRow?.name ?? 'MRU', subtitle: 'Radio unit' },
     ];
-  }, [selectedRemoteTopologyPath, selectedRemoteRow?.name, selectedRemoteRow?.role]);
+  }, [device.device, selectedRemoteTopologyPath, selectedRemoteRow?.name, selectedRemoteRow?.role]);
+  const selectedRemoteTopologyDisplayChain = React.useMemo(() => {
+    const tail = selectedRemoteTopologyChain.slice(-3);
+    return tail.map((node) => ({ ...node, compact: false }));
+  }, [selectedRemoteTopologyChain]);
+  React.useEffect(() => {
+    if (!remoteMapSheetOpen || !remoteSheetHydrated) return;
+    const id = window.setTimeout(() => {
+      currentTopologyNodeRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }, 30);
+    return () => window.clearTimeout(id);
+  }, [remoteMapSheetOpen, remoteSheetHydrated, selectedRemoteTopologyDisplayChain.length, selectedRemoteRow?.name]);
   const selectedRemotePamAlarmRows = React.useMemo(
     () => [
       {
@@ -4789,24 +4865,27 @@ function DeviceDetailPage({
                 <CardContent className="pt-4">
                   <div className="overflow-x-auto">
                     <div className="inline-flex min-w-full items-center gap-2">
-                      {selectedRemoteTopologyChain.map((node, index) => {
-                        const isCurrentDevice = index === selectedRemoteTopologyChain.length - 1;
+                      {selectedRemoteTopologyDisplayChain.map((node, index) => {
+                        const isCurrentDevice = index === selectedRemoteTopologyDisplayChain.length - 1;
                         return (
                           <React.Fragment key={`${node.label}-${index}`}>
                             <div
-                              className={`min-w-[170px] rounded-md border px-3 py-2 ${
+                              ref={isCurrentDevice ? currentTopologyNodeRef : null}
+                              className={`${node.compact ? 'min-w-[130px]' : 'min-w-[170px]'} rounded-md border px-3 py-2 ${
                                 isCurrentDevice
                                   ? 'border-primary/90 bg-primary/15 ring-2 ring-primary/30 shadow-md'
-                                  : 'bg-card'
+                                  : node.compact
+                                    ? 'bg-muted/40 border-dashed'
+                                    : 'bg-card'
                               }`}
                             >
                               <div className="inline-flex items-center gap-2">
                                 <span className={`h-2.5 w-2.5 rounded-full ${isCurrentDevice ? 'bg-primary' : 'bg-success'}`} />
-                                <span className="text-sm font-medium">{node.label}</span>
+                                <span className={`${node.compact ? 'max-w-[90px] truncate' : ''} text-sm font-medium`}>{node.label}</span>
                               </div>
                               <p className="mt-1 text-xs text-muted-foreground">{node.subtitle}</p>
                             </div>
-                            {index < selectedRemoteTopologyChain.length - 1 && (
+                            {index < selectedRemoteTopologyDisplayChain.length - 1 && (
                               <div className="inline-flex items-center text-muted-foreground">
                                 <Icon name="chevron_right" size={18} />
                               </div>

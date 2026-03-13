@@ -1,0 +1,14 @@
+---
+description: Canonical DAS device types for this project
+alwaysApply: true
+---
+
+# DAS Device Type Canonical Values
+
+Use only these three DAS device types in code, UI labels, filters, and mock data:
+
+- `MA3000`
+- `MA6200`
+- `MA6000`
+
+When normalizing or validating DAS type values, prefer this exact set.

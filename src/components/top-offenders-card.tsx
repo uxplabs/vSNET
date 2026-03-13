@@ -190,7 +190,7 @@ function filterBySearch(row: Row<TopOffenderRow>, _columnId: string, filterValue
 }
 
 const REGION_OPTIONS = ['All', 'Southeast', 'Northeast', 'Pacific Northwest', 'Desert Southwest', 'Midwest', 'Mountain West'] as const;
-const TYPE_OPTIONS = ['All', 'SN', 'CU', 'RCP', 'DAS'] as const;
+const TYPE_OPTIONS = ['All', 'SN', 'CU', 'RCP', 'MA3000', 'MA6200', 'MA6000'] as const;
 const STATUS_OPTIONS = ['All', 'Connected', 'Disconnected'] as const;
 const ALARM_TYPE_FILTER_OPTIONS = ['All', 'Critical', 'Major', 'Minor'] as const;
 const CONFIG_STATUS_OPTIONS = ['All', 'Synchronized', 'Out of sync'] as const;

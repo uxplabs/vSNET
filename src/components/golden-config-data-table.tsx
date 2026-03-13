@@ -31,7 +31,7 @@ import { NodeTypeBadge } from '@/components/ui/node-type-badge';
 import { SelectConfigurationModal } from './select-configuration-modal';
 import { toast } from 'sonner';
 
-type DeviceType = 'SN' | 'RCP' | 'DAS';
+type DeviceType = 'SN' | 'RCP' | 'MA3000';
 
 interface GoldenConfigVersion {
   id: string;
@@ -63,7 +63,7 @@ const INITIAL_GOLDEN_CONFIG_DATA: GoldenConfigSection[] = [
     ],
   },
   {
-    deviceType: 'DAS',
+    deviceType: 'MA3000',
     versions: [
       { id: 'das-1', version: 'v1.5.0', lastUpdated: 'Jan 22, 2025', appliedDevices: 4, deviceMismatches: 0 },
     ],
@@ -166,7 +166,7 @@ export function GoldenConfigDataTable() {
   const [openSections, setOpenSections] = React.useState<Record<DeviceType, boolean>>({
     'SN': true,
     'RCP': true,
-    'DAS': true,
+    'MA3000': true,
   });
 
   // Dialog state

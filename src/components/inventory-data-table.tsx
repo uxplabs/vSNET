@@ -88,7 +88,7 @@ const DESCRIPTIONS = [
   'Secondary sector B',
   'Urban micro cell',
   'Highway coverage',
-  'Indoor DAS node',
+  'Indoor MA3000 node',
   'Rural macro site',
   'Dense urban overlay',
   'Suburban coverage',

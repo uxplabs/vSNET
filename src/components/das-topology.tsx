@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
-// ─── DAS hierarchy types (Inventory-aligned) ──────────────────────────────────
+// ─── MA3000 hierarchy types (Inventory-aligned) ──────────────────────────────────
 const T = {
   STACK: "stack",
   EXTENSION: "extension",
@@ -34,17 +34,17 @@ const T = {
 const STATUS = { ONLINE: "online", DEGRADED: "degraded", OFFLINE: "offline" };
 
 const TYPE_META = {
-  [T.STACK]: { label: "Stack", desc: "Management Stack", family: "DAS", tier: "root", color: "var(--chart-1)", glow: "var(--chart-1)" },
-  [T.EXTENSION]: { label: "Extension", desc: "Secondary Head End", family: "DAS", tier: "head-end", color: "var(--chart-2)", glow: "var(--chart-2)" },
-  [T.IHU]: { label: "IHU", desc: "Indoor Head Unit Chassis", family: "DAS", tier: "head-end", color: "var(--chart-3)", glow: "var(--chart-3)" },
-  [T.HCM]: { label: "HCM", desc: "Host Controller Module", family: "DAS", tier: "module", color: "var(--chart-4)", glow: "var(--chart-4)" },
-  [T.RIM]: { label: "RIM", desc: "Radio Interface Module", family: "DAS", tier: "module", color: "var(--chart-5)", glow: "var(--chart-5)" },
-  [T.FMM]: { label: "FMM", desc: "Fiber Matrix Module", family: "DAS", tier: "module", color: "var(--chart-6)", glow: "var(--chart-6)" },
-  [T.OIM]: { label: "OIM", desc: "Optical Interface Module", family: "DAS", tier: "module", color: "var(--chart-7)", glow: "var(--chart-7)" },
-  [T.MRU]: { label: "MRU", desc: "Remote Unit", family: "DAS", tier: "remote", color: "var(--chart-8)", glow: "var(--chart-8)" },
-  [T.OCH_UNIT]: { label: "OCH Unit", desc: "Optical Channel Unit", family: "DAS", tier: "distribution", color: "var(--chart-9)", glow: "var(--chart-9)" },
-  [T.OCH_BANK]: { label: "OCH", desc: "Optical Channels", family: "DAS", tier: "distribution", color: "var(--chart-10)", glow: "var(--chart-10)" },
-  [T.INFO]: { label: "Info", desc: "Telemetry/Alarm detail", family: "DAS", tier: "detail", color: "#64748b", glow: "#64748b" },
+  [T.STACK]: { label: "Stack", desc: "Management Stack", family: "MA3000", tier: "root", color: "var(--chart-1)", glow: "var(--chart-1)" },
+  [T.EXTENSION]: { label: "Extension", desc: "Secondary Head End", family: "MA3000", tier: "head-end", color: "var(--chart-2)", glow: "var(--chart-2)" },
+  [T.IHU]: { label: "IHU", desc: "Indoor Head Unit Chassis", family: "MA3000", tier: "head-end", color: "var(--chart-3)", glow: "var(--chart-3)" },
+  [T.HCM]: { label: "HCM", desc: "Host Controller Module", family: "MA3000", tier: "module", color: "var(--chart-4)", glow: "var(--chart-4)" },
+  [T.RIM]: { label: "RIM", desc: "Radio Interface Module", family: "MA3000", tier: "module", color: "var(--chart-5)", glow: "var(--chart-5)" },
+  [T.FMM]: { label: "FMM", desc: "Fiber Matrix Module", family: "MA3000", tier: "module", color: "var(--chart-6)", glow: "var(--chart-6)" },
+  [T.OIM]: { label: "OIM", desc: "Optical Interface Module", family: "MA3000", tier: "module", color: "var(--chart-7)", glow: "var(--chart-7)" },
+  [T.MRU]: { label: "MRU", desc: "Remote Unit", family: "MA3000", tier: "remote", color: "var(--chart-8)", glow: "var(--chart-8)" },
+  [T.OCH_UNIT]: { label: "OCH Unit", desc: "Optical Channel Unit", family: "MA3000", tier: "distribution", color: "var(--chart-9)", glow: "var(--chart-9)" },
+  [T.OCH_BANK]: { label: "OCH", desc: "Optical Channels", family: "MA3000", tier: "distribution", color: "var(--chart-10)", glow: "var(--chart-10)" },
+  [T.INFO]: { label: "Info", desc: "Telemetry/Alarm detail", family: "MA3000", tier: "detail", color: "#64748b", glow: "#64748b" },
 };
 
 const MODULE_TABS = ["Module Info", "PAM Alarms", "Alarms", "RF Parameters", "Comment(N/A)"] as const;
@@ -154,7 +154,7 @@ function generateTopology() {
   const extension = add({
     id: mkId(),
     type: T.EXTENSION,
-    label: "Extension - ONE Class March",
+    label: "Extension - ONE Cl...",
     status: STATUS.ONLINE,
     model: "Secondary Head End",
     location: "Head-end room",
@@ -176,7 +176,7 @@ function generateTopology() {
   const hcm = add({ id: mkId(), type: T.HCM, label: "HCM", status: STATUS.ONLINE, model: "HCM", protocol: "Control", location: "Slot 1" });
   link(ihu, hcm, { medium: "backplane" });
 
-  const rim1 = add({ id: mkId(), type: T.RIM, label: "RIM1 - VZW 700 Path A LTE", status: STATUS.ONLINE, model: "RIM1", band: "700 Path A LTE", location: "Slot 2", protocol: "RF" });
+  const rim1 = add({ id: mkId(), type: T.RIM, label: "RIM1 - VZW 700 Path...", status: STATUS.ONLINE, model: "RIM1", band: "700 Path A LTE", location: "Slot 2", protocol: "RF" });
   const rim2 = add({ id: mkId(), type: T.RIM, label: "RIM2 - VZW 850", status: STATUS.ONLINE, model: "RIM2", band: "850", location: "Slot 3", protocol: "RF" });
   const rim3 = add({ id: mkId(), type: T.RIM, label: "RIM3 - VZW 1900 PCS", status: STATUS.ONLINE, model: "RIM3", band: "1900 PCS", location: "Slot 4", protocol: "RF" });
   const rim4 = add({ id: mkId(), type: T.RIM, label: "RIM4 - TDD", status: STATUS.ONLINE, model: "RIM4", band: "TDD", location: "Slot 5", protocol: "RF" });
@@ -188,15 +188,16 @@ function generateTopology() {
   const fmm9 = add({ id: mkId(), type: T.FMM, label: "FMM9", status: STATUS.ONLINE, model: "FMM9", location: "Slot 9", protocol: "Fiber matrix" });
   link(ihu, fmm9, { medium: "backplane" });
 
-  const oim10 = add({ id: mkId(), type: T.OIM, label: "OIM10", status: STATUS.ONLINE, model: "OIM10", location: "Slot 10", protocol: "Optical" });
+  const hiu1 = add({ id: mkId(), type: T.HCM, label: "HIU-1", status: STATUS.ONLINE, model: "HIU-1", location: "Slot 10", protocol: "Optical" });
+  link(ihu, hiu1, { medium: "backplane" });
+  const oim10 = add({ id: mkId(), type: T.OIM, label: "OIM-10", status: STATUS.ONLINE, model: "OIM10", location: "Slot 10A", protocol: "Optical" });
   const oim11 = add({ id: mkId(), type: T.OIM, label: "OIM11", status: STATUS.ONLINE, model: "OIM11", location: "Slot 11", protocol: "Optical" });
   const oim12 = add({ id: mkId(), type: T.OIM, label: "OIM12", status: STATUS.ONLINE, model: "OIM12", location: "Slot 12", protocol: "Optical" });
-  [oim10, oim11, oim12].forEach((oim) => link(ihu, oim, { medium: "backplane" }));
+  link(hiu1, oim10, { medium: "backplane" });
+  [oim11, oim12].forEach((oim) => link(ihu, oim, { medium: "backplane" }));
 
-  const mru1 = add({ id: mkId(), type: T.MRU, label: "MRU1", status: STATUS.ONLINE, model: "MRU1", protocol: "Optical", location: "Coverage zone A" });
-  const mru2 = add({ id: mkId(), type: T.MRU, label: "MRU2", status: STATUS.ONLINE, model: "MRU2", protocol: "Optical", location: "Coverage zone B" });
+  const mru1 = add({ id: mkId(), type: T.MRU, label: "MRU-1", status: STATUS.ONLINE, model: "MRU1", protocol: "Optical", location: "Coverage zone A" });
   link(oim10, mru1, { medium: "fiber", label: "Optical transport" });
-  link(mru1, mru2, { medium: "fiber", label: "Daisy-chain" });
 
   const ochUnit = add({
     id: mkId(),
@@ -236,7 +237,7 @@ export function getDasTopologyInventoryRows() {
     const yy = 22 + (base % 4); // 22-25
     const ww = (base % 52) + 1;
     const batch = (base * 97) % 10000;
-    const prefix = typeSerialPrefix[nodeType] ?? "DAS";
+    const prefix = typeSerialPrefix[nodeType] ?? "MA3000";
     return `${prefix}-${String(yy)}${String(ww).padStart(2, "0")}-${String(batch).padStart(4, "0")}`;
   };
   return nodes.map((n) => ({

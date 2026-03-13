@@ -79,7 +79,7 @@ export interface DevicesPageProps {
 
 const STATUS_OPTIONS = ['All', 'Connected', 'Disconnected', 'In maintenance', 'Offline'] as const;
 const CONFIG_STATUS_OPTIONS = ['All', 'Synchronized', 'Out of sync', 'Pending'] as const;
-const TYPE_OPTIONS = ['All', 'SN', 'CU', 'RCP', 'DAS'] as const;
+const TYPE_OPTIONS = ['All', 'SN', 'CU', 'RCP', 'MA3000', 'MA6200', 'MA6000'] as const;
 const VERSION_OPTIONS = ['All', 'v2.1', 'v2.2', 'v3.0', 'v3.1'] as const;
 const ALARMS_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'None'] as const;
 const LABELS_OPTIONS = ['All', 'Production', 'Test', 'Staging', 'Legacy'] as const;
@@ -89,7 +89,7 @@ const EVENTS_SOURCE_OPTIONS = ['All', 'eNB', 'RN'] as const;
 const TASKS_TYPE_OPTIONS = ['All', 'Backup', 'Sync', 'Report', 'Maintenance'] as const;
 const TASKS_STATUS_OPTIONS = ['All', 'Scheduled', 'Running', 'Completed', 'Failed'] as const;
 const TASKS_DOMAIN_OPTIONS = ['All', ...NORTH_AMERICAN_REGIONS, 'Core network', 'Radio access', 'Edge devices'] as const;
-const SOFTWARE_TYPE_OPTIONS = ['All', 'SN', 'CU', 'RCP', 'DAS'] as const;
+const SOFTWARE_TYPE_OPTIONS = ['All', 'SN', 'CU', 'RCP', 'MA3000', 'MA6200', 'MA6000'] as const;
 const SOFTWARE_STATUS_OPTIONS = ['All', 'Not transferred', 'Transfer complete', 'Updating', 'Error', 'Complete'] as const;
 const SOFTWARE_VERSION_OPTIONS = ['All', 'v2.1', 'v2.2', 'v3.0', 'v3.1'] as const;
 const REPORT_TYPE_OPTIONS = ['All', 'Daily', 'Weekly', 'Monthly', 'Custom'] as const;
