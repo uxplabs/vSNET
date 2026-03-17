@@ -240,12 +240,30 @@ export function getDasTopologyInventoryRows() {
     const prefix = typeSerialPrefix[nodeType] ?? "MA3000";
     return `${prefix}-${String(yy)}${String(ww).padStart(2, "0")}-${String(batch).padStart(4, "0")}`;
   };
+  const makeIpAddress = (nodeId: string) => {
+    const base = nodeId.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    return `10.24.${(base % 20) + 10}.${(base % 200) + 20}`;
+  };
+  const makeHwVersion = (nodeId: string) => {
+    const base = nodeId.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    return `HW-${(base % 5) + 1}.${(base % 9) + 1}`;
+  };
+  const makeSwVersion = (nodeId: string) => {
+    const base = nodeId.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    return `SW-${(base % 4) + 2}.${(base % 10)}.${(base % 15) + 1}`;
+  };
   return nodes.map((n) => ({
     id: n.id,
     name: n.label,
+    managedObject: `MA3000/${n.type.toUpperCase()}/${n.id}`,
+    band: n.band || "700, CELL/ESMR, PCS, AWS3",
     type: TYPE_META[n.type]?.desc || n.type,
     status: mapStatusToInventory(n.status),
+    ipAddress: makeIpAddress(n.id),
+    model: n.model || (TYPE_META[n.type]?.label ?? n.type.toUpperCase()),
     serial: makeSerial(n.id, n.type),
+    hwVersion: makeHwVersion(n.id),
+    swVersion: makeSwVersion(n.id),
   }));
 }
 

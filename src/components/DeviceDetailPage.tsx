@@ -421,6 +421,33 @@ function getFloorRows(building: (typeof FLOOR_VIEW_BUILDINGS)[number]) {
     };
   });
 }
+const FLOOR_PLAN_PIN_POSITIONS = [
+  { left: 14, top: 16 },
+  { left: 28, top: 24 },
+  { left: 43, top: 18 },
+  { left: 57, top: 28 },
+  { left: 72, top: 20 },
+  { left: 22, top: 42 },
+  { left: 38, top: 50 },
+  { left: 54, top: 44 },
+  { left: 70, top: 54 },
+  { left: 30, top: 68 },
+  { left: 48, top: 72 },
+  { left: 66, top: 66 },
+] as const;
+function getFloorPlanDevicePins(buildingId: string, floorId: string, remotes: number) {
+  const pinCount = Math.max(1, Math.min(remotes, FLOOR_PLAN_PIN_POSITIONS.length));
+  return Array.from({ length: pinCount }).map((_, index) => {
+    const pos = FLOOR_PLAN_PIN_POSITIONS[index];
+    return {
+      id: `${floorId}-pin-${index + 1}`,
+      name: `RU-${index + 1}`,
+      leftPct: pos.left,
+      topPct: pos.top,
+      model: `${buildingId.toUpperCase().slice(0, 3)}-${String(index + 1).padStart(2, '0')}`,
+    };
+  });
+}
 type SiteChartId =
   | 'erab-establishment'
   | 'volte-establishment'
@@ -945,15 +972,10 @@ function DeviceDetailPage({
   initialSection,
   initialCreatedTemplate,
 }: DeviceDetailPageProps) {
-  const officeFloorPlanSrc = `${import.meta.env.BASE_URL}office-floor-plan.svg`;
-  const [floorPlanImgSrc, setFloorPlanImgSrc] = React.useState(officeFloorPlanSrc);
-  React.useEffect(() => {
-    setFloorPlanImgSrc(officeFloorPlanSrc);
-  }, [officeFloorPlanSrc]);
   const remoteUnitMapBackgroundSrc = `${import.meta.env.BASE_URL}radio-unit-floor-plan.png`;
   const isDas = device.type === 'MA3000' || device.type === 'MA6200' || device.type === 'MA6000';
   const SIDEBAR_ITEMS = isDas
-    ? (['Summary', 'HCM info', 'Radio units', 'Inventory', 'SNMP details', 'Web terminal'] as const)
+    ? (['Summary', 'HCM info', 'Radio units', 'Inventory', 'Floor plans', 'SNMP details', 'Web terminal'] as const)
     : ([
         'Summary',
         'Commissioning',
@@ -1058,6 +1080,7 @@ function DeviceDetailPage({
   const [remoteModuleTab, setRemoteModuleTab] = useState<(typeof REMOTE_MODULE_TABS)[number]>(REMOTE_MODULE_TABS[1]);
   const [selectedRemoteRow, setSelectedRemoteRow] = useState<RadioNodeRow | null>(null);
   const currentTopologyNodeRef = React.useRef<HTMLDivElement | null>(null);
+  const remoteLocationCardRef = React.useRef<HTMLDivElement | null>(null);
   const [selectedRemoteTopologyPath, setSelectedRemoteTopologyPath] = useState<DasTopologyNodeSelection[] | null>(null);
   React.useEffect(() => {
     setRemoteSummaryExpanded(false);
@@ -1127,7 +1150,7 @@ function DeviceDetailPage({
   );
   const handleDasTopologyNodeSelect = React.useCallback((node: DasTopologyNodeSelection) => {
     const normalizedLabel = node.label.toLowerCase();
-    const existing = RADIO_NODES_DATA.find((row) => row.name.toLowerCase() === normalizedLabel);
+    const existing = radioNodesSourceData.find((row) => row.name.toLowerCase() === normalizedLabel);
     const role: RadioNodeRow['role'] =
       normalizedLabel.includes('riu') ? 'RIU'
         : normalizedLabel.includes('dcu') ? 'DCU'
@@ -1141,9 +1164,13 @@ function DeviceDetailPage({
     const fallbackRow: RadioNodeRow = {
       index: fallbackIndex,
       name: node.label,
+      managedObject: `${device.id}/radio-units/${fallbackIndex}`,
       role,
+      band: '700, CELL/ESMR, PCS, AWS3',
       description: node.location ?? 'Topology path',
+      location: node.location ?? 'Topology path',
       status,
+      ipAddress: `10.14.0.${(fallbackIndex % 200) + 20}`,
       enabled: status === 'Up',
       alarms: status === 'Down' ? 1 : 0,
       alarmType,
@@ -1156,7 +1183,7 @@ function DeviceDetailPage({
     setSelectedRemoteRow(existing ?? fallbackRow);
     setSelectedRemoteTopologyPath(getDasTopologyPathToNode(node.id));
     setRemoteMapSheetOpen(true);
-  }, []);
+  }, [device.id, radioNodesSourceData]);
   const selectedRemoteBandLatest = React.useMemo(
     () => selectedRemoteBandPowerData[selectedRemoteBandPowerData.length - 1] ?? null,
     [selectedRemoteBandPowerData],
@@ -1244,6 +1271,7 @@ function DeviceDetailPage({
       return selectedRemoteTopologyPath.map((node) => ({
         label: node.label,
         subtitle: node.location || typeSubtitleMap[node.type] || 'Topology node',
+        sourceNode: node,
       }));
     }
 
@@ -1330,6 +1358,36 @@ function DeviceDetailPage({
     const tail = selectedRemoteTopologyChain.slice(-3);
     return tail.map((node) => ({ ...node, compact: false }));
   }, [selectedRemoteTopologyChain]);
+  const handleHeaderTopologyNodeClick = React.useCallback((nodeLabel: string, nodeSubtitle: string, sourceNode?: DasTopologyNodeSelection) => {
+    if (sourceNode) {
+      handleDasTopologyNodeSelect(sourceNode);
+      return;
+    }
+
+    const normalize = (value: string) => value.toLowerCase().replace(/[\s-]+/g, '');
+    const match = radioNodesSourceData.find((row) => normalize(row.name) === normalize(nodeLabel));
+    if (match) {
+      setSelectedRemoteRow(match);
+      setSelectedRemoteTopologyPath(null);
+      setRemoteMapSheetOpen(true);
+      return;
+    }
+
+    handleDasTopologyNodeSelect({
+      id: `header-${normalize(nodeLabel)}`,
+      label: nodeLabel,
+      status: 'online',
+      type: 'info',
+      location: nodeSubtitle,
+    });
+  }, [handleDasTopologyNodeSelect, radioNodesSourceData]);
+  const handleScrollToRemoteLocation = React.useCallback(() => {
+    remoteLocationCardRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+      inline: 'nearest',
+    });
+  }, []);
   React.useEffect(() => {
     if (!remoteMapSheetOpen || !remoteSheetHydrated) return;
     const id = window.setTimeout(() => {
@@ -2634,7 +2692,7 @@ function DeviceDetailPage({
             </Card>
           )}
 
-          {activeSection === 'floor-view' && (
+          {(activeSection === 'floor-view' || activeSection === 'floor-plans') && (
             <Tabs defaultValue={FLOOR_VIEW_BUILDINGS[0].id} className="space-y-6">
               <TabsList className="h-auto w-full justify-start gap-0 overflow-x-auto rounded-none border-b bg-transparent p-0">
                 {FLOOR_VIEW_BUILDINGS.map((building) => (
@@ -2698,6 +2756,9 @@ function DeviceDetailPage({
                       : floorRows;
                     const selectedFloorId = selectedFloorByBuilding[building.id] ?? floorRows[0]?.id;
                     const selectedFloor = floorRows.find((row) => row.id === selectedFloorId) ?? floorRows[0];
+                    const floorPlanPins = selectedFloor
+                      ? getFloorPlanDevicePins(building.id, selectedFloor.id, selectedFloor.remotes)
+                      : [];
                     return (
                   <div className="flex flex-col gap-6 lg:flex-row">
                     <InternalSidebarList
@@ -2739,27 +2800,28 @@ function DeviceDetailPage({
                         </div>
                       </div>
                       {selectedFloor?.id === `${building.id}-floor-12` ? (
-                        <div>
+                        <div className="relative h-[540px] min-h-[540px] w-full overflow-hidden bg-white px-3 py-20">
                           <img
-                            src={floorPlanImgSrc}
+                            src={remoteUnitMapBackgroundSrc}
                             alt={`${building.name} ${selectedFloor.name} floor plan`}
-                            className="w-full h-auto dark:hidden"
-                            onError={() => {
-                              if (floorPlanImgSrc !== '/office-floor-plan.svg') {
-                                setFloorPlanImgSrc('/office-floor-plan.svg');
-                              }
-                            }}
+                            className="h-full w-full scale-125 object-contain"
                           />
-                          <img
-                            src={floorPlanImgSrc}
-                            alt={`${building.name} ${selectedFloor.name} floor plan dark`}
-                            className="hidden w-full h-auto dark:block [filter:invert(1)_hue-rotate(180deg)_brightness(.9)_contrast(1.05)]"
-                            onError={() => {
-                              if (floorPlanImgSrc !== '/office-floor-plan.svg') {
-                                setFloorPlanImgSrc('/office-floor-plan.svg');
-                              }
-                            }}
-                          />
+                          {floorPlanPins.map((pin) => (
+                            <div
+                              key={pin.id}
+                              className="absolute -translate-x-1/2 -translate-y-1/2"
+                              style={{
+                                // Keep pins within the visible floor-plan area while preserving current map zoom.
+                                left: `${8 + pin.leftPct * 0.84}%`,
+                                top: `${18 + pin.topPct * 0.64}%`,
+                              }}
+                              title={`${pin.name} (${pin.model})`}
+                            >
+                              <div className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-destructive/40 bg-background/95 shadow-sm">
+                                <Icon name="place" size={14} className="text-destructive" />
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <div className="text-sm text-muted-foreground">
@@ -3778,8 +3840,12 @@ function DeviceDetailPage({
                 const q = dasTableSearch.trim().toLowerCase();
                 return (
                   item.name.toLowerCase().includes(q) ||
+                  item.managedObject.toLowerCase().includes(q) ||
+                  item.band.toLowerCase().includes(q) ||
                   item.type.toLowerCase().includes(q) ||
                   item.status.toLowerCase().includes(q) ||
+                  item.ipAddress.toLowerCase().includes(q) ||
+                  item.model.toLowerCase().includes(q) ||
                   item.serial.toLowerCase().includes(q)
                 );
               }
@@ -3862,9 +3928,15 @@ function DeviceDetailPage({
                         <TableHeader>
                           <TableRow>
                             <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Name</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Managed object</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Band</TableHead>
                             <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Type</TableHead>
                             <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Status</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">IP address</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Model</TableHead>
                             <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Serial number</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">HW version</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">SW version</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -3880,16 +3952,26 @@ function DeviceDetailPage({
                                       label: item.name,
                                       status: item.status.toLowerCase(),
                                       type: item.type,
-                                      model: item.serial,
+                                      model: item.model,
                                     });
                                   }}
                                 />
                               </TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.type}</TableCell>
+                              <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.managedObject}</TableCell>
+                              <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.band}</TableCell>
+                              <TableCell className="px-4 py-3">
+                                <Badge variant="secondary" className="font-normal">
+                                  {item.type}
+                                </Badge>
+                              </TableCell>
                               <TableCell className="px-4 py-3">
                                 <DeviceStatus status={item.status} iconSize={14} />
                               </TableCell>
+                              <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.ipAddress}</TableCell>
+                              <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.model}</TableCell>
                               <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.serial}</TableCell>
+                              <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.hwVersion}</TableCell>
+                              <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.swVersion}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -4730,23 +4812,62 @@ function DeviceDetailPage({
       <Sheet open={remoteMapSheetOpen} onOpenChange={setRemoteMapSheetOpen}>
         <SheetContent side="right" className="w-[94vw] sm:max-w-5xl lg:max-w-6xl flex flex-col h-full">
           <SheetHeader className="shrink-0">
-            <SheetTitle>
-              {selectedRemoteRow ? `${selectedRemoteRow.index} - ${selectedRemoteRow.name}` : 'Details'}
-            </SheetTitle>
+            <div className="flex items-center gap-3">
+              <SheetTitle className="truncate">
+                {selectedRemoteRow ? `${selectedRemoteRow.index} - ${selectedRemoteRow.name}` : 'Details'}
+              </SheetTitle>
+            </div>
             {selectedRemoteRow && (
-              <div className="flex items-center gap-2 text-sm">
-                <DeviceStatus
-                  status={selectedRemoteRow.status === 'Up' ? 'Connected' : 'Disconnected'}
-                  iconSize={14}
-                  className="text-sm"
-                />
-                <span className="text-muted-foreground">•</span>
-                <Icon
-                  name={selectedRemoteRow.enabled ? 'check_circle' : 'cancel'}
-                  size={16}
-                  className={selectedRemoteRow.enabled ? 'text-success' : 'text-muted-foreground'}
-                  aria-label={selectedRemoteRow.enabled ? 'Enabled' : 'Disabled'}
-                />
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Badge variant="secondary" className="shrink-0">
+                    {selectedRemoteRow.role}
+                  </Badge>
+                  <span className="text-muted-foreground">•</span>
+                  <DeviceStatus
+                    status={selectedRemoteRow.status === 'Up' ? 'Connected' : 'Disconnected'}
+                    iconSize={14}
+                    className="text-sm"
+                  />
+                  <span className="text-muted-foreground">•</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    onClick={handleScrollToRemoteLocation}
+                    aria-label="Scroll to location section"
+                    title="Go to location"
+                  >
+                    <Icon name="map" size={14} />
+                  </Button>
+                </div>
+                {selectedRemoteTopologyDisplayChain.length > 0 && (
+                  <div className="hidden min-w-0 items-center gap-1 text-xs text-muted-foreground sm:flex">
+                    {selectedRemoteTopologyDisplayChain.slice(-4).map((node, index, arr) => (
+                      <React.Fragment key={`header-topology-${node.label}-${index}`}>
+                        {(() => {
+                          const isCurrentDevice = index === arr.length - 1;
+                          return (
+                            <button
+                              type="button"
+                              disabled={isCurrentDevice}
+                              onClick={() => handleHeaderTopologyNodeClick(node.label, node.subtitle, node.sourceNode)}
+                              className={`max-w-[110px] truncate rounded-sm border px-1.5 py-0.5 transition-colors ${
+                                isCurrentDevice
+                                  ? 'border-primary/80 bg-primary/15 text-foreground font-medium'
+                                  : 'hover:bg-muted/60 hover:border-border/90 cursor-pointer'
+                              } ${isCurrentDevice ? 'cursor-default' : ''}`}
+                            >
+                              {node.label}
+                            </button>
+                          );
+                        })()}
+                        {index < arr.length - 1 && <Icon name="chevron_right" size={14} className="shrink-0" />}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </SheetHeader>
@@ -4857,47 +4978,7 @@ function DeviceDetailPage({
                 </CardContent>
               </Card>
             )}
-            {selectedRemoteRow && (
-              <Card>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-sm font-semibold">Topology</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="overflow-x-auto">
-                    <div className="inline-flex min-w-full items-center gap-2">
-                      {selectedRemoteTopologyDisplayChain.map((node, index) => {
-                        const isCurrentDevice = index === selectedRemoteTopologyDisplayChain.length - 1;
-                        return (
-                          <React.Fragment key={`${node.label}-${index}`}>
-                            <div
-                              ref={isCurrentDevice ? currentTopologyNodeRef : null}
-                              className={`${node.compact ? 'min-w-[130px]' : 'min-w-[170px]'} rounded-md border px-3 py-2 ${
-                                isCurrentDevice
-                                  ? 'border-primary/90 bg-primary/15 ring-2 ring-primary/30 shadow-md'
-                                  : node.compact
-                                    ? 'bg-muted/40 border-dashed'
-                                    : 'bg-card'
-                              }`}
-                            >
-                              <div className="inline-flex items-center gap-2">
-                                <span className={`h-2.5 w-2.5 rounded-full ${isCurrentDevice ? 'bg-primary' : 'bg-success'}`} />
-                                <span className={`${node.compact ? 'max-w-[90px] truncate' : ''} text-sm font-medium`}>{node.label}</span>
-                              </div>
-                              <p className="mt-1 text-xs text-muted-foreground">{node.subtitle}</p>
-                            </div>
-                            {index < selectedRemoteTopologyDisplayChain.length - 1 && (
-                              <div className="inline-flex items-center text-muted-foreground">
-                                <Icon name="chevron_right" size={18} />
-                              </div>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Topology hidden temporarily per UI request */}
             {selectedRemoteRow && (
               <Card>
                 <CardHeader className="pb-4">
@@ -5109,34 +5190,36 @@ function DeviceDetailPage({
                 </CardContent>
               </Card>
             )}
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-sm font-semibold">Location</CardTitle>
-                {selectedRemoteRow && (
-                  <p className="text-xs text-muted-foreground">{selectedRemoteRow.description}</p>
-                )}
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="relative h-[360px] min-h-[360px] w-full overflow-hidden bg-white p-3">
-                  <img
-                    src={remoteUnitMapBackgroundSrc}
-                    alt="Radio unit floor plan map background"
-                    className="h-full w-full object-contain"
-                  />
+            <div ref={remoteLocationCardRef}>
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-sm font-semibold">Location</CardTitle>
                   {selectedRemoteRow && (
-                    <div
-                      className="absolute -translate-x-1/2 -translate-y-1/2"
-                      style={selectedRemoteFloorplanMarkerStyle}
-                    >
-                      <div className="inline-flex items-center gap-1 rounded-full border bg-background/95 px-2 py-0.5 shadow-sm">
-                        <Icon name="place" size={16} className="text-destructive" />
-                        <span className="text-[11px] font-medium leading-none">{selectedRemoteRow.name}</span>
-                      </div>
-                    </div>
+                    <p className="text-xs text-muted-foreground">{selectedRemoteRow.description}</p>
                   )}
-                </div>
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="relative h-[360px] min-h-[360px] w-full overflow-hidden bg-white p-3">
+                    <img
+                      src={remoteUnitMapBackgroundSrc}
+                      alt="Radio unit floor plan map background"
+                      className="h-full w-full object-contain"
+                    />
+                    {selectedRemoteRow && (
+                      <div
+                        className="absolute -translate-x-1/2 -translate-y-1/2"
+                        style={selectedRemoteFloorplanMarkerStyle}
+                      >
+                        <div className="inline-flex items-center gap-1 rounded-full border bg-background/95 px-2 py-0.5 shadow-sm">
+                          <Icon name="place" size={16} className="text-destructive" />
+                          <span className="text-[11px] font-medium leading-none">{selectedRemoteRow.name}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
               </>
             ) : (
               <div className="space-y-4 pr-1">

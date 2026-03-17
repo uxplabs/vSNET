@@ -123,15 +123,21 @@ interface ChartColorRow {
 
 const CHART_SEQUENTIAL_COLORS: ChartColorRow[] = [
   { name: 'Chart 1', variable: '--chart-1', light: '#004F69', dark: '#38BDF8', usage: 'Primary series / single-metric charts' },
-  { name: 'Chart 2', variable: '--chart-2', light: '#2A9D8F', dark: '#2DD4BF', usage: 'Secondary series / comparisons' },
-  { name: 'Chart 3', variable: '--chart-3', light: '#E9C46A', dark: '#FBBF24', usage: 'Tertiary series / highlights' },
-  { name: 'Chart 4', variable: '--chart-4', light: '#F4A261', dark: '#FB923C', usage: 'Fourth series / warm accent' },
-  { name: 'Chart 5', variable: '--chart-5', light: '#E76F51', dark: '#DC2626', usage: 'Fifth series / alert-adjacent' },
+  { name: 'Chart 2', variable: '--chart-2', light: '#7C3AED', dark: '#A78BFA', usage: 'Secondary series / strong contrast' },
+  { name: 'Chart 3', variable: '--chart-3', light: '#06B6D4', dark: '#67E8F9', usage: 'Tertiary series / cool accent' },
+  { name: 'Chart 4', variable: '--chart-4', light: '#2563EB', dark: '#60A5FA', usage: 'Fourth series / cool highlight' },
+  { name: 'Chart 5', variable: '--chart-5', light: '#10B981', dark: '#34D399', usage: 'Fifth series / cool contrast' },
   { name: 'Chart 6', variable: '--chart-6', light: '#7C3AED', dark: '#A78BFA', usage: 'Extended palette' },
   { name: 'Chart 7', variable: '--chart-7', light: '#0EA5E9', dark: '#22D3EE', usage: 'Extended palette' },
   { name: 'Chart 8', variable: '--chart-8', light: '#10B981', dark: '#34D399', usage: 'Extended palette' },
   { name: 'Chart 9', variable: '--chart-9', light: '#F43F5E', dark: '#FB7185', usage: 'Extended palette' },
   { name: 'Chart 10', variable: '--chart-10', light: '#8B5CF6', dark: '#C4B5FD', usage: 'Extended palette' },
+  { name: 'Chart 11', variable: '--chart-11', light: '#14B8A6', dark: '#5EEAD4', usage: 'Extended palette' },
+  { name: 'Chart 12', variable: '--chart-12', light: '#2563EB', dark: '#60A5FA', usage: 'Extended palette' },
+  { name: 'Chart 13', variable: '--chart-13', light: '#84CC16', dark: '#A3E635', usage: 'Extended palette' },
+  { name: 'Chart 14', variable: '--chart-14', light: '#D946EF', dark: '#E879F9', usage: 'Extended palette' },
+  { name: 'Chart 15', variable: '--chart-15', light: '#F59E0B', dark: '#FCD34D', usage: 'Extended palette' },
+  { name: 'Chart 16', variable: '--chart-16', light: '#06B6D4', dark: '#67E8F9', usage: 'Extended palette' },
 ];
 
 const CHART_SEMANTIC_COLORS: ChartColorRow[] = [
