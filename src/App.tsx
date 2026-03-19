@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, lazy, Suspense } from 'react'
 import { Toaster } from './components/ui/sonner'
 import { TooltipProvider } from './components/ui/tooltip'
 import { DeviceLinkProvider } from './components/ui/device-link'
@@ -9,18 +9,19 @@ import { DEVICES_DATA } from './components/devices-data-table'
 import type { RadioNodeRow } from './components/radio-nodes-data-table'
 import type { NrCellRow } from './components/nr-cells-data-table'
 import LoginPage from './components/LoginPage'
-import DashboardPage from './components/DashboardPage'
-import DevicesPage from './components/DevicesPage'
-import DeviceDetailPage from './components/DeviceDetailPage'
-import TasksPage from './components/TasksPage'
-import AdministrationPage from './components/AdministrationPage'
-import PerformancePage from './components/PerformancePage'
-import DesignSystemPage from './components/DesignSystemPage'
-import WebTerminalPage from './components/WebTerminalPage'
 import type { DeviceRow } from './components/devices-data-table'
 import { NORTH_AMERICAN_REGIONS } from './constants/regions'
 
 type Page = 'dashboard' | 'devices' | 'device-detail' | 'tasks' | 'administration' | 'performance' | 'design-system'
+
+const DashboardPage = lazy(() => import('./components/DashboardPage'))
+const DevicesPage = lazy(() => import('./components/DevicesPage'))
+const DeviceDetailPage = lazy(() => import('./components/DeviceDetailPage'))
+const TasksPage = lazy(() => import('./components/TasksPage'))
+const AdministrationPage = lazy(() => import('./components/AdministrationPage'))
+const PerformancePage = lazy(() => import('./components/PerformancePage'))
+const DesignSystemPage = lazy(() => import('./components/DesignSystemPage'))
+const WebTerminalPage = lazy(() => import('./components/WebTerminalPage'))
 
 function getDefaultRegionsForUser(email: string): string[] {
   if (email.toLowerCase() === 'udoe@acme.com') return [...NORTH_AMERICAN_REGIONS];
@@ -162,10 +163,12 @@ function App() {
   if (isTerminalTab && terminalDevice) {
     return (
       <>
-        <WebTerminalPage
-          device={terminalDevice}
-          appName="AMS"
-        />
+        <Suspense fallback={<div className="h-screen flex items-center justify-center text-sm text-muted-foreground">Loading terminal...</div>}>
+          <WebTerminalPage
+            device={terminalDevice}
+            appName="AMS"
+          />
+        </Suspense>
         <Toaster />
       </>
     )
@@ -174,19 +177,21 @@ function App() {
   if (!isAuthenticated) {
     return (
       <>
-        <LoginPage
-          appName="AMS"
-          onLogin={async (username) => {
-            try { localStorage.setItem('ams-current-user', username); } catch {}
-            setRegions(getDefaultRegionsForUser(username));
-            setIsAuthenticated(true);
-          }}
-          onLoginWithSSO={async () => {
-            try { localStorage.setItem('ams-current-user', 'sso-user'); } catch {}
-            setRegions(getDefaultRegionsForUser('sso-user'));
-            setIsAuthenticated(true);
-          }}
-        />
+        <Suspense fallback={<div className="h-screen flex items-center justify-center text-sm text-muted-foreground">Loading login...</div>}>
+          <LoginPage
+            appName="AMS"
+            onLogin={async (username) => {
+              try { localStorage.setItem('ams-current-user', username); } catch {}
+              setRegions(getDefaultRegionsForUser(username));
+              setIsAuthenticated(true);
+            }}
+            onLoginWithSSO={async () => {
+              try { localStorage.setItem('ams-current-user', 'sso-user'); } catch {}
+              setRegions(getDefaultRegionsForUser('sso-user'));
+              setIsAuthenticated(true);
+            }}
+          />
+        </Suspense>
         <Toaster />
       </>
     )
@@ -195,40 +200,9 @@ function App() {
   return (
     <DeviceLinkProvider onDeviceClick={handleDeviceLinkClick}>
     <TooltipProvider delayDuration={300}>
-      {currentPage === 'dashboard' ? (
-        <DashboardPage
-          appName="AMS"
-          onSignOut={handleSignOut}
-          onNavigate={handleNavigate}
-          region={region}
-          regions={regions}
-          onRegionChange={(r) => setRegions([r])}
-          onRegionsChange={setRegions}
-          fixedRegion={fixedRegion}
-        />
-      ) : currentPage === 'device-detail' && selectedDevice ? (
-        <DeviceDetailPage
-          device={selectedDevice}
-          appName="AMS"
-          onSignOut={handleSignOut}
-          onBack={handleBackToDevices}
-          onNavigate={handleNavigate}
-          onOpenWebTerminal={handleOpenWebTerminal}
-          region={region}
-          regions={regions}
-          onRegionChange={(r) => setRegions([r])}
-          onRegionsChange={setRegions}
-          fixedRegion={fixedRegion}
-          scrollToAlarms={scrollToAlarmsForDeviceId === selectedDevice.id}
-          onScrollToAlarmsDone={() => setScrollToAlarmsForDeviceId(null)}
-          scrollToNotes={scrollToNotesForDeviceId === selectedDevice.id}
-          onScrollToNotesDone={() => setScrollToNotesForDeviceId(null)}
-          initialSection={deviceInitialSection}
-          initialCreatedTemplate={deviceCreatedTemplate}
-        />
-      ) : currentPage === 'tasks' ? (
-        <div className="h-screen overflow-hidden">
-          <TasksPage
+      <Suspense fallback={<div className="h-screen flex items-center justify-center text-sm text-muted-foreground">Loading page...</div>}>
+        {currentPage === 'dashboard' ? (
+          <DashboardPage
             appName="AMS"
             onSignOut={handleSignOut}
             onNavigate={handleNavigate}
@@ -238,10 +212,54 @@ function App() {
             onRegionsChange={setRegions}
             fixedRegion={fixedRegion}
           />
-        </div>
-      ) : currentPage === 'performance' ? (
-        <div className="h-screen overflow-hidden">
-          <PerformancePage
+        ) : currentPage === 'device-detail' && selectedDevice ? (
+          <DeviceDetailPage
+            device={selectedDevice}
+            appName="AMS"
+            onSignOut={handleSignOut}
+            onBack={handleBackToDevices}
+            onNavigate={handleNavigate}
+            onOpenWebTerminal={handleOpenWebTerminal}
+            region={region}
+            regions={regions}
+            onRegionChange={(r) => setRegions([r])}
+            onRegionsChange={setRegions}
+            fixedRegion={fixedRegion}
+            scrollToAlarms={scrollToAlarmsForDeviceId === selectedDevice.id}
+            onScrollToAlarmsDone={() => setScrollToAlarmsForDeviceId(null)}
+            scrollToNotes={scrollToNotesForDeviceId === selectedDevice.id}
+            onScrollToNotesDone={() => setScrollToNotesForDeviceId(null)}
+            initialSection={deviceInitialSection}
+            initialCreatedTemplate={deviceCreatedTemplate}
+          />
+        ) : currentPage === 'tasks' ? (
+          <div className="h-screen overflow-hidden">
+            <TasksPage
+              appName="AMS"
+              onSignOut={handleSignOut}
+              onNavigate={handleNavigate}
+              region={region}
+              regions={regions}
+              onRegionChange={(r) => setRegions([r])}
+              onRegionsChange={setRegions}
+              fixedRegion={fixedRegion}
+            />
+          </div>
+        ) : currentPage === 'performance' ? (
+          <div className="h-screen overflow-hidden">
+            <PerformancePage
+              appName="AMS"
+              onSignOut={handleSignOut}
+              onNavigate={handleNavigate}
+              region={region}
+              regions={regions}
+              onRegionChange={(r) => setRegions([r])}
+              onRegionsChange={setRegions}
+              fixedRegion={fixedRegion}
+            />
+          </div>
+        ) : currentPage === 'design-system' ? (
+          <DesignSystemPage
             appName="AMS"
             onSignOut={handleSignOut}
             onNavigate={handleNavigate}
@@ -251,51 +269,40 @@ function App() {
             onRegionsChange={setRegions}
             fixedRegion={fixedRegion}
           />
-        </div>
-      ) : currentPage === 'design-system' ? (
-        <DesignSystemPage
-          appName="AMS"
-          onSignOut={handleSignOut}
-          onNavigate={handleNavigate}
-          region={region}
-          regions={regions}
-          onRegionChange={(r) => setRegions([r])}
-          onRegionsChange={setRegions}
-          fixedRegion={fixedRegion}
-        />
-      ) : currentPage === 'administration' ? (
-        <div className="h-screen overflow-hidden">
-          <AdministrationPage
-            appName="AMS"
-            onSignOut={handleSignOut}
-            onNavigate={handleNavigate}
-            region={region}
-            regions={regions}
-            onRegionChange={(r) => setRegions([r])}
-            onRegionsChange={setRegions}
-            fixedRegion={fixedRegion}
-          />
-        </div>
-      ) : (
-        <div className="h-screen overflow-hidden">
-          <DevicesPage
-            appName="AMS"
-            onSignOut={handleSignOut}
-            onNavigate={handleNavigate}
-            mainTab={devicesTab}
-            onMainTabChange={setDevicesTab}
-            region={region}
-            regions={regions}
-            onRegionChange={(r) => setRegions([r])}
-            onRegionsChange={setRegions}
-            fixedRegion={fixedRegion}
-            onNavigateToDeviceDetail={handleNavigateToDeviceDetail}
-            initialStatusFilter={devicesStatusFilter}
-            initialConfigStatusFilter={devicesConfigStatusFilter}
-            initialRegionFilter={devicesRegionFilter}
-          />
-        </div>
-      )}
+        ) : currentPage === 'administration' ? (
+          <div className="h-screen overflow-hidden">
+            <AdministrationPage
+              appName="AMS"
+              onSignOut={handleSignOut}
+              onNavigate={handleNavigate}
+              region={region}
+              regions={regions}
+              onRegionChange={(r) => setRegions([r])}
+              onRegionsChange={setRegions}
+              fixedRegion={fixedRegion}
+            />
+          </div>
+        ) : (
+          <div className="h-screen overflow-hidden">
+            <DevicesPage
+              appName="AMS"
+              onSignOut={handleSignOut}
+              onNavigate={handleNavigate}
+              mainTab={devicesTab}
+              onMainTabChange={setDevicesTab}
+              region={region}
+              regions={regions}
+              onRegionChange={(r) => setRegions([r])}
+              onRegionsChange={setRegions}
+              fixedRegion={fixedRegion}
+              onNavigateToDeviceDetail={handleNavigateToDeviceDetail}
+              initialStatusFilter={devicesStatusFilter}
+              initialConfigStatusFilter={devicesConfigStatusFilter}
+              initialRegionFilter={devicesRegionFilter}
+            />
+          </div>
+        )}
+      </Suspense>
       <Toaster />
       <DeviceDrawer
         device={globalDrawerDevice}

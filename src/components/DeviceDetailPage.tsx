@@ -7,7 +7,6 @@ import { Icon } from './Icon';
 import { DeviceStatus } from './ui/device-status';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { DasTopology, getDasTopologyInventoryRows, getDasTopologyPathToNode, type DasTopologyNodeSelection } from './das-topology';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
@@ -975,7 +974,7 @@ function DeviceDetailPage({
   const remoteUnitMapBackgroundSrc = `${import.meta.env.BASE_URL}radio-unit-floor-plan.png`;
   const isDas = device.type === 'MA3000' || device.type === 'MA6200' || device.type === 'MA6000';
   const SIDEBAR_ITEMS = isDas
-    ? (['Summary', 'HCM info', 'Radio units', 'Inventory', 'Floor plans', 'SNMP details', 'Web terminal'] as const)
+    ? (['Summary', 'HCM info', 'Radio units', 'Inventory', 'Topology', 'Floor plans', 'SNMP details', 'Web terminal'] as const)
     : ([
         'Summary',
         'Commissioning',
@@ -1562,7 +1561,6 @@ function DeviceDetailPage({
     }
   }, [expandedSiteChart]);
 
-  const [dasInventoryView, setDasInventoryView] = useState<'list' | 'map'>('list');
   const [dasTopologySearch, setDasTopologySearch] = useState('');
   const [dasTopologyStatusFilter, setDasTopologyStatusFilter] = useState('All');
   const [dasTopologyTypeFilter, setDasTopologyTypeFilter] = useState('All');
@@ -3855,143 +3853,133 @@ function DeviceDetailPage({
             return (
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3">
-                {dasInventoryView === 'map' ? (
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="relative w-full sm:max-w-[240px] shrink-0">
-                      <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                      <input
-                        type="text"
-                        placeholder="Search by label, band, location..."
-                        value={dasTopologySearch}
-                        onChange={(e) => setDasTopologySearch(e.target.value)}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 pl-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      />
-                    </div>
-                    <FilterSelect
-                      value={dasTopologyStatusFilter}
-                      onValueChange={setDasTopologyStatusFilter}
-                      label="Status"
-                      options={['All', 'Online', 'Degraded', 'Offline']}
-                      className="w-[140px] shrink-0"
-                    />
-                    <FilterSelect
-                      value={dasTopologyTypeFilter}
-                      onValueChange={setDasTopologyTypeFilter}
-                      label="Type"
-                      options={['All', 'RIU', 'DCU', 'DEU', 'dLRU', 'dMRU', 'dHRU', 'AUC', 'EU', 'EUG', 'N2RU', 'M2RU', 'H2RU', 'N3RU', 'M3RU']}
-                      className="w-[170px] shrink-0"
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="relative w-full sm:max-w-[240px] shrink-0">
+                    <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search name, type, status..."
+                      value={dasTableSearch}
+                      onChange={(e) => setDasTableSearch(e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 pl-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     />
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="relative w-full sm:max-w-[240px] shrink-0">
-                      <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                      <input
-                        type="text"
-                        placeholder="Search name, type, status..."
-                        value={dasTableSearch}
-                        onChange={(e) => setDasTableSearch(e.target.value)}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 pl-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      />
-                    </div>
-                    <FilterSelect
-                      value={dasTableStatusFilter}
-                      onValueChange={setDasTableStatusFilter}
-                      label="Status"
-                      options={dasTableStatusOptions}
-                      className="w-[150px] shrink-0"
-                    />
-                    <FilterSelect
-                      value={dasTableTypeFilter}
-                      onValueChange={setDasTableTypeFilter}
-                      label="Type"
-                      options={dasTableTypeOptions}
-                      className="w-[180px] shrink-0"
-                    />
-                  </div>
-                )}
-                <ToggleGroup type="single" value={dasInventoryView} onValueChange={(v) => v && setDasInventoryView(v as 'list' | 'map')} size="sm" variant="outline">
-                  <ToggleGroupItem value="list" aria-label="Table view" title="Table view">
-                    <Icon name="view_list" size={16} />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="map" aria-label="Graph view" title="Graph view">
-                    <Icon name="account_tree" size={16} />
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                  <FilterSelect
+                    value={dasTableStatusFilter}
+                    onValueChange={setDasTableStatusFilter}
+                    label="Status"
+                    options={dasTableStatusOptions}
+                    className="w-[150px] shrink-0"
+                  />
+                  <FilterSelect
+                    value={dasTableTypeFilter}
+                    onValueChange={setDasTableTypeFilter}
+                    label="Type"
+                    options={dasTableTypeOptions}
+                    className="w-[180px] shrink-0"
+                  />
+                </div>
               </div>
 
-              {dasInventoryView === 'list' && (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="overflow-hidden rounded-lg border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Name</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Managed object</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Band</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Type</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Status</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">IP address</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Model</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Serial number</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">HW version</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">SW version</TableHead>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="overflow-hidden rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Name</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Managed object</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Band</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Type</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Status</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">IP address</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Model</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Serial number</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">HW version</TableHead>
+                          <TableHead className="px-4 py-3 h-10 whitespace-nowrap">SW version</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredDasInventory.map((item) => (
+                          <TableRow key={item.serial}>
+                            <TableCell className="px-4 py-3 font-medium">
+                              <DeviceLink
+                                value={item.name}
+                                maxLength={28}
+                                onClick={() => {
+                                  handleDasTopologyNodeSelect({
+                                    id: item.id,
+                                    label: item.name,
+                                    status: item.status.toLowerCase(),
+                                    type: item.type,
+                                    model: item.model,
+                                  });
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.managedObject}</TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.band}</TableCell>
+                            <TableCell className="px-4 py-3">
+                              <Badge variant="secondary" className="font-normal">
+                                {item.type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <DeviceStatus status={item.status} iconSize={14} />
+                            </TableCell>
+                            <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.ipAddress}</TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.model}</TableCell>
+                            <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.serial}</TableCell>
+                            <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.hwVersion}</TableCell>
+                            <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.swVersion}</TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredDasInventory.map((item) => (
-                            <TableRow key={item.serial}>
-                              <TableCell className="px-4 py-3 font-medium">
-                                <DeviceLink
-                                  value={item.name}
-                                  maxLength={28}
-                                  onClick={() => {
-                                    handleDasTopologyNodeSelect({
-                                      id: item.id,
-                                      label: item.name,
-                                      status: item.status.toLowerCase(),
-                                      type: item.type,
-                                      model: item.model,
-                                    });
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.managedObject}</TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.band}</TableCell>
-                              <TableCell className="px-4 py-3">
-                                <Badge variant="secondary" className="font-normal">
-                                  {item.type}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="px-4 py-3">
-                                <DeviceStatus status={item.status} iconSize={14} />
-                              </TableCell>
-                              <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.ipAddress}</TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-muted-foreground">{item.model}</TableCell>
-                              <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.serial}</TableCell>
-                              <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.hwVersion}</TableCell>
-                              <TableCell className="px-4 py-3 font-mono text-sm text-muted-foreground">{item.swVersion}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {dasInventoryView === 'map' && (
-                <DasTopology
-                  searchQuery={dasTopologySearch}
-                  statusFilter={dasTopologyStatusFilter}
-                  typeFilter={dasTopologyTypeFilter}
-                  onNodeSelect={handleDasTopologyNodeSelect}
-                />
-              )}
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
             );
           })()}
+
+          {activeSection === 'topology' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="relative w-full sm:max-w-[240px] shrink-0">
+                  <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search by label, band, location..."
+                    value={dasTopologySearch}
+                    onChange={(e) => setDasTopologySearch(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 pl-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+                <FilterSelect
+                  value={dasTopologyStatusFilter}
+                  onValueChange={setDasTopologyStatusFilter}
+                  label="Status"
+                  options={['All', 'Online', 'Degraded', 'Offline']}
+                  className="w-[140px] shrink-0"
+                />
+                <FilterSelect
+                  value={dasTopologyTypeFilter}
+                  onValueChange={setDasTopologyTypeFilter}
+                  label="Type"
+                  options={['All', 'Stack', 'Extension', 'IHU', 'HCM', 'RIM', 'FMM', 'OIM', 'MRU', 'OCH Unit', 'OCH']}
+                  className="w-[180px] shrink-0"
+                />
+              </div>
+
+              <DasTopology
+                searchQuery={dasTopologySearch}
+                statusFilter={dasTopologyStatusFilter}
+                typeFilter={dasTopologyTypeFilter}
+                onNodeSelect={handleDasTopologyNodeSelect}
+              />
+            </div>
+          )}
 
           {activeSection === 'snmp-details' && (
             <div className="space-y-6">
@@ -4853,7 +4841,7 @@ function DeviceDetailPage({
                               type="button"
                               disabled={isCurrentDevice}
                               onClick={() => handleHeaderTopologyNodeClick(node.label, node.subtitle, node.sourceNode)}
-                              className={`max-w-[110px] truncate rounded-sm border px-1.5 py-0.5 transition-colors ${
+                              className={`max-w-[160px] truncate rounded-md border px-2.5 py-1 text-sm transition-colors ${
                                 isCurrentDevice
                                   ? 'border-primary/80 bg-primary/15 text-foreground font-medium'
                                   : 'hover:bg-muted/60 hover:border-border/90 cursor-pointer'

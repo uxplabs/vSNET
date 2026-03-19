@@ -5,6 +5,22 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+
+          if (id.includes('recharts') || id.includes('d3-')) return 'charts-vendor';
+          if (id.includes('leaflet')) return 'map-vendor';
+          if (id.includes('@radix-ui')) return 'radix-vendor';
+          if (id.includes('react') || id.includes('scheduler')) return 'react-vendor';
+
+          return 'vendor';
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navbar01 } from './navbar-01';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
@@ -8,7 +8,9 @@ import { Input } from './ui/input';
 import { FilterSelect } from './ui/filter-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
+import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Card, CardContent } from './ui/card';
 import {
   AlertDialog,
@@ -45,11 +47,10 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { AccessControlUsersDataTable, ACCESS_CONTROL_USERS_DATA } from './access-control-users-data-table';
-import { AccessControlDomainsDataTable, ACCESS_CONTROL_DOMAINS_DATA } from './access-control-domains-data-table';
-import type { AccessControlDomainRow } from './access-control-domains-data-table';
-import { AddDomainSheet } from './add-domain-sheet';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
+import { InternalSidebarList } from './ui/internal-sidebar-list';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import FaultManagementPage from './FaultManagementPage';
 import LabelManagementPage from './LabelManagementPage';
 import FileManagementPage from './FileManagementPage';
@@ -90,6 +91,53 @@ const SIDEBAR_ITEMS = [
 const PROFILE_OPTIONS = ['All', 'Administrator', 'Operator', 'Viewer'] as const;
 const DEPARTMENT_OPTIONS = ['All', 'Engineering', 'Operations', 'Support', 'Management'] as const;
 const LOCATION_OPTIONS = ['All', 'Seattle', 'Portland', 'San Francisco', 'Phoenix', 'New York'] as const;
+const ADMIN_OPERATION_OPTIONS = ['Configure Profile', 'System Administration', 'User Management'] as const;
+const AUDIT_DATE_RANGE_OPTIONS = ['All', 'Today', 'Last 7 days', 'Last 30 days', 'Custom'] as const;
+const APPLICATION_OPERATION_OPTIONS = [
+  'Manage Label Management',
+  'Manage Node',
+  'Manage Topology',
+  'Manage Performance',
+  'Manage Tasks',
+  'View Events',
+  'View Label Management',
+  'View Performance',
+  'View Profile',
+  'View Node',
+  'View Tasks',
+  'View Topology',
+] as const;
+const AUDIT_TRAIL_ROWS = [
+  { seqNo: 1, operationDateTime: 'Mar 05, 2026 09:12', username: 'admin@acme.com', operationName: 'Update region name', operationStatus: 'Allowed', ageDays: 0 },
+  { seqNo: 2, operationDateTime: 'Mar 04, 2026 16:48', username: 'operator@acme.com', operationName: 'Modify profile permissions', operationStatus: 'Allowed', ageDays: 1 },
+  { seqNo: 3, operationDateTime: 'Mar 03, 2026 11:02', username: 'viewer@acme.com', operationName: 'Attempt user management', operationStatus: 'Denied', ageDays: 2 },
+  { seqNo: 4, operationDateTime: 'Mar 01, 2026 14:35', username: 'admin@acme.com', operationName: 'Enable login banner', operationStatus: 'Allowed', ageDays: 4 },
+  { seqNo: 5, operationDateTime: 'Feb 18, 2026 08:21', username: 'operator@acme.com', operationName: 'Change authentication mode', operationStatus: 'Allowed', ageDays: 16 },
+] as const;
+const ALARM_FORWARDING_ROWS = [
+  { name: 'Primary NMS', hostName: 'nms-core-01.acme.net' },
+  { name: 'Backup NMS', hostName: 'nms-dr-01.acme.net' },
+] as const;
+const SYSLOG_FORWARDING_ROWS = [
+  {
+    hostName: 'syslog-west-01.acme.net',
+    port: '514',
+    enabled: true,
+    enabledEvents: ['Critical alarms', 'Major alarms', 'Node status changes'],
+    description: 'Primary west-region syslog collector',
+  },
+  {
+    hostName: 'syslog-central-01.acme.net',
+    port: '1514',
+    enabled: false,
+    enabledEvents: ['Authentication events', 'Configuration changes'],
+    description: 'Secondary collector for compliance logging',
+  },
+] as const;
+interface EmailGroupSettings {
+  name: string;
+  emailAddresses: string[];
+}
 
 export interface ProfileSchedule { days: string[]; allDay: boolean; startTime: string; endTime: string }
 export interface ProfileAction { action: string; details: string; detailType?: 'badge' }
@@ -102,6 +150,11 @@ export interface ProfileData {
   actions: ProfileAction[];
   schedules: Record<string, ProfileSchedule>;
   rules: ProfileRule[];
+}
+interface AccessControlProfileAccess {
+  regions: string[];
+  adminOperations: string[];
+  applicationOperations: string[];
 }
 
 export const PERF_PROFILES_INIT: Record<string, ProfileData> = {
@@ -307,10 +360,113 @@ export default function AdministrationPage({
   const toKey = (label: string) => label.toLowerCase().replace(/\s+/g, '-');
   const [activeSection, setActiveSection] = useState(toKey(SIDEBAR_ITEMS[0].label));
   const [accessControlTab, setAccessControlTab] = useState('users');
-  const [addDomainSheetOpen, setAddDomainSheetOpen] = useState(false);
-  const [editDomainSheetOpen, setEditDomainSheetOpen] = useState(false);
-  const [selectedDomainForEdit, setSelectedDomainForEdit] = useState<AccessControlDomainRow | null>(null);
+  const [authSidebarSection, setAuthSidebarSection] = useState<'general' | 'radius' | 'tacacs' | 'saml'>('general');
+  const [authMode, setAuthMode] = useState<'vsnet-only' | 'external-only' | 'combined'>('combined');
+  const [externalAuthType, setExternalAuthType] = useState<'radius' | 'tacacs' | 'saml'>('radius');
+  const [profilesSidebarItems, setProfilesSidebarItems] = useState<Array<{ id: string; label: string }>>([
+    { id: 'administrator', label: 'Administrator' },
+    { id: 'operator', label: 'Operator' },
+    { id: 'viewer', label: 'Viewer' },
+  ]);
+  const [selectedProfileId, setSelectedProfileId] = useState('administrator');
+  const [profileAccessById, setProfileAccessById] = useState<Record<string, AccessControlProfileAccess>>({
+    administrator: {
+      regions: (regions && regions.length > 0)
+        ? [...regions]
+        : (region ? [region] : ['Pacific Northwest']),
+      adminOperations: ['Configure Profile', 'System Administration', 'User Management'],
+      applicationOperations: [...APPLICATION_OPERATION_OPTIONS],
+    },
+    operator: {
+      regions: ['Pacific Northwest'],
+      adminOperations: ['Configure Profile'],
+      applicationOperations: ['Manage Node', 'Manage Topology', 'Manage Performance', 'Manage Tasks', 'View Events'],
+    },
+    viewer: {
+      regions: ['Pacific Northwest'],
+      adminOperations: [],
+      applicationOperations: ['View Events', 'View Label Management', 'View Performance', 'View Profile', 'View Node', 'View Tasks', 'View Topology'],
+    },
+  });
+  const [pendingProfileRegions, setPendingProfileRegions] = useState<string[]>([]);
+  const [pendingAdminOperations, setPendingAdminOperations] = useState<string[]>([]);
+  const [pendingApplicationOperations, setPendingApplicationOperations] = useState<string[]>([]);
+  const [addRegionDialogOpen, setAddRegionDialogOpen] = useState(false);
+  const [addAdminOperationDialogOpen, setAddAdminOperationDialogOpen] = useState(false);
+  const [addApplicationOperationDialogOpen, setAddApplicationOperationDialogOpen] = useState(false);
+  const [regionSidebarItems, setRegionSidebarItems] = useState<Array<{ id: string; label: string }>>(() => {
+    const initialRegions = (regions && regions.length > 0)
+      ? regions
+      : (region ? [region] : ['Pacific Northwest']);
+    return initialRegions.map((regionName, index) => ({
+      id: `${regionName.toLowerCase().replace(/\s+/g, '-')}-${index}`,
+      label: regionName,
+    }));
+  });
+  const [selectedRegionSidebarId, setSelectedRegionSidebarId] = useState(() => {
+    const initialRegions = (regions && regions.length > 0)
+      ? regions
+      : (region ? [region] : ['Pacific Northwest']);
+    return `${initialRegions[0].toLowerCase().replace(/\s+/g, '-')}-0`;
+  });
+  const [regionNameValue, setRegionNameValue] = useState('');
+  const [passwordAgeDays, setPasswordAgeDays] = useState('90');
+  const [passwordExpiryWarningDays, setPasswordExpiryWarningDays] = useState('14');
+  const [passwordMinLength, setPasswordMinLength] = useState('12');
+  const [passwordReusePreventionCount, setPasswordReusePreventionCount] = useState('5');
+  const [passwordReusePreventionDays, setPasswordReusePreventionDays] = useState('365');
+  const [accountLockoutEnabled, setAccountLockoutEnabled] = useState(true);
+  const [accountLockoutThreshold, setAccountLockoutThreshold] = useState('5');
+  const [inactivityLogoutDurationMinutes, setInactivityLogoutDurationMinutes] = useState('15');
+  const [loginBannerEnabled, setLoginBannerEnabled] = useState(true);
+  const [bannerTitle, setBannerTitle] = useState('Authorized Access Only');
+  const [messageOfDay, setMessageOfDay] = useState('Maintenance window every Sunday 02:00-04:00 UTC.');
   const [search, setSearch] = useState('');
+  const [northboundTab, setNorthboundTab] = useState('alarm-forwarding');
+  const [emailTab, setEmailTab] = useState('email-groups');
+  const [emailGroupSidebarItems, setEmailGroupSidebarItems] = useState<Array<{ id: string; label: string }>>([
+    { id: 'noc-primary', label: 'NOC Primary' },
+    { id: 'operations-managers', label: 'Operations Managers' },
+  ]);
+  const [selectedEmailGroupId, setSelectedEmailGroupId] = useState('noc-primary');
+  const [emailGroupById, setEmailGroupById] = useState<Record<string, EmailGroupSettings>>({
+    'noc-primary': {
+      name: 'NOC Primary',
+      emailAddresses: ['noc@acme.com', 'oncall@acme.com'],
+    },
+    'operations-managers': {
+      name: 'Operations Managers',
+      emailAddresses: ['ops-managers@acme.com'],
+    },
+  });
+  const [emailGroupNameValue, setEmailGroupNameValue] = useState('NOC Primary');
+  const [addEmailAddressDialogOpen, setAddEmailAddressDialogOpen] = useState(false);
+  const [pendingEmailAddress, setPendingEmailAddress] = useState('');
+  const [smtpEnabled, setSmtpEnabled] = useState(true);
+  const [smtpFromEmail, setSmtpFromEmail] = useState('alerts@acme.com');
+  const [smtpEmailKey, setSmtpEmailKey] = useState('AMS-ALERTS');
+  const [smtpServer, setSmtpServer] = useState('smtp.acme.com');
+  const [smtpPort, setSmtpPort] = useState('587');
+  const [smtpSecurityMode, setSmtpSecurityMode] = useState<'none' | 'starttls' | 'ssl'>('starttls');
+  const [smtpUseAuthentication, setSmtpUseAuthentication] = useState(true);
+  const [smtpUserName, setSmtpUserName] = useState('alerts-service');
+  const [smtpPassword, setSmtpPassword] = useState('');
+  const [smtpTestEmail, setSmtpTestEmail] = useState('noc@acme.com');
+  const [snmpEnableInternalAgent, setSnmpEnableInternalAgent] = useState(true);
+  const [snmpEnableV2c, setSnmpEnableV2c] = useState(true);
+  const [snmpReadCommunity, setSnmpReadCommunity] = useState('public');
+  const [snmpWriteCommunity, setSnmpWriteCommunity] = useState('private');
+  const [snmpEnableV3, setSnmpEnableV3] = useState(false);
+  const [snmpEngineId, setSnmpEngineId] = useState('80000009030000254A4D5E');
+  const [snmpUserName, setSnmpUserName] = useState('snmp-admin');
+  const [snmpAuthenticationProtocol, setSnmpAuthenticationProtocol] = useState('SHA-256');
+  const [snmpChangeAuthenticationPassword, setSnmpChangeAuthenticationPassword] = useState(false);
+  const [snmpPrivacyProtocol, setSnmpPrivacyProtocol] = useState('AES-256');
+  const [snmpChangePrivacyPassword, setSnmpChangePrivacyPassword] = useState(false);
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditUsernameFilter, setAuditUsernameFilter] = useState('All');
+  const [auditStatusFilter, setAuditStatusFilter] = useState('All');
+  const [auditDateRangeFilter, setAuditDateRangeFilter] = useState<(typeof AUDIT_DATE_RANGE_OPTIONS)[number]>('All');
   const [profileFilter, setProfileFilter] = useState<string>('All');
   const [departmentFilter, setDepartmentFilter] = useState<string>('All');
   const [locationFilter, setLocationFilter] = useState<string>('All');
@@ -358,6 +514,46 @@ export default function AdministrationPage({
   };
 
   const activeLabel = SIDEBAR_ITEMS.find((item) => toKey(item.label) === activeSection)?.label ?? activeSection;
+  const selectedProfileLabel = profilesSidebarItems.find((item) => item.id === selectedProfileId)?.label ?? 'Profile';
+  const accountRegions = (regions && regions.length > 0)
+    ? regions
+    : (region ? [region] : ['Pacific Northwest']);
+  const selectedRegionLabel = regionSidebarItems.find((item) => item.id === selectedRegionSidebarId)?.label ?? '';
+  useEffect(() => {
+    setRegionNameValue(selectedRegionLabel);
+  }, [selectedRegionLabel]);
+  const selectedProfileAccess = profileAccessById[selectedProfileId] ?? {
+    regions: [],
+    adminOperations: [],
+    applicationOperations: [],
+  };
+  const availableProfileRegions = accountRegions.filter((regionName) => !selectedProfileAccess.regions.includes(regionName));
+  const availableAdminOperations = ADMIN_OPERATION_OPTIONS.filter((operation) => !selectedProfileAccess.adminOperations.includes(operation));
+  const availableApplicationOperations = APPLICATION_OPERATION_OPTIONS.filter((operation) => !selectedProfileAccess.applicationOperations.includes(operation));
+  const auditUsernameOptions = ['All', ...Array.from(new Set(AUDIT_TRAIL_ROWS.map((row) => row.username)))];
+  const updateSelectedProfileAccess = (patch: Partial<AccessControlProfileAccess>) => {
+    setProfileAccessById((prev) => {
+      const current = prev[selectedProfileId] ?? { regions: [], adminOperations: [], applicationOperations: [] };
+      return { ...prev, [selectedProfileId]: { ...current, ...patch } };
+    });
+  };
+  const selectedEmailGroup = emailGroupById[selectedEmailGroupId] ?? { name: '', emailAddresses: [] };
+  useEffect(() => {
+    setEmailGroupNameValue(selectedEmailGroup.name);
+  }, [selectedEmailGroup.name, selectedEmailGroupId]);
+  const filteredAuditRows = AUDIT_TRAIL_ROWS.filter((row) => {
+    const searchTerm = auditSearch.trim().toLowerCase();
+    if (searchTerm) {
+      const searchable = `${row.seqNo} ${row.operationDateTime} ${row.username} ${row.operationName} ${row.operationStatus}`.toLowerCase();
+      if (!searchable.includes(searchTerm)) return false;
+    }
+    if (auditUsernameFilter !== 'All' && row.username !== auditUsernameFilter) return false;
+    if (auditStatusFilter !== 'All' && row.operationStatus !== auditStatusFilter) return false;
+    if (auditDateRangeFilter === 'Today' && row.ageDays > 0) return false;
+    if (auditDateRangeFilter === 'Last 7 days' && row.ageDays > 7) return false;
+    if (auditDateRangeFilter === 'Last 30 days' && row.ageDays > 30) return false;
+    return true;
+  });
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
@@ -450,19 +646,13 @@ export default function AdministrationPage({
                         </Badge>
                       </TabsTrigger>
                       <TabsTrigger value="domains" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 gap-2">
-                        Domains
+                        Regions
                         <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs tabular-nums">
-                          {ACCESS_CONTROL_DOMAINS_DATA.length}
+                          {regionSidebarItems.length}
                         </Badge>
                       </TabsTrigger>
-                      <TabsTrigger value="password" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
-                        Password
-                      </TabsTrigger>
-                      <TabsTrigger value="connected-users" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 gap-2">
-                        Connected users
-                        <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs tabular-nums">
-                          12
-                        </Badge>
+                      <TabsTrigger value="settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
+                        Settings
                       </TabsTrigger>
                     </TabsList>
                   </div>
@@ -487,48 +677,977 @@ export default function AdministrationPage({
                   </TabsContent>
 
                   <TabsContent value="authentication" className="mt-6">
-                    <p className="text-muted-foreground">Authentication settings will be displayed here.</p>
+                    <div className="flex flex-col gap-6 lg:flex-row">
+                      <InternalSidebarList
+                        title="Authentication"
+                        items={[
+                          { id: 'general', label: 'General' },
+                          { id: 'radius', label: 'RADIUS' },
+                          { id: 'tacacs', label: 'TACACS+' },
+                          { id: 'saml', label: 'SAML' },
+                        ]}
+                        selectedId={authSidebarSection}
+                        onSelect={(id) => setAuthSidebarSection(id as typeof authSidebarSection)}
+                      />
+                      <div className="flex-1 space-y-4">
+                        {authSidebarSection === 'general' && (
+                          <Card>
+                            <CardContent className="pt-6 space-y-5">
+                              <div>
+                                <h3 className="text-sm font-semibold text-foreground">General settings</h3>
+                              </div>
+                              <div className="rounded-md border p-3">
+                                <RadioGroup value={authMode} onValueChange={(value) => setAuthMode(value as typeof authMode)} className="gap-3">
+                                  <Label
+                                    htmlFor="auth-vsnet-only"
+                                    className="flex cursor-pointer items-start gap-3 rounded-md p-2 hover:bg-muted/40"
+                                  >
+                                    <RadioGroupItem id="auth-vsnet-only" value="vsnet-only" className="mt-0.5" />
+                                    <div className="space-y-0.5">
+                                      <p className="text-sm font-medium text-foreground">VSNET Only</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        Users will be authenticated against VSNET&apos;s internal database.
+                                      </p>
+                                    </div>
+                                  </Label>
+                                  <Label
+                                    htmlFor="auth-external-only"
+                                    className="flex cursor-pointer items-start gap-3 rounded-md p-2 hover:bg-muted/40"
+                                  >
+                                    <RadioGroupItem id="auth-external-only" value="external-only" className="mt-0.5" />
+                                    <div className="space-y-0.5">
+                                      <p className="text-sm font-medium text-foreground">External Only</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        Users will be authenticated against an external AAA server.
+                                      </p>
+                                    </div>
+                                  </Label>
+                                  <Label
+                                    htmlFor="auth-combined"
+                                    className="flex cursor-pointer items-start gap-3 rounded-md p-2 hover:bg-muted/40"
+                                  >
+                                    <RadioGroupItem id="auth-combined" value="combined" className="mt-0.5" />
+                                    <div className="space-y-0.5">
+                                      <p className="text-sm font-medium text-foreground">Combined</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        If external authentication fails, users will be authenticated against VSNET&apos;s internal database.
+                                      </p>
+                                    </div>
+                                  </Label>
+                                </RadioGroup>
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="external-auth-type">External Authentication Type</Label>
+                                <Select value={externalAuthType} onValueChange={(value) => setExternalAuthType(value as typeof externalAuthType)}>
+                                  <SelectTrigger id="external-auth-type" className="max-w-[280px]">
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="radius">RADIUS</SelectItem>
+                                    <SelectItem value="tacacs">TACACS+</SelectItem>
+                                    <SelectItem value="saml">SAML</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                        {authSidebarSection === 'radius' && (
+                          <Card>
+                            <CardContent className="pt-6">
+                              <p className="text-muted-foreground">RADIUS settings will be displayed here.</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                        {authSidebarSection === 'tacacs' && (
+                          <Card>
+                            <CardContent className="pt-6">
+                              <p className="text-muted-foreground">TACACS+ settings will be displayed here.</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                        {authSidebarSection === 'saml' && (
+                          <Card>
+                            <CardContent className="pt-6">
+                              <p className="text-muted-foreground">SAML settings will be displayed here.</p>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="profiles" className="mt-6">
-                    <p className="text-muted-foreground">Profile management will be displayed here.</p>
+                    <div className="flex flex-col gap-6 lg:flex-row">
+                      <InternalSidebarList
+                        title="Profiles"
+                        items={profilesSidebarItems}
+                        selectedId={selectedProfileId}
+                        onSelect={setSelectedProfileId}
+                        showAddAction
+                        addAriaLabel="Add profile"
+                        onAddAction={() => {
+                          const nextId = `profile-${profilesSidebarItems.length + 1}`;
+                          const nextLabel = `Profile ${profilesSidebarItems.length + 1}`;
+                          setProfilesSidebarItems((prev) => [...prev, { id: nextId, label: nextLabel }]);
+                          setSelectedProfileId(nextId);
+                          setProfileAccessById((prev) => ({
+                            ...prev,
+                            [nextId]: {
+                              regions: accountRegions.length > 0 ? [accountRegions[0]] : [],
+                              adminOperations: [],
+                              applicationOperations: [],
+                            },
+                          }));
+                          toast.success(`Added ${nextLabel}`);
+                        }}
+                      />
+                      <div className="flex-1 space-y-4">
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="mb-6 flex items-center justify-between">
+                              <h3 className="text-sm font-semibold text-foreground">{selectedProfileLabel}</h3>
+                            </div>
+                            <div className="space-y-5">
+                                <div>
+                                  <Label>Regions</Label>
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {selectedProfileAccess.regions.length > 0 ? (
+                                      selectedProfileAccess.regions.map((regionName) => (
+                                        <Badge key={`${selectedProfileId}-region-${regionName}`} variant="secondary" className="gap-1 pr-0.5">
+                                          {regionName}
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-4 w-4 rounded-sm"
+                                            aria-label={`Remove ${regionName}`}
+                                            onClick={() =>
+                                              updateSelectedProfileAccess({
+                                                regions: selectedProfileAccess.regions.filter((value) => value !== regionName),
+                                              })
+                                            }
+                                          >
+                                            <Icon name="close" size={12} />
+                                          </Button>
+                                        </Badge>
+                                      ))
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground">No regions assigned.</p>
+                                    )}
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="mt-3 h-8 w-8"
+                                    aria-label="Add region"
+                                    disabled={availableProfileRegions.length === 0}
+                                    onClick={() => {
+                                      setPendingProfileRegions([]);
+                                      setAddRegionDialogOpen(true);
+                                    }}
+                                  >
+                                    <Icon name="add" size={16} />
+                                  </Button>
+                                </div>
+                                <div>
+                                  <Label>Admin operations</Label>
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {selectedProfileAccess.adminOperations.length > 0 ? (
+                                      selectedProfileAccess.adminOperations.map((operation) => (
+                                        <Badge key={`${selectedProfileId}-admin-op-${operation}`} variant="secondary" className="gap-1 pr-0.5">
+                                          {operation}
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-4 w-4 rounded-sm"
+                                            aria-label={`Remove ${operation}`}
+                                            onClick={() =>
+                                              updateSelectedProfileAccess({
+                                                adminOperations: selectedProfileAccess.adminOperations.filter((value) => value !== operation),
+                                              })
+                                            }
+                                          >
+                                            <Icon name="close" size={12} />
+                                          </Button>
+                                        </Badge>
+                                      ))
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground">No admin operations assigned.</p>
+                                    )}
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="mt-3 h-8 w-8"
+                                    aria-label="Add admin operation"
+                                    disabled={availableAdminOperations.length === 0}
+                                    onClick={() => {
+                                      setPendingAdminOperations([]);
+                                      setAddAdminOperationDialogOpen(true);
+                                    }}
+                                  >
+                                    <Icon name="add" size={16} />
+                                  </Button>
+                                </div>
+                                <div>
+                                  <Label>Application operations</Label>
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {selectedProfileAccess.applicationOperations.length > 0 ? (
+                                      selectedProfileAccess.applicationOperations.map((operation) => (
+                                        <Badge key={`${selectedProfileId}-app-op-${operation}`} variant="secondary" className="gap-1 pr-0.5">
+                                          {operation}
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-4 w-4 rounded-sm"
+                                            aria-label={`Remove ${operation}`}
+                                            onClick={() =>
+                                              updateSelectedProfileAccess({
+                                                applicationOperations: selectedProfileAccess.applicationOperations.filter((value) => value !== operation),
+                                              })
+                                            }
+                                          >
+                                            <Icon name="close" size={12} />
+                                          </Button>
+                                        </Badge>
+                                      ))
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground">No application operations assigned.</p>
+                                    )}
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="mt-3 h-8 w-8"
+                                    aria-label="Add application operation"
+                                    disabled={availableApplicationOperations.length === 0}
+                                    onClick={() => {
+                                      setPendingApplicationOperations([]);
+                                      setAddApplicationOperationDialogOpen(true);
+                                    }}
+                                  >
+                                    <Icon name="add" size={16} />
+                                  </Button>
+                                </div>
+                              </div>
+                          </CardContent>
+                        </Card>
+                        <Dialog open={addRegionDialogOpen} onOpenChange={setAddRegionDialogOpen}>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Add region</DialogTitle>
+                            </DialogHeader>
+                            <div>
+                              <Label>Regions</Label>
+                              <div className="mt-3 space-y-2 max-h-56 overflow-auto">
+                                {availableProfileRegions.map((regionName) => (
+                                  <label key={`${selectedProfileId}-dialog-region-${regionName}`} className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <Checkbox
+                                      checked={pendingProfileRegions.includes(regionName)}
+                                      onCheckedChange={(checked) => {
+                                        setPendingProfileRegions((prev) =>
+                                          checked
+                                            ? [...prev, regionName]
+                                            : prev.filter((value) => value !== regionName),
+                                        );
+                                      }}
+                                    />
+                                    <span>{regionName}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setAddRegionDialogOpen(false)}>Cancel</Button>
+                              <Button
+                                onClick={() => {
+                                  if (pendingProfileRegions.length === 0) return;
+                                  updateSelectedProfileAccess({
+                                    regions: [...selectedProfileAccess.regions, ...pendingProfileRegions],
+                                  });
+                                  setPendingProfileRegions([]);
+                                  setAddRegionDialogOpen(false);
+                                }}
+                                disabled={pendingProfileRegions.length === 0}
+                              >
+                                Add
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                        <Dialog open={addAdminOperationDialogOpen} onOpenChange={setAddAdminOperationDialogOpen}>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Add admin operation</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-6">
+                              <Label>Admin operations</Label>
+                              <div className="space-y-2 max-h-56 overflow-auto">
+                                {availableAdminOperations.map((operation) => (
+                                  <label key={`${selectedProfileId}-dialog-admin-op-${operation}`} className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <Checkbox
+                                      checked={pendingAdminOperations.includes(operation)}
+                                      onCheckedChange={(checked) => {
+                                        setPendingAdminOperations((prev) =>
+                                          checked
+                                            ? [...prev, operation]
+                                            : prev.filter((value) => value !== operation),
+                                        );
+                                      }}
+                                    />
+                                    <span>{operation}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setAddAdminOperationDialogOpen(false)}>Cancel</Button>
+                              <Button
+                                onClick={() => {
+                                  if (pendingAdminOperations.length === 0) return;
+                                  updateSelectedProfileAccess({
+                                    adminOperations: [...selectedProfileAccess.adminOperations, ...pendingAdminOperations],
+                                  });
+                                  setPendingAdminOperations([]);
+                                  setAddAdminOperationDialogOpen(false);
+                                }}
+                                disabled={pendingAdminOperations.length === 0}
+                              >
+                                Add
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                        <Dialog open={addApplicationOperationDialogOpen} onOpenChange={setAddApplicationOperationDialogOpen}>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Add application operation</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-6">
+                              <Label>Application operations</Label>
+                              <div className="space-y-2 max-h-56 overflow-auto">
+                                {availableApplicationOperations.map((operation) => (
+                                  <label key={`${selectedProfileId}-dialog-application-op-${operation}`} className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <Checkbox
+                                      checked={pendingApplicationOperations.includes(operation)}
+                                      onCheckedChange={(checked) => {
+                                        setPendingApplicationOperations((prev) =>
+                                          checked
+                                            ? [...prev, operation]
+                                            : prev.filter((value) => value !== operation),
+                                        );
+                                      }}
+                                    />
+                                    <span>{operation}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setAddApplicationOperationDialogOpen(false)}>Cancel</Button>
+                              <Button
+                                onClick={() => {
+                                  if (pendingApplicationOperations.length === 0) return;
+                                  updateSelectedProfileAccess({
+                                    applicationOperations: [...selectedProfileAccess.applicationOperations, ...pendingApplicationOperations],
+                                  });
+                                  setPendingApplicationOperations([]);
+                                  setAddApplicationOperationDialogOpen(false);
+                                }}
+                                disabled={pendingApplicationOperations.length === 0}
+                              >
+                                Add
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="domains" className="mt-6 space-y-4">
+                    <div className="flex flex-col gap-6 lg:flex-row">
+                      <InternalSidebarList
+                        title="Regions"
+                        items={regionSidebarItems}
+                        selectedId={selectedRegionSidebarId}
+                        onSelect={setSelectedRegionSidebarId}
+                        showAddAction
+                        addAriaLabel="Add region"
+                        onAddAction={() => {
+                          const nextId = `region-${regionSidebarItems.length + 1}`;
+                          const nextLabel = `Region ${regionSidebarItems.length + 1}`;
+                          setRegionSidebarItems((prev) => [...prev, { id: nextId, label: nextLabel }]);
+                          setSelectedRegionSidebarId(nextId);
+                          toast.success(`Added ${nextLabel}`);
+                        }}
+                      />
+                      <div className="flex-1 space-y-4">
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="max-w-md">
+                              <Label htmlFor="region-name-field">Region name</Label>
+                              <Input
+                                id="region-name-field"
+                                className="mt-3"
+                                value={regionNameValue}
+                                onChange={(e) => setRegionNameValue(e.target.value)}
+                                placeholder="Enter region name"
+                              />
+                              {selectedRegionLabel !== '' && regionNameValue.trim() !== selectedRegionLabel && (
+                                <div className="mt-3 flex items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setRegionNameValue(selectedRegionLabel)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    disabled={regionNameValue.trim().length === 0}
+                                    onClick={() => {
+                                      const nextLabel = regionNameValue.trim();
+                                      if (!nextLabel) return;
+                                      setRegionSidebarItems((prev) =>
+                                        prev.map((item) =>
+                                          item.id === selectedRegionSidebarId
+                                            ? { ...item, label: nextLabel }
+                                            : item,
+                                        ),
+                                      );
+                                      toast.success('Region name updated');
+                                    }}
+                                  >
+                                    Save
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="settings" className="mt-6">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                          <div>
+                            <Label htmlFor="password-age-days">Password Age (Days)*</Label>
+                            <Input id="password-age-days" className="mt-3" type="number" value={passwordAgeDays} onChange={(e) => setPasswordAgeDays(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="password-expiry-warning-days">Password Expiry Warning (Days)*</Label>
+                            <Input id="password-expiry-warning-days" className="mt-3" type="number" value={passwordExpiryWarningDays} onChange={(e) => setPasswordExpiryWarningDays(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="password-min-length">Password Minimum Length*</Label>
+                            <Input id="password-min-length" className="mt-3" type="number" value={passwordMinLength} onChange={(e) => setPasswordMinLength(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="password-reuse-prevention-count">Password Reuse Prevention Count*</Label>
+                            <Input id="password-reuse-prevention-count" className="mt-3" type="number" value={passwordReusePreventionCount} onChange={(e) => setPasswordReusePreventionCount(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="password-reuse-prevention-days">Password Reuse Prevention (Days)*</Label>
+                            <Input id="password-reuse-prevention-days" className="mt-3" type="number" value={passwordReusePreventionDays} onChange={(e) => setPasswordReusePreventionDays(e.target.value)} />
+                          </div>
+                          <div className="flex items-center gap-2 self-end md:col-span-2">
+                            <Checkbox id="account-lockout-enabled" checked={accountLockoutEnabled} onCheckedChange={(checked) => setAccountLockoutEnabled(Boolean(checked))} />
+                            <Label htmlFor="account-lockout-enabled">Account lockout</Label>
+                          </div>
+                          {accountLockoutEnabled && (
+                            <div className="md:col-span-2 rounded-md border p-4">
+                              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                <div>
+                                  <Label htmlFor="account-lockout-threshold">Account Lockout Threshold*</Label>
+                                  <Input id="account-lockout-threshold" className="mt-3" type="number" value={accountLockoutThreshold} onChange={(e) => setAccountLockoutThreshold(e.target.value)} />
+                                </div>
+                                <div>
+                                  <Label htmlFor="inactivity-logout-duration">Inactivity Logout Duration (Minutes)*</Label>
+                                  <Input id="inactivity-logout-duration" className="mt-3" type="number" value={inactivityLogoutDurationMinutes} onChange={(e) => setInactivityLogoutDurationMinutes(e.target.value)} />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 self-end md:col-span-2">
+                            <Checkbox id="login-banner-enabled" checked={loginBannerEnabled} onCheckedChange={(checked) => setLoginBannerEnabled(Boolean(checked))} />
+                            <Label htmlFor="login-banner-enabled">Login banner enabled</Label>
+                          </div>
+                          {loginBannerEnabled && (
+                            <div className="md:col-span-2 rounded-md border p-4">
+                              <div>
+                                <Label htmlFor="banner-title">Banner Title*</Label>
+                                <Input id="banner-title" className="mt-3" value={bannerTitle} onChange={(e) => setBannerTitle(e.target.value)} />
+                              </div>
+                            </div>
+                          )}
+                          <div className="md:col-span-2">
+                            <Label htmlFor="message-of-day">Message Of Day</Label>
+                            <Textarea id="message-of-day" className="mt-3 min-h-24" value={messageOfDay} onChange={(e) => setMessageOfDay(e.target.value)} />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+
+            {activeSection === 'audit-trail' && (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative w-full sm:min-w-[220px] sm:max-w-[320px]">
+                    <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search audit trail..."
+                      value={auditSearch}
+                      onChange={(e) => setAuditSearch(e.target.value)}
+                      className="pl-9 w-full"
+                    />
+                  </div>
+                  <FilterSelect value={auditUsernameFilter} onValueChange={setAuditUsernameFilter} label="Username" options={auditUsernameOptions} className="w-[220px]" />
+                  <FilterSelect value={auditStatusFilter} onValueChange={setAuditStatusFilter} label="Status" options={['All', 'Allowed', 'Denied']} className="w-[150px]" />
+                  <FilterSelect value={auditDateRangeFilter} onValueChange={(v) => setAuditDateRangeFilter(v as (typeof AUDIT_DATE_RANGE_OPTIONS)[number])} label="Date range" options={[...AUDIT_DATE_RANGE_OPTIONS]} className="w-[170px]" />
+                </div>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="overflow-hidden rounded-lg border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Seq no.</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Operation time/date</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Username</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Operation name</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Operation status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredAuditRows.length > 0 ? (
+                            filteredAuditRows.map((row) => (
+                              <TableRow key={`audit-${row.seqNo}`}>
+                                <TableCell className="px-4 py-3 tabular-nums">{row.seqNo}</TableCell>
+                                <TableCell className="px-4 py-3">{row.operationDateTime}</TableCell>
+                                <TableCell className="px-4 py-3">{row.username}</TableCell>
+                                <TableCell className="px-4 py-3">{row.operationName}</TableCell>
+                                <TableCell className="px-4 py-3">
+                                  <Badge variant={row.operationStatus === 'Allowed' ? 'secondary' : 'destructive'} className="font-normal">
+                                    {row.operationStatus}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
+                                No audit records match the current filters.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeSection === 'northbound-interface' && (
+              <div className="space-y-6">
+                <Tabs value={northboundTab} onValueChange={setNorthboundTab}>
+                  <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm">
+                    <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
+                      <TabsTrigger value="alarm-forwarding" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
+                        Alarm forwarding
+                      </TabsTrigger>
+                      <TabsTrigger value="snmp-agent" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
+                        SNMP agent
+                      </TabsTrigger>
+                      <TabsTrigger value="syslog-forwarding" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
+                        Syslog forwarding
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <TabsContent value="alarm-forwarding" className="mt-6 space-y-4">
                     <div className="flex justify-end">
-                      <Button variant="outline" size="default" className="gap-1" onClick={() => setAddDomainSheetOpen(true)}>
-                        <Icon name="add" size={18} />
-                        Add domain
+                      <Button type="button" variant="outline" className="gap-1">
+                        <Icon name="add" size={16} />
+                        Add new snmp managers group
                       </Button>
                     </div>
-                    <AccessControlDomainsDataTable
-                      onEditClick={(domain) => {
-                        setSelectedDomainForEdit(domain);
-                        setEditDomainSheetOpen(true);
-                      }}
-                    />
-                    <AddDomainSheet
-                      open={addDomainSheetOpen}
-                      onOpenChange={setAddDomainSheetOpen}
-                      onSubmit={() => {}}
-                    />
-                    <AddDomainSheet
-                      open={editDomainSheetOpen}
-                      onOpenChange={(open) => {
-                        setEditDomainSheetOpen(open);
-                        if (!open) setSelectedDomainForEdit(null);
-                      }}
-                      domain={selectedDomainForEdit}
-                      onSubmit={() => {}}
-                    />
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="overflow-hidden rounded-lg border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Name</TableHead>
+                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Host name</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {ALARM_FORWARDING_ROWS.map((row) => (
+                                <TableRow key={row.name}>
+                                  <TableCell className="px-4 py-3">{row.name}</TableCell>
+                                  <TableCell className="px-4 py-3 font-mono text-sm">{row.hostName}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </TabsContent>
 
-                  <TabsContent value="password" className="mt-6">
-                    <p className="text-muted-foreground">Password policies will be displayed here.</p>
+                  <TabsContent value="snmp-agent" className="mt-6">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                          <div className="flex items-center gap-2 md:col-span-2">
+                            <Checkbox id="snmp-enable-internal-agent" checked={snmpEnableInternalAgent} onCheckedChange={(checked) => setSnmpEnableInternalAgent(Boolean(checked))} />
+                            <Label htmlFor="snmp-enable-internal-agent">Enable Internal SNMP Agent</Label>
+                          </div>
+                          <div className="flex items-center gap-2 md:col-span-2">
+                            <Checkbox id="snmp-enable-v2c" checked={snmpEnableV2c} onCheckedChange={(checked) => setSnmpEnableV2c(Boolean(checked))} />
+                            <Label htmlFor="snmp-enable-v2c">SNMP V2C</Label>
+                          </div>
+                          <div>
+                            <Label htmlFor="snmp-read-community">Read community</Label>
+                            <Input id="snmp-read-community" className="mt-3" value={snmpReadCommunity} onChange={(e) => setSnmpReadCommunity(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="snmp-write-community">Write community</Label>
+                            <Input id="snmp-write-community" className="mt-3" value={snmpWriteCommunity} onChange={(e) => setSnmpWriteCommunity(e.target.value)} />
+                          </div>
+                          <div className="flex items-center gap-2 md:col-span-2">
+                            <Checkbox id="snmp-enable-v3" checked={snmpEnableV3} onCheckedChange={(checked) => setSnmpEnableV3(Boolean(checked))} />
+                            <Label htmlFor="snmp-enable-v3">SNMP V3</Label>
+                          </div>
+                          <div className="md:col-span-2 space-y-5">
+                            <div>
+                              <Label htmlFor="snmp-engine-id">Engine id</Label>
+                              <Input id="snmp-engine-id" className="mt-3" value={snmpEngineId} onChange={(e) => setSnmpEngineId(e.target.value)} />
+                            </div>
+                            <div>
+                              <Label htmlFor="snmp-user-name">User name</Label>
+                              <Input id="snmp-user-name" className="mt-3" value={snmpUserName} onChange={(e) => setSnmpUserName(e.target.value)} />
+                            </div>
+                            <div>
+                              <Label htmlFor="snmp-authentication-protocol">Authentication protocol</Label>
+                              <Input id="snmp-authentication-protocol" className="mt-3" value={snmpAuthenticationProtocol} onChange={(e) => setSnmpAuthenticationProtocol(e.target.value)} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Checkbox id="snmp-change-auth-password" checked={snmpChangeAuthenticationPassword} onCheckedChange={(checked) => setSnmpChangeAuthenticationPassword(Boolean(checked))} />
+                              <Label htmlFor="snmp-change-auth-password">Change password authentication protocol</Label>
+                            </div>
+                            <div>
+                              <Label htmlFor="snmp-privacy-protocol">Privacy protocol</Label>
+                              <Input id="snmp-privacy-protocol" className="mt-3" value={snmpPrivacyProtocol} onChange={(e) => setSnmpPrivacyProtocol(e.target.value)} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Checkbox id="snmp-change-privacy-password" checked={snmpChangePrivacyPassword} onCheckedChange={(checked) => setSnmpChangePrivacyPassword(Boolean(checked))} />
+                              <Label htmlFor="snmp-change-privacy-password">Change password privacy protocol</Label>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </TabsContent>
 
-                  <TabsContent value="connected-users" className="mt-6">
-                    <p className="text-muted-foreground">Connected users will be displayed here.</p>
+                  <TabsContent value="syslog-forwarding" className="mt-6">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="overflow-hidden rounded-lg border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Host name</TableHead>
+                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Port</TableHead>
+                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Enable</TableHead>
+                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">List of enabled events</TableHead>
+                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Description</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {SYSLOG_FORWARDING_ROWS.map((row) => (
+                                <TableRow key={`${row.hostName}-${row.port}`}>
+                                  <TableCell className="px-4 py-3 font-mono text-sm">{row.hostName}</TableCell>
+                                  <TableCell className="px-4 py-3">{row.port}</TableCell>
+                                  <TableCell className="px-4 py-3">
+                                    <Switch checked={row.enabled} disabled />
+                                  </TableCell>
+                                  <TableCell className="px-4 py-3">
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {row.enabledEvents.map((eventName) => (
+                                        <Badge key={`${row.hostName}-${eventName}`} variant="secondary" className="font-normal">
+                                          {eventName}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="px-4 py-3 text-muted-foreground">{row.description}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+
+            {activeSection === 'email' && (
+              <div className="space-y-6">
+                <Tabs value={emailTab} onValueChange={setEmailTab}>
+                  <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm">
+                    <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
+                      <TabsTrigger value="email-groups" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
+                        Email groups
+                      </TabsTrigger>
+                      <TabsTrigger value="smtp" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2">
+                        SMTP
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <TabsContent value="email-groups" className="mt-6">
+                    <div className="flex flex-col gap-6 lg:flex-row">
+                      <InternalSidebarList
+                        title="Email groups"
+                        items={emailGroupSidebarItems}
+                        selectedId={selectedEmailGroupId}
+                        onSelect={setSelectedEmailGroupId}
+                        showAddAction
+                        addAriaLabel="Add email group"
+                        onAddAction={() => {
+                          const nextIndex = emailGroupSidebarItems.length + 1;
+                          const nextId = `email-group-${nextIndex}`;
+                          const nextName = `Email Group ${nextIndex}`;
+                          setEmailGroupSidebarItems((prev) => [...prev, { id: nextId, label: nextName }]);
+                          setEmailGroupById((prev) => ({
+                            ...prev,
+                            [nextId]: { name: nextName, emailAddresses: [] },
+                          }));
+                          setSelectedEmailGroupId(nextId);
+                          toast.success(`Added ${nextName}`);
+                        }}
+                      />
+                      <div className="flex-1 space-y-4">
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="space-y-5">
+                              <div className="max-w-md">
+                                <Label htmlFor="email-group-name-field">Name</Label>
+                                <Input
+                                  id="email-group-name-field"
+                                  className="mt-3"
+                                  value={emailGroupNameValue}
+                                  onChange={(e) => setEmailGroupNameValue(e.target.value)}
+                                  placeholder="Enter group name"
+                                />
+                                {selectedEmailGroup.name !== '' && emailGroupNameValue.trim() !== selectedEmailGroup.name && (
+                                  <div className="mt-3 flex items-center gap-2">
+                                    <Button type="button" variant="outline" size="sm" onClick={() => setEmailGroupNameValue(selectedEmailGroup.name)}>
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      disabled={emailGroupNameValue.trim().length === 0}
+                                      onClick={() => {
+                                        const nextName = emailGroupNameValue.trim();
+                                        if (!nextName) return;
+                                        setEmailGroupById((prev) => ({
+                                          ...prev,
+                                          [selectedEmailGroupId]: {
+                                            ...(prev[selectedEmailGroupId] ?? { name: '', emailAddresses: [] }),
+                                            name: nextName,
+                                          },
+                                        }));
+                                        setEmailGroupSidebarItems((prev) =>
+                                          prev.map((item) => (item.id === selectedEmailGroupId ? { ...item, label: nextName } : item)),
+                                        );
+                                        toast.success('Email group name updated');
+                                      }}
+                                    >
+                                      Save
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <Label>Email addresses</Label>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {selectedEmailGroup.emailAddresses.length > 0 ? (
+                                    selectedEmailGroup.emailAddresses.map((address) => (
+                                      <Badge key={`${selectedEmailGroupId}-${address}`} variant="secondary" className="gap-1 pr-0.5">
+                                        {address}
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-4 w-4 rounded-sm"
+                                          aria-label={`Remove ${address}`}
+                                          onClick={() =>
+                                            setEmailGroupById((prev) => ({
+                                              ...prev,
+                                              [selectedEmailGroupId]: {
+                                                ...(prev[selectedEmailGroupId] ?? { name: '', emailAddresses: [] }),
+                                                emailAddresses: (prev[selectedEmailGroupId]?.emailAddresses ?? []).filter((email) => email !== address),
+                                              },
+                                            }))
+                                          }
+                                        >
+                                          <Icon name="close" size={12} />
+                                        </Button>
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">No email addresses added.</p>
+                                  )}
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="mt-3 h-8 w-8"
+                                  aria-label="Add email address"
+                                  onClick={() => {
+                                    setPendingEmailAddress('');
+                                    setAddEmailAddressDialogOpen(true);
+                                  }}
+                                >
+                                  <Icon name="add" size={16} />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Dialog open={addEmailAddressDialogOpen} onOpenChange={setAddEmailAddressDialogOpen}>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Add email address</DialogTitle>
+                            </DialogHeader>
+                            <div>
+                              <Label htmlFor="email-group-address-input">Email address</Label>
+                              <Input
+                                id="email-group-address-input"
+                                className="mt-3"
+                                value={pendingEmailAddress}
+                                onChange={(e) => setPendingEmailAddress(e.target.value)}
+                                placeholder="name@example.com"
+                              />
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setAddEmailAddressDialogOpen(false)}>Cancel</Button>
+                              <Button
+                                disabled={!pendingEmailAddress.trim()}
+                                onClick={() => {
+                                  const nextEmail = pendingEmailAddress.trim();
+                                  if (!nextEmail) return;
+                                  setEmailGroupById((prev) => ({
+                                    ...prev,
+                                    [selectedEmailGroupId]: {
+                                      ...(prev[selectedEmailGroupId] ?? { name: '', emailAddresses: [] }),
+                                      emailAddresses: [...new Set([...(prev[selectedEmailGroupId]?.emailAddresses ?? []), nextEmail])],
+                                    },
+                                  }));
+                                  setPendingEmailAddress('');
+                                  setAddEmailAddressDialogOpen(false);
+                                }}
+                              >
+                                Add
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="smtp" className="mt-6">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="space-y-5 max-w-2xl">
+                          <div className="flex items-center gap-2">
+                            <Checkbox id="smtp-enabled" checked={smtpEnabled} onCheckedChange={(checked) => setSmtpEnabled(Boolean(checked))} />
+                            <Label htmlFor="smtp-enabled">Enable</Label>
+                          </div>
+                          <div>
+                            <Label htmlFor="smtp-from-email">From email</Label>
+                            <Input id="smtp-from-email" className="mt-3" value={smtpFromEmail} onChange={(e) => setSmtpFromEmail(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="smtp-email-key">Email key</Label>
+                            <Input id="smtp-email-key" className="mt-3" value={smtpEmailKey} onChange={(e) => setSmtpEmailKey(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="smtp-server">SMTP server</Label>
+                            <Input id="smtp-server" className="mt-3" value={smtpServer} onChange={(e) => setSmtpServer(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="smtp-port">SMTP Port*</Label>
+                            <Input id="smtp-port" className="mt-3" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label>Security</Label>
+                            <RadioGroup
+                              value={smtpSecurityMode}
+                              onValueChange={(value) => setSmtpSecurityMode(value as 'none' | 'starttls' | 'ssl')}
+                              className="mt-3 flex flex-wrap gap-6"
+                            >
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <RadioGroupItem id="smtp-security-none" value="none" />
+                                <Label htmlFor="smtp-security-none">None</Label>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <RadioGroupItem id="smtp-security-starttls" value="starttls" />
+                                <Label htmlFor="smtp-security-starttls">STARTTLS</Label>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <RadioGroupItem id="smtp-security-ssl" value="ssl" />
+                                <Label htmlFor="smtp-security-ssl">SSL</Label>
+                              </label>
+                            </RadioGroup>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox id="smtp-use-auth" checked={smtpUseAuthentication} onCheckedChange={(checked) => setSmtpUseAuthentication(Boolean(checked))} />
+                            <Label htmlFor="smtp-use-auth">Use authentication</Label>
+                          </div>
+                          <div>
+                            <Label htmlFor="smtp-user-name">User name</Label>
+                            <Input id="smtp-user-name" className="mt-3" value={smtpUserName} onChange={(e) => setSmtpUserName(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="smtp-password">Password</Label>
+                            <Input id="smtp-password" className="mt-3" type="password" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
+                          </div>
+                          <div>
+                            <Label htmlFor="smtp-test-email">Send test email</Label>
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <Input id="smtp-test-email" className="max-w-md" value={smtpTestEmail} onChange={(e) => setSmtpTestEmail(e.target.value)} />
+                              <Button type="button" onClick={() => toast.success(`Test email sent to ${smtpTestEmail}`)}>
+                                Send
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </TabsContent>
                 </Tabs>
               </div>
@@ -1190,7 +2309,7 @@ export default function AdministrationPage({
               );
             })()}
 
-            {activeSection !== 'access-control' && activeSection !== 'fault-management' && activeSection !== 'label-management' && activeSection !== 'file-management' && activeSection !== 'device-migration' && activeSection !== 'performance' && (
+            {activeSection !== 'access-control' && activeSection !== 'audit-trail' && activeSection !== 'northbound-interface' && activeSection !== 'email' && activeSection !== 'fault-management' && activeSection !== 'label-management' && activeSection !== 'file-management' && activeSection !== 'device-migration' && activeSection !== 'performance' && (
               <div className="flex items-center justify-center py-12">
                 <p className="text-muted-foreground">
                   {activeLabel} content will be displayed here.

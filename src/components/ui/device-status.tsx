@@ -19,9 +19,9 @@ export function DeviceStatus({ status, className, iconSize = 16, variant = 'defa
 
   let iconClass: string;
   if (variant === 'dark') {
-    iconClass = isMaintenance ? 'text-warning shrink-0' : isConnected ? 'text-gray-400 shrink-0' : 'text-red-400 shrink-0';
+    iconClass = isMaintenance ? 'text-warning shrink-0' : isConnected ? 'text-success shrink-0' : 'text-red-400 shrink-0';
   } else {
-    iconClass = isMaintenance ? 'text-warning shrink-0' : isConnected ? 'text-muted-foreground shrink-0' : 'text-destructive shrink-0';
+    iconClass = isMaintenance ? 'text-warning shrink-0' : isConnected ? 'text-success shrink-0' : 'text-destructive shrink-0';
   }
 
   const textClass = variant === 'dark' ? 'text-gray-300' : '';

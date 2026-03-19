@@ -219,6 +219,19 @@ function generateTopology() {
 
 export function getDasTopologyInventoryRows() {
   const { nodes } = generateTopology();
+  const MA3000_INVENTORY_TYPE_BY_NODE: Record<string, string> = {
+    stack: "HEU",
+    extension: "HEU",
+    ihu: "HEU",
+    hcm: "HEU",
+    rim: "HEU",
+    fmm: "HEU",
+    oim: "HEU",
+    och_unit: "HEU",
+    och_bank: "HEU",
+    mru: "RRU",
+    info: "HEU",
+  };
   const typeSerialPrefix: Record<string, string> = {
     stack: "STK",
     extension: "EXT",
@@ -257,7 +270,7 @@ export function getDasTopologyInventoryRows() {
     name: n.label,
     managedObject: `MA3000/${n.type.toUpperCase()}/${n.id}`,
     band: n.band || "700, CELL/ESMR, PCS, AWS3",
-    type: TYPE_META[n.type]?.desc || n.type,
+    type: MA3000_INVENTORY_TYPE_BY_NODE[n.type] || "HEU",
     status: mapStatusToInventory(n.status),
     ipAddress: makeIpAddress(n.id),
     model: n.model || (TYPE_META[n.type]?.label ?? n.type.toUpperCase()),
