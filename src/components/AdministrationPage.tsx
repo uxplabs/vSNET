@@ -80,10 +80,10 @@ const SIDEBAR_ITEMS = [
   { label: 'Audit trail', icon: 'history' },
   { label: 'Northbound interface', icon: 'api' },
   { label: 'Email', icon: 'mail' },
-  { label: 'File management', icon: 'folder' },
   { label: 'Fault management', icon: 'error' },
-  { label: 'Service settings', icon: 'settings' },
+  { label: 'Server settings', icon: 'settings' },
   { label: 'Device migration', icon: 'swap_horiz' },
+  { label: 'Redundancy', icon: 'sync' },
   { label: 'Performance', icon: 'speed' },
   { label: 'Label management', icon: 'label' },
 ] as const;
