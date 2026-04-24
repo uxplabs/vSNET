@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { SortableHeader } from '@/components/ui/sortable-header';
@@ -37,93 +38,137 @@ export const FILE_MANAGEMENT_USERS_DATA: FileManagementUserRow[] = [
   { id: '12', user: 'config_admin', passwordHashed: '••••••••••••••••', description: 'Configuration management', permissions: 'Read, Write, Delete' },
 ];
 
-const columns: ColumnDef<FileManagementUserRow>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-    meta: {
-      headerClassName: 'sticky left-0 z-10 w-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-      cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-    },
-  },
-  {
-    accessorKey: 'user',
-    header: ({ column }) => <SortableHeader column={column}>User</SortableHeader>,
-    cell: ({ row }) => (
-      <span className="font-medium">{row.getValue('user') as string}</span>
-    ),
-  },
-  {
-    accessorKey: 'passwordHashed',
-    header: ({ column }) => <SortableHeader column={column}>Password</SortableHeader>,
-    cell: ({ row }) => (
-      <span className="font-mono text-sm text-muted-foreground">{row.getValue('passwordHashed') as string}</span>
-    ),
-  },
-  {
-    accessorKey: 'description',
-    header: ({ column }) => <SortableHeader column={column}>Description</SortableHeader>,
-    cell: ({ row }) => (
-      <span className="truncate max-w-[200px] block" title={row.getValue('description') as string}>
-        {row.getValue('description') as string}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'permissions',
-    header: ({ column }) => <SortableHeader column={column}>Permissions</SortableHeader>,
-    cell: ({ row }) => row.getValue('permissions') as string,
-  },
-  {
-    id: 'actions',
-    header: '',
-    cell: () => (
-      <div className="flex items-center justify-end">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="More actions">
-              <Icon name="more_vert" size={20} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Edit</DropdownMenuItem>
-            <DropdownMenuItem>Reset password</DropdownMenuItem>
-            <DropdownMenuItem>Change permissions</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    ),
-    enableSorting: false,
-    meta: {
-      headerClassName: 'sticky right-0 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',
-      cellClassName: 'sticky right-0 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',
-    },
-  },
-];
+/** File management data included in the administration save snapshot (users + retention + sync). */
+export interface FileManagementPersisted {
+  fileUsers: FileManagementUserRow[];
+  pmDays: string;
+  cmMb: string;
+  cperDays: string;
+  debugLogsDays: string;
+  errorBundlesDays: string;
+  deviceDbBackupsDays: string;
+  amsDbBackupsMb: string;
+  cmBackupAutoSync: boolean;
+  cmFileFormat: string;
+  deviceDbBackupAutoSync: boolean;
+}
 
-export function FileManagementUsersDataTable() {
+export function createInitialFileManagementPersisted(): FileManagementPersisted {
+  return {
+    fileUsers: FILE_MANAGEMENT_USERS_DATA.map((u) => ({ ...u })),
+    pmDays: '30',
+    cmMb: '1024',
+    cperDays: '14',
+    debugLogsDays: '7',
+    errorBundlesDays: '14',
+    deviceDbBackupsDays: '30',
+    amsDbBackupsMb: '2048',
+    cmBackupAutoSync: true,
+    cmFileFormat: 'CSV',
+    deviceDbBackupAutoSync: false,
+  };
+}
+
+function buildColumns(onEditUser?: (row: FileManagementUserRow) => void): ColumnDef<FileManagementUserRow>[] {
+  return [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        headerClassName: 'sticky left-0 z-10 w-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+        cellClassName:
+          'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
+      },
+    },
+    {
+      accessorKey: 'user',
+      header: ({ column }) => <SortableHeader column={column}>User</SortableHeader>,
+      cell: ({ row }) => <span className="font-medium">{row.getValue('user') as string}</span>,
+    },
+    {
+      accessorKey: 'passwordHashed',
+      header: ({ column }) => <SortableHeader column={column}>Password</SortableHeader>,
+      cell: ({ row }) => (
+        <span className="font-mono text-sm text-muted-foreground">{row.getValue('passwordHashed') as string}</span>
+      ),
+    },
+    {
+      accessorKey: 'description',
+      header: ({ column }) => <SortableHeader column={column}>Description</SortableHeader>,
+      cell: ({ row }) => (
+        <span className="block max-w-[200px] truncate" title={row.getValue('description') as string}>
+          {row.getValue('description') as string}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'permissions',
+      header: ({ column }) => <SortableHeader column={column}>Permissions</SortableHeader>,
+      cell: ({ row }) => row.getValue('permissions') as string,
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="More actions">
+                <Icon name="more_vert" size={20} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onSelect={() => {
+                  onEditUser?.(row.original);
+                }}
+              >
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem>Reset password</DropdownMenuItem>
+              <DropdownMenuItem>Change permissions</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+      enableSorting: false,
+      meta: {
+        headerClassName: 'sticky right-0 bg-card shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',
+        cellClassName:
+          'sticky right-0 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] text-right',
+      },
+    },
+  ];
+}
+
+export interface FileManagementUsersDataTableProps {
+  data: FileManagementUserRow[];
+  onEditUser?: (row: FileManagementUserRow) => void;
+}
+
+export function FileManagementUsersDataTable({ data, onEditUser }: FileManagementUsersDataTableProps) {
+  const columns = React.useMemo(() => buildColumns(onEditUser), [onEditUser]);
   return (
     <TooltipProvider delayDuration={300}>
-      <DataTable columns={columns} data={FILE_MANAGEMENT_USERS_DATA} />
+      <DataTable columns={columns} data={data} getRowId={(row) => row.id} />
     </TooltipProvider>
   );
 }

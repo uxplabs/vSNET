@@ -1,0 +1,32 @@
+---
+description: Template for read-only detail views in a Sheet (label/value rows, footer OK).
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# Read-only detail sheet (template)
+
+Use this pattern when showing **read-only** entity details in a side **Sheet** (not a form).
+
+## Structure
+
+- **Header:** `SheetTitle` only (e.g. “Audit details”). Omit `SheetDescription` unless a short context line is required; put identifiers in the first body row instead.
+- **Body:** Scrollable region (`min-h-0 flex-1 overflow-y-auto px-4 py-2`) with a **vertical list of rows** separated by `divide-y divide-border`.
+- **Each row:** Two-column layout on `sm+`: label column `minmax(10rem, 12rem)`, value column `1fr`. Stack on small screens (`grid-cols-1`, then `sm:grid-cols-[minmax(10rem,12rem)_1fr]`, `sm:gap-x-6`, `sm:items-start`). Row padding `py-3`.
+- **Labels:** `text-muted-foreground text-sm` (sentence case).
+- **Values:** `min-w-0 text-sm text-foreground`. Use `tabular-nums` where appropriate (e.g. sequence numbers).
+- **Long text:** No bordered “callout” boxes around prose. Use `break-words [overflow-wrap:anywhere] leading-relaxed` on the value element (e.g. `<p>`).
+- **Status in read-only mode:** Prefer **plain text** in the detail sheet; reserve badges/chips for tables and lists.
+- **Footer:** `SheetFooter` with `flex justify-end`, single **OK** button (`Button` default variant) that dismisses the sheet.
+
+## Sheet width
+
+For detail sheets with long prose, prefer `sm:max-w-xl md:max-w-2xl` (or similar) on `SheetContent` so wrapped text is readable.
+
+## Add / edit sheets (forms)
+
+Use the **same “no extra panel” idea**: do **not** wrap the whole form in another `rounded-lg border bg-muted/…` box inside `SheetContent`. The sheet chrome (header border, body padding, footer border) is enough. Stack fields with `space-y-*` on the scrollable body.
+
+## Reference implementation
+
+`AdministrationPage.tsx` — audit trail row → “Audit details” sheet (seq → time & date → user → operation name → status). Add SNMP managers group sheet uses a flat form body (no inner bordered container).

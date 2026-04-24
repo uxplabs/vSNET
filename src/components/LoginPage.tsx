@@ -129,8 +129,12 @@ function LoginPage({ onLogin, onLoginWithSSO: _onLoginWithSSO, appName = 'AMS' }
             >
               {loading ? 'Signing in…' : 'Log in'}
             </Button>
-            <div className="text-center text-xs uppercase tracking-widest text-muted-foreground">
-              or
+            <div className="flex w-full items-center gap-2.5 py-0.5">
+              <div className="h-px min-w-0 flex-1 bg-border" />
+              <span className="shrink-0 text-[0.625rem] font-medium uppercase tracking-wide text-muted-foreground">
+                or
+              </span>
+              <div className="h-px min-w-0 flex-1 bg-border" />
             </div>
             <Button
               type="button"

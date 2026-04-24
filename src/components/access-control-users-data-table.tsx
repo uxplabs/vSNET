@@ -20,7 +20,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Checkbox } from '@/components/ui/checkbox';
 
 export interface AccessControlUserRow {
   id: string;
@@ -46,33 +45,8 @@ export const ACCESS_CONTROL_USERS_DATA: AccessControlUserRow[] = [
 
 const PROFILE_OPTIONS = ['Administrator', 'Operator', 'Viewer'] as const;
 
-const columns: ColumnDef<AccessControlUserRow>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-    meta: {
-      headerClassName: 'sticky left-0 z-10 w-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-      cellClassName: 'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-    },
-  },
+function buildColumns(onEditUser?: (row: AccessControlUserRow) => void): ColumnDef<AccessControlUserRow>[] {
+  return [
   {
     accessorKey: 'user',
     header: ({ column }) => <SortableHeader column={column}>User</SortableHeader>,
@@ -135,7 +109,7 @@ const columns: ColumnDef<AccessControlUserRow>[] = [
   {
     id: 'actions',
     header: '',
-    cell: () => (
+    cell: ({ row }) => (
       <div className="flex items-center justify-end">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -144,7 +118,13 @@ const columns: ColumnDef<AccessControlUserRow>[] = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Edit</DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => {
+                onEditUser?.(row.original);
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
             <DropdownMenuItem>Change password</DropdownMenuItem>
             <DropdownMenuItem>View activity</DropdownMenuItem>
             <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
@@ -159,11 +139,21 @@ const columns: ColumnDef<AccessControlUserRow>[] = [
     },
   },
 ];
+}
 
-export function AccessControlUsersDataTable() {
+export interface AccessControlUsersDataTableProps {
+  data?: AccessControlUserRow[];
+  onEditUser?: (row: AccessControlUserRow) => void;
+}
+
+export function AccessControlUsersDataTable({
+  data = ACCESS_CONTROL_USERS_DATA,
+  onEditUser,
+}: AccessControlUsersDataTableProps) {
+  const columns = React.useMemo(() => buildColumns(onEditUser), [onEditUser]);
   return (
     <TooltipProvider delayDuration={300}>
-      <DataTable columns={columns} data={ACCESS_CONTROL_USERS_DATA} />
+      <DataTable columns={columns} data={data} getRowId={(row) => row.id} />
     </TooltipProvider>
   );
 }

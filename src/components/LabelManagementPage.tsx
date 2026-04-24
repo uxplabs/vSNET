@@ -5,12 +5,7 @@ import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
 import { FilterSelect } from './ui/filter-select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from './ui/tooltip';
+import { TooltipProvider } from './ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -125,15 +120,18 @@ export default function LabelManagementPage({ onBack: _onBack }: LabelManagement
               <div className="p-3 border-b border-border/80 bg-muted/20">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-foreground truncate">Labels</h3>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 rounded-md" aria-label="Add label" onClick={() => setAddLabelDialogOpen(true)}>
-                        <Icon name="add" size={16} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Add label</TooltipContent>
-                  </Tooltip>
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full justify-center"
+                  aria-label="Add label"
+                  onClick={() => setAddLabelDialogOpen(true)}
+                >
+                  <Icon name="add" size={16} className="mr-1.5 shrink-0" />
+                  <span className="truncate">Add label</span>
+                </Button>
                 <div className="relative mt-3">
                   <Icon name="search" size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <Input
@@ -209,8 +207,8 @@ export default function LabelManagementPage({ onBack: _onBack }: LabelManagement
                         <p className="text-sm text-muted-foreground mb-4">
                           This label has no devices yet. Add devices to get started.
                         </p>
-                        <Button variant="outline" className="gap-1" onClick={() => setAddDeviceSheetOpen(true)}>
-                          <Icon name="add" size={18} />
+                        <Button type="button" variant="outline" size="sm" onClick={() => setAddDeviceSheetOpen(true)}>
+                          <Icon name="add" size={16} className="mr-1.5" />
                           Add device
                         </Button>
                       </div>
@@ -246,8 +244,8 @@ export default function LabelManagementPage({ onBack: _onBack }: LabelManagement
                             <FilterSelect value={groupFilter} onValueChange={setGroupFilter} label="Group" options={[...GROUP_OPTIONS]} className="w-[120px] shrink-0" />
                           </div>
                           <div className="ml-auto flex items-center gap-2">
-                            <Button variant="outline" size="default" className="gap-1" onClick={() => setAddDeviceSheetOpen(true)}>
-                              <Icon name="add" size={18} />
+                            <Button type="button" variant="outline" size="sm" onClick={() => setAddDeviceSheetOpen(true)}>
+                              <Icon name="add" size={16} className="mr-1.5" />
                               Add device
                             </Button>
                             <DropdownMenu>

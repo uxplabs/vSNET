@@ -43,10 +43,14 @@ function Calendar({
       classNames={{
         root: cn("w-fit", defaultClassNames.root),
         months: cn(
-          "relative flex flex-col gap-4 md:flex-row",
-          defaultClassNames.months
+          defaultClassNames.months,
+          // Always row: popovers/dialogs are often < md (768px) wide, which used to force an awkward vertical stack.
+          "relative flex max-w-[100vw] flex-row flex-nowrap items-start justify-center gap-3 overflow-x-auto sm:gap-4",
         ),
-        month: cn("flex w-full flex-col gap-4", defaultClassNames.month),
+        month: cn(
+          defaultClassNames.month,
+          "flex w-fit shrink-0 flex-col gap-3 sm:gap-4",
+        ),
         nav: cn(
           "absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1",
           defaultClassNames.nav
@@ -85,12 +89,18 @@ function Calendar({
           defaultClassNames.caption_label
         ),
         table: "w-full border-collapse",
-        weekdays: cn("flex", defaultClassNames.weekdays),
-        weekday: cn(
-          "text-muted-foreground flex-1 select-none rounded-md text-[0.8rem] font-normal",
-          defaultClassNames.weekday
+        weekdays: cn(
+          defaultClassNames.weekdays,
+          "flex w-[calc(7*var(--cell-size))] max-w-full flex-nowrap justify-start gap-0",
         ),
-        week: cn("mt-2 flex w-full", defaultClassNames.week),
+        weekday: cn(
+          defaultClassNames.weekday,
+          "text-muted-foreground flex h-[var(--cell-size)] w-[var(--cell-size)] shrink-0 select-none items-center justify-center rounded-md text-[0.8rem] font-normal",
+        ),
+        week: cn(
+          defaultClassNames.week,
+          "mt-2 flex w-[calc(7*var(--cell-size))] max-w-full flex-nowrap gap-0",
+        ),
         week_number_header: cn(
           "w-[--cell-size] select-none",
           defaultClassNames.week_number_header
@@ -100,8 +110,8 @@ function Calendar({
           defaultClassNames.week_number
         ),
         day: cn(
-          "group/day relative aspect-square h-full w-full select-none p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md",
-          defaultClassNames.day
+          defaultClassNames.day,
+          "group/day relative h-[var(--cell-size)] w-[var(--cell-size)] shrink-0 select-none p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md",
         ),
         range_start: cn(
           "bg-accent rounded-l-md",

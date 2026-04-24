@@ -1,0 +1,16 @@
+---
+description: Form and field labels use sentence case
+globs: src/**/*.tsx
+alwaysApply: false
+---
+
+# Form labels: sentence case
+
+Use **sentence case** for visible field labels, table column headers tied to fields, and control text that acts as a label (e.g. `Label`, `htmlFor` targets, radio option titles).
+
+- Capitalize the **first word** only, plus **proper nouns** and **standard acronyms** where they read correctly (e.g. `SNMP`, `SMTP`, `STARTTLS`, `SSL`, `VSNET`, `RADIUS`, `SAML`).
+- Lowercase the rest: e.g. `Password age (days)*`, `Banner title*`, `External authentication type`, `Message of day`.
+- Prefer **Username** as one word over “User name” for account fields.
+- Radio / stacked titles inside `Label` follow the same rule (e.g. `VSNET only`, `External only`).
+
+Do not use title case for routine labels (`Password Age (Days)*`).

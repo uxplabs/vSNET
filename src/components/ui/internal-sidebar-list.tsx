@@ -18,6 +18,8 @@ interface InternalSidebarListProps {
   showAddAction?: boolean;
   onAddAction?: () => void;
   addAriaLabel?: string;
+  /** Visible label on the add button (e.g. "Add profile"). Defaults to "Add". */
+  addButtonLabel?: string;
   showSearch?: boolean;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -34,6 +36,7 @@ export function InternalSidebarList({
   showAddAction = false,
   onAddAction,
   addAriaLabel = 'Add item',
+  addButtonLabel = 'Add',
   showSearch = false,
   searchValue = '',
   onSearchChange,
@@ -46,19 +49,20 @@ export function InternalSidebarList({
       <div className="p-3 border-b border-border/80 bg-muted/20">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-foreground truncate">{title}</h3>
-          {showAddAction && (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-7 w-7 shrink-0 rounded-md"
-              aria-label={addAriaLabel}
-              onClick={onAddAction}
-            >
-              <Icon name="add" size={16} />
-            </Button>
-          )}
         </div>
+        {showAddAction && onAddAction && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={addAriaLabel}
+            onClick={onAddAction}
+            className="mt-2 h-auto min-h-8 w-full border-dashed border-border/80 bg-background/40 py-2 font-normal text-muted-foreground shadow-none hover:border-border hover:bg-background hover:text-foreground"
+          >
+            <Icon name="add" size={18} className="shrink-0 opacity-80" />
+            <span className="truncate">{addButtonLabel}</span>
+          </Button>
+        )}
         {showSearch && (
           <div className="relative mt-3">
             <Icon name="search" size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Navbar01 } from './navbar-01';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
@@ -29,24 +29,39 @@ import {
   DialogTitle,
   DialogFooter,
 } from './ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from './ui/sheet';
 import { Textarea } from './ui/textarea';
 import { toast } from 'sonner';
+import { endOfDay, format, isAfter, isBefore, startOfDay, subDays } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
+import { Calendar } from './ui/calendar';
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './ui/popover';
+import { cn } from '@/lib/utils';
 import { DeviceStatus } from './ui/device-status';
 import { DeviceLink } from './ui/device-link';
 import { NodeTypeBadge } from './ui/node-type-badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from './ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { AccessControlUsersDataTable, ACCESS_CONTROL_USERS_DATA } from './access-control-users-data-table';
+import {
+  AccessControlUsersDataTable,
+  ACCESS_CONTROL_USERS_DATA,
+  type AccessControlUserRow,
+} from './access-control-users-data-table';
+import { AccessControlUserSheet } from './access-control-user-sheet';
+import { AccessControlProfilesDataTable } from './access-control-profiles-data-table';
+import { ProfileRegionsField } from './profile-regions-field';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { InternalSidebarList } from './ui/internal-sidebar-list';
@@ -54,6 +69,7 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import FaultManagementPage from './FaultManagementPage';
 import LabelManagementPage from './LabelManagementPage';
 import FileManagementPage from './FileManagementPage';
+import { createInitialFileManagementPersisted, type FileManagementPersisted } from './file-management-users-data-table';
 import DeviceMigrationPage from './DeviceMigrationPage';
 import {
   Sidebar,
@@ -80,6 +96,7 @@ const SIDEBAR_ITEMS = [
   { label: 'Audit trail', icon: 'history' },
   { label: 'Northbound interface', icon: 'api' },
   { label: 'Email', icon: 'mail' },
+  { label: 'File management', icon: 'folder' },
   { label: 'Fault management', icon: 'error' },
   { label: 'Server settings', icon: 'settings' },
   { label: 'Device migration', icon: 'swap_horiz' },
@@ -89,8 +106,6 @@ const SIDEBAR_ITEMS = [
 ] as const;
 
 const PROFILE_OPTIONS = ['All', 'Administrator', 'Operator', 'Viewer'] as const;
-const DEPARTMENT_OPTIONS = ['All', 'Engineering', 'Operations', 'Support', 'Management'] as const;
-const LOCATION_OPTIONS = ['All', 'Seattle', 'Portland', 'San Francisco', 'Phoenix', 'New York'] as const;
 const ADMIN_OPERATION_OPTIONS = ['Configure Profile', 'System Administration', 'User Management'] as const;
 const AUDIT_DATE_RANGE_OPTIONS = ['All', 'Today', 'Last 7 days', 'Last 30 days', 'Custom'] as const;
 const APPLICATION_OPERATION_OPTIONS = [
@@ -107,36 +122,160 @@ const APPLICATION_OPERATION_OPTIONS = [
   'View Tasks',
   'View Topology',
 ] as const;
-const AUDIT_TRAIL_ROWS = [
-  { seqNo: 1, operationDateTime: 'Mar 05, 2026 09:12', username: 'admin@acme.com', operationName: 'Update region name', operationStatus: 'Allowed', ageDays: 0 },
-  { seqNo: 2, operationDateTime: 'Mar 04, 2026 16:48', username: 'operator@acme.com', operationName: 'Modify profile permissions', operationStatus: 'Allowed', ageDays: 1 },
-  { seqNo: 3, operationDateTime: 'Mar 03, 2026 11:02', username: 'viewer@acme.com', operationName: 'Attempt user management', operationStatus: 'Denied', ageDays: 2 },
-  { seqNo: 4, operationDateTime: 'Mar 01, 2026 14:35', username: 'admin@acme.com', operationName: 'Enable login banner', operationStatus: 'Allowed', ageDays: 4 },
-  { seqNo: 5, operationDateTime: 'Feb 18, 2026 08:21', username: 'operator@acme.com', operationName: 'Change authentication mode', operationStatus: 'Allowed', ageDays: 16 },
-] as const;
-const ALARM_FORWARDING_ROWS = [
+interface AuditTrailRow {
+  seqNo: number;
+  operationDateTime: string;
+  username: string;
+  operationName: string;
+  operationStatus: 'Allowed' | 'Denied';
+  ageDays: number;
+}
+
+const AUDIT_TRAIL_ROWS: AuditTrailRow[] = [
+  {
+    seqNo: 1,
+    operationDateTime: 'Mar 05, 2026 09:12',
+    username: 'admin@acme.com',
+    operationName:
+      'Update region display name and metadata for Pacific Northwest (ID pnw-01): validate uniqueness against existing regions, propagate the change to all northbound inventory exports, refresh cached topology labels served to the operator console, write an immutable configuration revision with rollback pointer, enqueue background sync to redundant management pairs (ams-west-02, ams-west-03), and emit structured audit fields including previous label, new label, actor session ID, and client IP 10.12.44.18',
+    operationStatus: 'Allowed',
+    ageDays: 0,
+  },
+  {
+    seqNo: 2,
+    operationDateTime: 'Mar 04, 2026 16:48',
+    username: 'operator@acme.com',
+    operationName:
+      'Modify profile permissions across all assigned regions, reconcile admin and application operation lists with the identity provider (Okta app vSNET-AMS-prod), diff the resulting capability matrix against the last approved baseline commit 9f3c2a1, stage the update in pending state for secondary approver workflow, publish the resulting access matrix to the audit subsystem for SOC2 evidence bundle export, and attach correlation token corr-20260304-164812-aa7f to downstream task queue ams.tasks.profile-publish',
+    operationStatus: 'Allowed',
+    ageDays: 1,
+  },
+  {
+    seqNo: 3,
+    operationDateTime: 'Mar 03, 2026 11:02',
+    username: 'viewer@acme.com',
+    operationName:
+      'Attempt user management: createUser denied because principal lacks AMS:Users:Write; requested payload included email jnewman@vendor.example, temporary MFA enrollment, and assignment to profile "Field engineer — read only"; evaluated policy bundle revision 2026-03-01.3 with explicit deny on role elevation paths; client reported User-Agent Mozilla/5.0 (compatible; scripted-check/1.4)',
+    operationStatus: 'Denied',
+    ageDays: 2,
+  },
+  {
+    seqNo: 4,
+    operationDateTime: 'Mar 01, 2026 14:35',
+    username: 'admin@acme.com',
+    operationName:
+      'Enable login banner: set bannerTitle to "Authorized use only", messageOfDay to rotating compliance text block (UTF-8, 2.1 KB), enableLegalAcknowledgement=true, requireAckBeforeSession=true, apply banner to Web UI + REST session establishment paths, invalidate existing sessions without ack where policy version bumped from v14 to v15, and schedule nightly reminder job cron "0 45 6 * * ?" on management cluster job-runner-ams-01',
+    operationStatus: 'Allowed',
+    ageDays: 4,
+  },
+  {
+    seqNo: 5,
+    operationDateTime: 'Feb 18, 2026 08:21',
+    username: 'operator@acme.com',
+    operationName:
+      'Change authentication mode from local-only to hybrid SAML (IdP https://idp.acme.com/realms/noc): import SP metadata, rotate signing certificates with 48h overlap, map IdP groups to AMS roles, disable legacy local admin except break-glass acct bg-admin@acme.com, update session TTL and idle timeout per security bulletin SB-2026-02-09, run smoke login against staging IdP mirror, and record pre/post fingerprint hashes for configuration drift detection',
+    operationStatus: 'Allowed',
+    ageDays: 16,
+  },
+];
+interface AlarmForwardingRow {
+  name: string;
+  hostName: string;
+}
+
+const ALARM_FORWARDING_INITIAL: AlarmForwardingRow[] = [
   { name: 'Primary NMS', hostName: 'nms-core-01.acme.net' },
   { name: 'Backup NMS', hostName: 'nms-dr-01.acme.net' },
-] as const;
-const SYSLOG_FORWARDING_ROWS = [
+];
+
+type SnmpManagersGroupVersion = 'v2c' | 'v3';
+
+interface SnmpManagersGroupFormValues {
+  name: string;
+  port: string;
+  enable: boolean;
+  hostName: string;
+  enableHeartbeatTrap: boolean;
+  heartbeatIntervalMinutes: string;
+  snmpVersion: SnmpManagersGroupVersion;
+  community: string;
+  v3UserName: string;
+}
+
+const DEFAULT_SNMP_MANAGERS_GROUP_FORM: SnmpManagersGroupFormValues = {
+  name: '',
+  port: '162',
+  enable: true,
+  hostName: '',
+  enableHeartbeatTrap: false,
+  heartbeatIntervalMinutes: '5',
+  snmpVersion: 'v2c',
+  community: 'public',
+  v3UserName: '',
+};
+interface SyslogForwardingRow {
+  hostName: string;
+  port: string;
+  enabled: boolean;
+  enableAuditTrail: boolean;
+  enableSystemEvent: boolean;
+  description: string;
+}
+
+const SYSLOG_FORWARDING_INITIAL: SyslogForwardingRow[] = [
   {
     hostName: 'syslog-west-01.acme.net',
     port: '514',
     enabled: true,
-    enabledEvents: ['Critical alarms', 'Major alarms', 'Node status changes'],
+    enableAuditTrail: true,
+    enableSystemEvent: true,
     description: 'Primary west-region syslog collector',
   },
   {
     hostName: 'syslog-central-01.acme.net',
     port: '1514',
     enabled: false,
-    enabledEvents: ['Authentication events', 'Configuration changes'],
+    enableAuditTrail: true,
+    enableSystemEvent: true,
     description: 'Secondary collector for compliance logging',
   },
-] as const;
+];
+
+interface SyslogForwardingFormValues {
+  hostName: string;
+  port: string;
+  enabled: boolean;
+  enableAuditTrail: boolean;
+  enableSystemEvent: boolean;
+  description: string;
+}
+
+const DEFAULT_SYSLOG_FORWARDING_FORM: SyslogForwardingFormValues = {
+  hostName: '',
+  port: '514',
+  enabled: true,
+  enableAuditTrail: true,
+  enableSystemEvent: true,
+  description: '',
+};
+
+function syslogEventLabels(row: SyslogForwardingRow): string[] {
+  const labels: string[] = [];
+  if (row.enableAuditTrail) labels.push('Audit trail');
+  if (row.enableSystemEvent) labels.push('System event');
+  return labels;
+}
 interface EmailGroupSettings {
   name: string;
   emailAddresses: string[];
+}
+
+function parseEmailAddressesText(text: string): string[] {
+  const parts = text
+    .split(/[\n,;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return [...new Set(parts)];
 }
 
 export interface ProfileSchedule { days: string[]; allDay: boolean; startTime: string; endTime: string }
@@ -155,6 +294,62 @@ interface AccessControlProfileAccess {
   regions: string[];
   adminOperations: string[];
   applicationOperations: string[];
+}
+
+interface ProfileEditorSessionSnapshot {
+  access: AccessControlProfileAccess;
+  label: string;
+}
+
+type AdministrationNavigationIntent =
+  | { kind: 'sidebar'; sectionKey: string }
+  | { kind: 'accessControlTab'; tab: string }
+  | { kind: 'app'; page: string; tab?: string };
+
+/** Serializable snapshot of administration configuration (in-page state only). */
+interface AdministrationPersistedSnapshot {
+  accessControlUsers: AccessControlUserRow[];
+  authSidebarSection: 'general' | 'radius' | 'tacacs' | 'saml';
+  authMode: 'vsnet-only' | 'external-only' | 'combined';
+  externalAuthType: 'radius' | 'tacacs' | 'saml';
+  profilesSidebarItems: Array<{ id: string; label: string }>;
+  profileAccessById: Record<string, AccessControlProfileAccess>;
+  regionSidebarItems: Array<{ id: string; label: string }>;
+  selectedRegionSidebarId: string;
+  regionNameValue: string;
+  accessControlSettings: AccessControlSettingsFormValues;
+  alarmForwardingRows: AlarmForwardingRow[];
+  syslogForwardingRows: SyslogForwardingRow[];
+  emailGroupSidebarItems: Array<{ id: string; label: string }>;
+  emailGroupById: Record<string, EmailGroupSettings>;
+  smtp: {
+    smtpEnabled: boolean;
+    smtpFromEmail: string;
+    smtpEmailKey: string;
+    smtpServer: string;
+    smtpPort: string;
+    smtpSecurityMode: 'none' | 'starttls' | 'ssl';
+    smtpUseAuthentication: boolean;
+    smtpUserName: string;
+    smtpPassword: string;
+    smtpTestEmail: string;
+  };
+  snmp: {
+    snmpEnableInternalAgent: boolean;
+    snmpEnableV2c: boolean;
+    snmpReadCommunity: string;
+    snmpWriteCommunity: string;
+    snmpEnableV3: boolean;
+    snmpEngineId: string;
+    snmpUserName: string;
+    snmpAuthenticationProtocol: string;
+    snmpChangeAuthenticationPassword: boolean;
+    snmpPrivacyProtocol: string;
+    snmpChangePrivacyPassword: boolean;
+  };
+  profileData: Record<string, ProfileData>;
+  /** Present in new snapshots; absent in older serialized state. */
+  fileManagement?: FileManagementPersisted;
 }
 
 export const PERF_PROFILES_INIT: Record<string, ProfileData> = {
@@ -347,6 +542,34 @@ export interface AdministrationPageProps {
   fixedRegion?: string;
 }
 
+type AccessControlSettingsFormValues = {
+  passwordAgeDays: string;
+  passwordExpiryWarningDays: string;
+  passwordMinLength: string;
+  passwordReusePreventionCount: string;
+  passwordReusePreventionDays: string;
+  accountLockoutEnabled: boolean;
+  accountLockoutThreshold: string;
+  inactivityLogoutDurationMinutes: string;
+  loginBannerEnabled: boolean;
+  bannerTitle: string;
+  messageOfDay: string;
+};
+
+const DEFAULT_ACCESS_CONTROL_SETTINGS: AccessControlSettingsFormValues = {
+  passwordAgeDays: '90',
+  passwordExpiryWarningDays: '14',
+  passwordMinLength: '12',
+  passwordReusePreventionCount: '5',
+  passwordReusePreventionDays: '365',
+  accountLockoutEnabled: true,
+  accountLockoutThreshold: '5',
+  inactivityLogoutDurationMinutes: '15',
+  loginBannerEnabled: true,
+  bannerTitle: 'Authorized Access Only',
+  messageOfDay: 'Maintenance window every Sunday 02:00-04:00 UTC.',
+};
+
 export default function AdministrationPage({
   appName = 'AMS',
   onSignOut,
@@ -368,7 +591,17 @@ export default function AdministrationPage({
     { id: 'operator', label: 'Operator' },
     { id: 'viewer', label: 'Viewer' },
   ]);
-  const [selectedProfileId, setSelectedProfileId] = useState('administrator');
+  const [profileEditorId, setProfileEditorId] = useState<string | null>(null);
+  const [profileSheetMode, setProfileSheetMode] = useState<'add' | 'edit' | null>(null);
+  const [accessProfileDeleteTarget, setAccessProfileDeleteTarget] = useState<{ id: string; name: string } | null>(
+    null,
+  );
+  const [regionDeleteTarget, setRegionDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [profileEditorBaseline, setProfileEditorBaseline] = useState<ProfileEditorSessionSnapshot | null>(null);
+  const profileEditorIdRef = useRef<string | null>(null);
+  const skipRevertOnNextOverlayCloseRef = useRef(false);
+  const profileEditorCloseReasonRef = useRef<'cancel' | 'save' | 'overlay' | null>(null);
+  const bumpCommittedAdministrationRef = useRef<() => void>(() => {});
   const [profileAccessById, setProfileAccessById] = useState<Record<string, AccessControlProfileAccess>>({
     administrator: {
       regions: (regions && regions.length > 0)
@@ -388,12 +621,6 @@ export default function AdministrationPage({
       applicationOperations: ['View Events', 'View Label Management', 'View Performance', 'View Profile', 'View Node', 'View Tasks', 'View Topology'],
     },
   });
-  const [pendingProfileRegions, setPendingProfileRegions] = useState<string[]>([]);
-  const [pendingAdminOperations, setPendingAdminOperations] = useState<string[]>([]);
-  const [pendingApplicationOperations, setPendingApplicationOperations] = useState<string[]>([]);
-  const [addRegionDialogOpen, setAddRegionDialogOpen] = useState(false);
-  const [addAdminOperationDialogOpen, setAddAdminOperationDialogOpen] = useState(false);
-  const [addApplicationOperationDialogOpen, setAddApplicationOperationDialogOpen] = useState(false);
   const [regionSidebarItems, setRegionSidebarItems] = useState<Array<{ id: string; label: string }>>(() => {
     const initialRegions = (regions && regions.length > 0)
       ? regions
@@ -409,26 +636,64 @@ export default function AdministrationPage({
       : (region ? [region] : ['Pacific Northwest']);
     return `${initialRegions[0].toLowerCase().replace(/\s+/g, '-')}-0`;
   });
-  const [regionNameValue, setRegionNameValue] = useState('');
-  const [passwordAgeDays, setPasswordAgeDays] = useState('90');
-  const [passwordExpiryWarningDays, setPasswordExpiryWarningDays] = useState('14');
-  const [passwordMinLength, setPasswordMinLength] = useState('12');
-  const [passwordReusePreventionCount, setPasswordReusePreventionCount] = useState('5');
-  const [passwordReusePreventionDays, setPasswordReusePreventionDays] = useState('365');
-  const [accountLockoutEnabled, setAccountLockoutEnabled] = useState(true);
-  const [accountLockoutThreshold, setAccountLockoutThreshold] = useState('5');
-  const [inactivityLogoutDurationMinutes, setInactivityLogoutDurationMinutes] = useState('15');
-  const [loginBannerEnabled, setLoginBannerEnabled] = useState(true);
-  const [bannerTitle, setBannerTitle] = useState('Authorized Access Only');
-  const [messageOfDay, setMessageOfDay] = useState('Maintenance window every Sunday 02:00-04:00 UTC.');
+  const [regionNameValue, setRegionNameValue] = useState(() => {
+    const initialRegions = (regions && regions.length > 0)
+      ? regions
+      : (region ? [region] : ['Pacific Northwest']);
+    const initialItems = initialRegions.map((regionName, index) => ({
+      id: `${regionName.toLowerCase().replace(/\s+/g, '-')}-${index}`,
+      label: regionName,
+    }));
+    const initialSelectedId = `${initialRegions[0].toLowerCase().replace(/\s+/g, '-')}-0`;
+    return initialItems.find((item) => item.id === initialSelectedId)?.label ?? initialRegions[0] ?? '';
+  });
+  const [passwordAgeDays, setPasswordAgeDays] = useState(DEFAULT_ACCESS_CONTROL_SETTINGS.passwordAgeDays);
+  const [passwordExpiryWarningDays, setPasswordExpiryWarningDays] = useState(
+    DEFAULT_ACCESS_CONTROL_SETTINGS.passwordExpiryWarningDays,
+  );
+  const [passwordMinLength, setPasswordMinLength] = useState(DEFAULT_ACCESS_CONTROL_SETTINGS.passwordMinLength);
+  const [passwordReusePreventionCount, setPasswordReusePreventionCount] = useState(
+    DEFAULT_ACCESS_CONTROL_SETTINGS.passwordReusePreventionCount,
+  );
+  const [passwordReusePreventionDays, setPasswordReusePreventionDays] = useState(
+    DEFAULT_ACCESS_CONTROL_SETTINGS.passwordReusePreventionDays,
+  );
+  const [accountLockoutEnabled, setAccountLockoutEnabled] = useState(
+    DEFAULT_ACCESS_CONTROL_SETTINGS.accountLockoutEnabled,
+  );
+  const [accountLockoutThreshold, setAccountLockoutThreshold] = useState(
+    DEFAULT_ACCESS_CONTROL_SETTINGS.accountLockoutThreshold,
+  );
+  const [inactivityLogoutDurationMinutes, setInactivityLogoutDurationMinutes] = useState(
+    DEFAULT_ACCESS_CONTROL_SETTINGS.inactivityLogoutDurationMinutes,
+  );
+  const [loginBannerEnabled, setLoginBannerEnabled] = useState(DEFAULT_ACCESS_CONTROL_SETTINGS.loginBannerEnabled);
+  const [bannerTitle, setBannerTitle] = useState(DEFAULT_ACCESS_CONTROL_SETTINGS.bannerTitle);
+  const [messageOfDay, setMessageOfDay] = useState(DEFAULT_ACCESS_CONTROL_SETTINGS.messageOfDay);
+  const [, setAccessControlSettingsBaseline] = useState<AccessControlSettingsFormValues>(() => ({
+    ...DEFAULT_ACCESS_CONTROL_SETTINGS,
+  }));
   const [search, setSearch] = useState('');
   const [northboundTab, setNorthboundTab] = useState('alarm-forwarding');
+  const [alarmForwardingRows, setAlarmForwardingRows] = useState<AlarmForwardingRow[]>(() => [...ALARM_FORWARDING_INITIAL]);
+  const [snmpManagersGroupSheetOpen, setSnmpManagersGroupSheetOpen] = useState(false);
+  const [snmpManagersGroupEditIndex, setSnmpManagersGroupEditIndex] = useState<number | null>(null);
+  const [alarmForwardingDeleteIndex, setAlarmForwardingDeleteIndex] = useState<number | null>(null);
+  const [snmpManagersGroupForm, setSnmpManagersGroupForm] = useState<SnmpManagersGroupFormValues>(() => ({
+    ...DEFAULT_SNMP_MANAGERS_GROUP_FORM,
+  }));
+  const [syslogForwardingRows, setSyslogForwardingRows] = useState<SyslogForwardingRow[]>(() =>
+    SYSLOG_FORWARDING_INITIAL.map((r) => ({ ...r })),
+  );
+  const [syslogSheetOpen, setSyslogSheetOpen] = useState(false);
+  const [syslogEditIndex, setSyslogEditIndex] = useState<number | null>(null);
+  const [syslogDeleteIndex, setSyslogDeleteIndex] = useState<number | null>(null);
+  const [syslogForm, setSyslogForm] = useState<SyslogForwardingFormValues>(() => ({ ...DEFAULT_SYSLOG_FORWARDING_FORM }));
   const [emailTab, setEmailTab] = useState('email-groups');
   const [emailGroupSidebarItems, setEmailGroupSidebarItems] = useState<Array<{ id: string; label: string }>>([
     { id: 'noc-primary', label: 'NOC Primary' },
     { id: 'operations-managers', label: 'Operations Managers' },
   ]);
-  const [selectedEmailGroupId, setSelectedEmailGroupId] = useState('noc-primary');
   const [emailGroupById, setEmailGroupById] = useState<Record<string, EmailGroupSettings>>({
     'noc-primary': {
       name: 'NOC Primary',
@@ -439,9 +704,12 @@ export default function AdministrationPage({
       emailAddresses: ['ops-managers@acme.com'],
     },
   });
-  const [emailGroupNameValue, setEmailGroupNameValue] = useState('NOC Primary');
-  const [addEmailAddressDialogOpen, setAddEmailAddressDialogOpen] = useState(false);
-  const [pendingEmailAddress, setPendingEmailAddress] = useState('');
+  const [emailGroupSheetOpen, setEmailGroupSheetOpen] = useState(false);
+  const [emailGroupSheetEditId, setEmailGroupSheetEditId] = useState<string | null>(null);
+  const [emailGroupSheetName, setEmailGroupSheetName] = useState('');
+  const [emailGroupSheetAddressesText, setEmailGroupSheetAddressesText] = useState('');
+  const [emailGroupDeleteId, setEmailGroupDeleteId] = useState<string | null>(null);
+  const [fileMgmt, setFileMgmt] = useState<FileManagementPersisted>(() => createInitialFileManagementPersisted());
   const [smtpEnabled, setSmtpEnabled] = useState(true);
   const [smtpFromEmail, setSmtpFromEmail] = useState('alerts@acme.com');
   const [smtpEmailKey, setSmtpEmailKey] = useState('AMS-ALERTS');
@@ -467,9 +735,18 @@ export default function AdministrationPage({
   const [auditUsernameFilter, setAuditUsernameFilter] = useState('All');
   const [auditStatusFilter, setAuditStatusFilter] = useState('All');
   const [auditDateRangeFilter, setAuditDateRangeFilter] = useState<(typeof AUDIT_DATE_RANGE_OPTIONS)[number]>('All');
+  const [auditCustomApplied, setAuditCustomApplied] = useState<DateRange | undefined>();
+  const [auditCustomDraft, setAuditCustomDraft] = useState<DateRange | undefined>();
+  const [auditCustomOpen, setAuditCustomOpen] = useState(false);
+  const [auditDetailRow, setAuditDetailRow] = useState<AuditTrailRow | null>(null);
+  const auditCustomAppliedRef = useRef<DateRange | undefined>(undefined);
+  useEffect(() => {
+    auditCustomAppliedRef.current = auditCustomApplied;
+  }, [auditCustomApplied]);
   const [profileFilter, setProfileFilter] = useState<string>('All');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('All');
-  const [locationFilter, setLocationFilter] = useState<string>('All');
+  const [accessControlUsers, setAccessControlUsers] = useState<AccessControlUserRow[]>(() => [...ACCESS_CONTROL_USERS_DATA]);
+  const [accessControlUserSheetOpen, setAccessControlUserSheetOpen] = useState(false);
+  const [accessControlUserEditing, setAccessControlUserEditing] = useState<AccessControlUserRow | null>(null);
   const [perfSearch, setPerfSearch] = useState('');
   const [_perfLteFilter, _setPerfLteFilter] = useState<string>('All');
   const [_perfTimeFilter, _setPerfTimeFilter] = useState<string>('All');
@@ -514,7 +791,6 @@ export default function AdministrationPage({
   };
 
   const activeLabel = SIDEBAR_ITEMS.find((item) => toKey(item.label) === activeSection)?.label ?? activeSection;
-  const selectedProfileLabel = profilesSidebarItems.find((item) => item.id === selectedProfileId)?.label ?? 'Profile';
   const accountRegions = (regions && regions.length > 0)
     ? regions
     : (region ? [region] : ['Pacific Northwest']);
@@ -522,45 +798,509 @@ export default function AdministrationPage({
   useEffect(() => {
     setRegionNameValue(selectedRegionLabel);
   }, [selectedRegionLabel]);
-  const selectedProfileAccess = profileAccessById[selectedProfileId] ?? {
-    regions: [],
-    adminOperations: [],
-    applicationOperations: [],
-  };
-  const availableProfileRegions = accountRegions.filter((regionName) => !selectedProfileAccess.regions.includes(regionName));
-  const availableAdminOperations = ADMIN_OPERATION_OPTIONS.filter((operation) => !selectedProfileAccess.adminOperations.includes(operation));
-  const availableApplicationOperations = APPLICATION_OPERATION_OPTIONS.filter((operation) => !selectedProfileAccess.applicationOperations.includes(operation));
-  const auditUsernameOptions = ['All', ...Array.from(new Set(AUDIT_TRAIL_ROWS.map((row) => row.username)))];
-  const updateSelectedProfileAccess = (patch: Partial<AccessControlProfileAccess>) => {
+
+  const patchProfileAccess = (profileId: string, patch: Partial<AccessControlProfileAccess>) => {
     setProfileAccessById((prev) => {
-      const current = prev[selectedProfileId] ?? { regions: [], adminOperations: [], applicationOperations: [] };
-      return { ...prev, [selectedProfileId]: { ...current, ...patch } };
+      const current = prev[profileId] ?? { regions: [], adminOperations: [], applicationOperations: [] };
+      return { ...prev, [profileId]: { ...current, ...patch } };
     });
   };
-  const selectedEmailGroup = emailGroupById[selectedEmailGroupId] ?? { name: '', emailAddresses: [] };
-  useEffect(() => {
-    setEmailGroupNameValue(selectedEmailGroup.name);
-  }, [selectedEmailGroup.name, selectedEmailGroupId]);
-  const filteredAuditRows = AUDIT_TRAIL_ROWS.filter((row) => {
-    const searchTerm = auditSearch.trim().toLowerCase();
-    if (searchTerm) {
-      const searchable = `${row.seqNo} ${row.operationDateTime} ${row.username} ${row.operationName} ${row.operationStatus}`.toLowerCase();
-      if (!searchable.includes(searchTerm)) return false;
+
+  const applyEditorAccessPatch = (patch: Partial<AccessControlProfileAccess>) => {
+    if (profileEditorId) patchProfileAccess(profileEditorId, patch);
+  };
+
+  const editorAccess = useMemo(() => {
+    if (!profileEditorId) {
+      return { regions: [] as string[], adminOperations: [] as string[], applicationOperations: [] as string[] };
     }
-    if (auditUsernameFilter !== 'All' && row.username !== auditUsernameFilter) return false;
-    if (auditStatusFilter !== 'All' && row.operationStatus !== auditStatusFilter) return false;
-    if (auditDateRangeFilter === 'Today' && row.ageDays > 0) return false;
-    if (auditDateRangeFilter === 'Last 7 days' && row.ageDays > 7) return false;
-    if (auditDateRangeFilter === 'Last 30 days' && row.ageDays > 30) return false;
-    return true;
-  });
+    return profileAccessById[profileEditorId] ?? { regions: [], adminOperations: [], applicationOperations: [] };
+  }, [profileEditorId, profileAccessById]);
+
+  const editorLabel = useMemo(
+    () => (profileEditorId ? profilesSidebarItems.find((p) => p.id === profileEditorId)?.label ?? 'Profile' : ''),
+    [profileEditorId, profilesSidebarItems],
+  );
+
+  profileEditorIdRef.current = profileEditorId;
+
+  useLayoutEffect(() => {
+    if (!profileEditorId) {
+      setProfileEditorBaseline(null);
+      return;
+    }
+    const current = profileAccessById[profileEditorId] ?? {
+      regions: [],
+      adminOperations: [],
+      applicationOperations: [],
+    };
+    const label = profilesSidebarItems.find((p) => p.id === profileEditorId)?.label ?? '';
+    setProfileEditorBaseline({
+      access: structuredClone(current),
+      label,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- baseline only when opening a profile id, not on each edit
+  }, [profileEditorId]);
+
+  const administrationPersistedJson = useMemo(() => {
+    const snapshot: AdministrationPersistedSnapshot = {
+      accessControlUsers,
+      authSidebarSection,
+      authMode,
+      externalAuthType,
+      profilesSidebarItems,
+      profileAccessById,
+      regionSidebarItems,
+      selectedRegionSidebarId,
+      regionNameValue,
+      accessControlSettings: {
+        passwordAgeDays,
+        passwordExpiryWarningDays,
+        passwordMinLength,
+        passwordReusePreventionCount,
+        passwordReusePreventionDays,
+        accountLockoutEnabled,
+        accountLockoutThreshold,
+        inactivityLogoutDurationMinutes,
+        loginBannerEnabled,
+        bannerTitle,
+        messageOfDay,
+      },
+      alarmForwardingRows,
+      syslogForwardingRows,
+      emailGroupSidebarItems,
+      emailGroupById,
+      smtp: {
+        smtpEnabled,
+        smtpFromEmail,
+        smtpEmailKey,
+        smtpServer,
+        smtpPort,
+        smtpSecurityMode,
+        smtpUseAuthentication,
+        smtpUserName,
+        smtpPassword,
+        smtpTestEmail,
+      },
+      snmp: {
+        snmpEnableInternalAgent,
+        snmpEnableV2c,
+        snmpReadCommunity,
+        snmpWriteCommunity,
+        snmpEnableV3,
+        snmpEngineId,
+        snmpUserName,
+        snmpAuthenticationProtocol,
+        snmpChangeAuthenticationPassword,
+        snmpPrivacyProtocol,
+        snmpChangePrivacyPassword,
+      },
+      profileData,
+      fileManagement: fileMgmt,
+    };
+    return JSON.stringify(snapshot);
+  }, [
+    accessControlUsers,
+    authSidebarSection,
+    authMode,
+    externalAuthType,
+    profilesSidebarItems,
+    profileAccessById,
+    regionSidebarItems,
+    selectedRegionSidebarId,
+    regionNameValue,
+    passwordAgeDays,
+    passwordExpiryWarningDays,
+    passwordMinLength,
+    passwordReusePreventionCount,
+    passwordReusePreventionDays,
+    accountLockoutEnabled,
+    accountLockoutThreshold,
+    inactivityLogoutDurationMinutes,
+    loginBannerEnabled,
+    bannerTitle,
+    messageOfDay,
+    alarmForwardingRows,
+    syslogForwardingRows,
+    emailGroupSidebarItems,
+    emailGroupById,
+    smtpEnabled,
+    smtpFromEmail,
+    smtpEmailKey,
+    smtpServer,
+    smtpPort,
+    smtpSecurityMode,
+    smtpUseAuthentication,
+    smtpUserName,
+    smtpPassword,
+    smtpTestEmail,
+    snmpEnableInternalAgent,
+    snmpEnableV2c,
+    snmpReadCommunity,
+    snmpWriteCommunity,
+    snmpEnableV3,
+    snmpEngineId,
+    snmpUserName,
+    snmpAuthenticationProtocol,
+    snmpChangeAuthenticationPassword,
+    snmpPrivacyProtocol,
+    snmpChangePrivacyPassword,
+    profileData,
+    fileMgmt,
+  ]);
+
+  const [committedAdministrationJson, setCommittedAdministrationJson] = useState<string | null>(null);
+  useLayoutEffect(() => {
+    setCommittedAdministrationJson((prev) => (prev === null ? administrationPersistedJson : prev));
+  }, [administrationPersistedJson]);
+
+  const administrationPageDirty =
+    committedAdministrationJson !== null && administrationPersistedJson !== committedAdministrationJson;
+
+  bumpCommittedAdministrationRef.current = () => {
+    setCommittedAdministrationJson(administrationPersistedJson);
+  };
+
+  const applyAdministrationPersistedSnapshot = useCallback((s: AdministrationPersistedSnapshot) => {
+    setAccessControlUsers(s.accessControlUsers);
+    setAuthSidebarSection(s.authSidebarSection);
+    setAuthMode(s.authMode);
+    setExternalAuthType(s.externalAuthType);
+    setProfilesSidebarItems(s.profilesSidebarItems);
+    setProfileAccessById(s.profileAccessById);
+    setRegionSidebarItems(s.regionSidebarItems);
+    setSelectedRegionSidebarId(s.selectedRegionSidebarId);
+    setRegionNameValue(s.regionNameValue);
+    const ac = s.accessControlSettings;
+    setPasswordAgeDays(ac.passwordAgeDays);
+    setPasswordExpiryWarningDays(ac.passwordExpiryWarningDays);
+    setPasswordMinLength(ac.passwordMinLength);
+    setPasswordReusePreventionCount(ac.passwordReusePreventionCount);
+    setPasswordReusePreventionDays(ac.passwordReusePreventionDays);
+    setAccountLockoutEnabled(ac.accountLockoutEnabled);
+    setAccountLockoutThreshold(ac.accountLockoutThreshold);
+    setInactivityLogoutDurationMinutes(ac.inactivityLogoutDurationMinutes);
+    setLoginBannerEnabled(ac.loginBannerEnabled);
+    setBannerTitle(ac.bannerTitle);
+    setMessageOfDay(ac.messageOfDay);
+    setAccessControlSettingsBaseline({ ...ac });
+    setAlarmForwardingRows(s.alarmForwardingRows);
+    setSyslogForwardingRows(s.syslogForwardingRows);
+    setEmailGroupSidebarItems(s.emailGroupSidebarItems);
+    setEmailGroupById(s.emailGroupById);
+    setSmtpEnabled(s.smtp.smtpEnabled);
+    setSmtpFromEmail(s.smtp.smtpFromEmail);
+    setSmtpEmailKey(s.smtp.smtpEmailKey);
+    setSmtpServer(s.smtp.smtpServer);
+    setSmtpPort(s.smtp.smtpPort);
+    setSmtpSecurityMode(s.smtp.smtpSecurityMode);
+    setSmtpUseAuthentication(s.smtp.smtpUseAuthentication);
+    setSmtpUserName(s.smtp.smtpUserName);
+    setSmtpPassword(s.smtp.smtpPassword);
+    setSmtpTestEmail(s.smtp.smtpTestEmail);
+    setSnmpEnableInternalAgent(s.snmp.snmpEnableInternalAgent);
+    setSnmpEnableV2c(s.snmp.snmpEnableV2c);
+    setSnmpReadCommunity(s.snmp.snmpReadCommunity);
+    setSnmpWriteCommunity(s.snmp.snmpWriteCommunity);
+    setSnmpEnableV3(s.snmp.snmpEnableV3);
+    setSnmpEngineId(s.snmp.snmpEngineId);
+    setSnmpUserName(s.snmp.snmpUserName);
+    setSnmpAuthenticationProtocol(s.snmp.snmpAuthenticationProtocol);
+    setSnmpChangeAuthenticationPassword(s.snmp.snmpChangeAuthenticationPassword);
+    setSnmpPrivacyProtocol(s.snmp.snmpPrivacyProtocol);
+    setSnmpChangePrivacyPassword(s.snmp.snmpChangePrivacyPassword);
+    setProfileData(structuredClone(s.profileData));
+    if (s.fileManagement) {
+      setFileMgmt({
+        ...s.fileManagement,
+        fileUsers: s.fileManagement.fileUsers.map((u) => ({ ...u })),
+      });
+    } else {
+      setFileMgmt(createInitialFileManagementPersisted());
+    }
+  }, []);
+
+  const handleAdministrationSaveAll = useCallback(() => {
+    if (selectedRegionSidebarId && regionSidebarItems.length > 0) {
+      const nextLabel = regionNameValue.trim();
+      const prevLabel = selectedRegionLabel;
+      if (nextLabel && nextLabel !== prevLabel) {
+        setRegionSidebarItems((prev) =>
+          prev.map((item) =>
+            item.id === selectedRegionSidebarId ? { ...item, label: nextLabel } : item,
+          ),
+        );
+        setProfileAccessById((prev) => {
+          const out: Record<string, AccessControlProfileAccess> = {};
+          for (const [pid, access] of Object.entries(prev)) {
+            out[pid] = {
+              ...access,
+              regions: access.regions.map((r) => (r === prevLabel ? nextLabel : r)),
+            };
+          }
+          return out;
+        });
+        setRegionNameValue(nextLabel);
+        const nextRegionNames = regionSidebarItems.map((item) =>
+          item.id === selectedRegionSidebarId ? nextLabel : item.label,
+        );
+        onRegionsChange?.(nextRegionNames);
+      }
+    }
+
+    setAccessControlSettingsBaseline({
+      passwordAgeDays,
+      passwordExpiryWarningDays,
+      passwordMinLength,
+      passwordReusePreventionCount,
+      passwordReusePreventionDays,
+      accountLockoutEnabled,
+      accountLockoutThreshold,
+      inactivityLogoutDurationMinutes,
+      loginBannerEnabled,
+      bannerTitle,
+      messageOfDay,
+    });
+    if (profileEditorId) {
+      setProfileSheetMode(null);
+      setProfileEditorId(null);
+      setProfileEditorBaseline(null);
+    }
+    toast.success('All changes saved');
+    setTimeout(() => {
+      bumpCommittedAdministrationRef.current();
+    }, 0);
+  }, [
+    selectedRegionSidebarId,
+    regionSidebarItems,
+    regionNameValue,
+    selectedRegionLabel,
+    onRegionsChange,
+    passwordAgeDays,
+    passwordExpiryWarningDays,
+    passwordMinLength,
+    passwordReusePreventionCount,
+    passwordReusePreventionDays,
+    accountLockoutEnabled,
+    accountLockoutThreshold,
+    inactivityLogoutDurationMinutes,
+    loginBannerEnabled,
+    bannerTitle,
+    messageOfDay,
+    profileEditorId,
+  ]);
+
+  const handleAdministrationCancelAll = useCallback(() => {
+    if (committedAdministrationJson === null) return;
+    const data = JSON.parse(committedAdministrationJson) as AdministrationPersistedSnapshot;
+    applyAdministrationPersistedSnapshot(data);
+    if (profileEditorId) {
+      setProfileSheetMode(null);
+      setProfileEditorId(null);
+      setProfileEditorBaseline(null);
+    }
+  }, [committedAdministrationJson, applyAdministrationPersistedSnapshot, profileEditorId]);
+
+  const dismissProfileEditor = useCallback(
+    (reason: 'save' | 'cancel' | 'overlay') => {
+      profileEditorCloseReasonRef.current = reason;
+      const id = profileEditorIdRef.current;
+      if (reason === 'overlay' && skipRevertOnNextOverlayCloseRef.current) {
+        skipRevertOnNextOverlayCloseRef.current = false;
+        setProfileSheetMode(null);
+        setProfileEditorId(null);
+        setProfileEditorBaseline(null);
+        profileEditorCloseReasonRef.current = null;
+        return;
+      }
+      if (reason === 'save') {
+        skipRevertOnNextOverlayCloseRef.current = true;
+        if (id) {
+          let labelForToast = 'Profile';
+          setProfilesSidebarItems((prev) => {
+            const trimmed = (prev.find((p) => p.id === id)?.label ?? '').trim() || 'Profile';
+            labelForToast = trimmed;
+            return prev.map((p) => (p.id === id ? { ...p, label: trimmed } : p));
+          });
+          toast.success(`Saved permissions for ${labelForToast}`);
+        }
+        bumpCommittedAdministrationRef.current();
+      } else if (id && profileEditorBaseline) {
+        const snap = profileEditorBaseline;
+        setProfileAccessById((prev) => ({
+          ...prev,
+          [id]: structuredClone(snap.access),
+        }));
+        setProfilesSidebarItems((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, label: snap.label } : p)),
+        );
+      }
+      setProfileSheetMode(null);
+      setProfileEditorId(null);
+      setProfileEditorBaseline(null);
+      if (reason === 'overlay') {
+        profileEditorCloseReasonRef.current = null;
+      }
+    },
+    [profileEditorBaseline],
+  );
+
+  const editorLabelTrimmed = editorLabel.trim();
+
+  const [adminNavigationBlockerOpen, setAdminNavigationBlockerOpen] = useState(false);
+  const pendingAdminNavigationRef = useRef<AdministrationNavigationIntent | null>(null);
+
+  const hasUnsavedAdministrationChanges = administrationPageDirty;
+
+  useEffect(() => {
+    if (!hasUnsavedAdministrationChanges) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedAdministrationChanges]);
+
+  const flushAdministrationNavigation = useCallback((intent: AdministrationNavigationIntent) => {
+    if (intent.kind === 'sidebar') setActiveSection(intent.sectionKey);
+    else if (intent.kind === 'accessControlTab') setAccessControlTab(intent.tab);
+    else onNavigate?.(intent.page, intent.tab);
+  }, [onNavigate]);
+
+  const discardUnsavedAndNavigate = useCallback(() => {
+    const intent = pendingAdminNavigationRef.current;
+    if (!intent) return;
+    if (committedAdministrationJson !== null) {
+      const data = JSON.parse(committedAdministrationJson) as AdministrationPersistedSnapshot;
+      applyAdministrationPersistedSnapshot(data);
+    }
+    if (profileEditorId) {
+      setProfileSheetMode(null);
+      setProfileEditorId(null);
+      setProfileEditorBaseline(null);
+    }
+    flushAdministrationNavigation(intent);
+    pendingAdminNavigationRef.current = null;
+    setAdminNavigationBlockerOpen(false);
+  }, [committedAdministrationJson, applyAdministrationPersistedSnapshot, profileEditorId, flushAdministrationNavigation]);
+
+  const requestSidebarSection = useCallback(
+    (sectionKey: string) => {
+      if (sectionKey === activeSection) return;
+      if (hasUnsavedAdministrationChanges) {
+        pendingAdminNavigationRef.current = { kind: 'sidebar', sectionKey };
+        setAdminNavigationBlockerOpen(true);
+        return;
+      }
+      setActiveSection(sectionKey);
+    },
+    [activeSection, hasUnsavedAdministrationChanges],
+  );
+
+  const requestAccessControlTab = useCallback(
+    (tab: string) => {
+      if (tab === accessControlTab) return;
+      if (hasUnsavedAdministrationChanges) {
+        pendingAdminNavigationRef.current = { kind: 'accessControlTab', tab };
+        setAdminNavigationBlockerOpen(true);
+        return;
+      }
+      setAccessControlTab(tab);
+    },
+    [accessControlTab, hasUnsavedAdministrationChanges],
+  );
+
+  const requestAppNavigation = useCallback(
+    (page: string, tab?: string) => {
+      if (hasUnsavedAdministrationChanges) {
+        pendingAdminNavigationRef.current = { kind: 'app', page, tab };
+        setAdminNavigationBlockerOpen(true);
+        return;
+      }
+      onNavigate?.(page, tab);
+    },
+    [hasUnsavedAdministrationChanges, onNavigate],
+  );
+
+  const profileTableRows = useMemo(
+    () =>
+      profilesSidebarItems.map((item) => {
+        const a = profileAccessById[item.id] ?? { regions: [], adminOperations: [], applicationOperations: [] };
+        const regionsAll =
+          accountRegions.length > 0 && accountRegions.every((regionName) => a.regions.includes(regionName));
+        const regionsList = [...a.regions].sort((x, y) => x.localeCompare(y, undefined, { sensitivity: 'base' }));
+        const adminOperationsList = [...a.adminOperations].sort((x, y) =>
+          x.localeCompare(y, undefined, { sensitivity: 'base' }),
+        );
+        const applicationOperationsList = [...a.applicationOperations].sort((x, y) =>
+          x.localeCompare(y, undefined, { sensitivity: 'base' }),
+        );
+        return {
+          id: item.id,
+          name: item.label,
+          regionsAll,
+          regionsCount: accountRegions.length,
+          regionsList,
+          adminOperationsList,
+          applicationOperationsList,
+        };
+      }),
+    [profilesSidebarItems, profileAccessById, accountRegions],
+  );
+
+  const auditUsernameOptions = ['All', ...Array.from(new Set(AUDIT_TRAIL_ROWS.map((row) => row.username)))];
+  const handleAuditDatePresetChange = useCallback((value: string) => {
+    const v = value as (typeof AUDIT_DATE_RANGE_OPTIONS)[number];
+    setAuditDateRangeFilter(v);
+    if (v === 'Custom') {
+      setAuditCustomDraft(auditCustomAppliedRef.current);
+      setAuditCustomOpen(true);
+    } else {
+      setAuditCustomApplied(undefined);
+      setAuditCustomDraft(undefined);
+      setAuditCustomOpen(false);
+    }
+  }, []);
+
+  const filteredAuditRows = useMemo(() => {
+    const auditRowDay = (ageDays: number) => startOfDay(subDays(new Date(), ageDays));
+    return AUDIT_TRAIL_ROWS.filter((row) => {
+      const searchTerm = auditSearch.trim().toLowerCase();
+      if (searchTerm) {
+        const searchable = `${row.seqNo} ${row.operationDateTime} ${row.username} ${row.operationName} ${row.operationStatus}`.toLowerCase();
+        if (!searchable.includes(searchTerm)) return false;
+      }
+      if (auditUsernameFilter !== 'All' && row.username !== auditUsernameFilter) return false;
+      if (auditStatusFilter !== 'All' && row.operationStatus !== auditStatusFilter) return false;
+      if (auditDateRangeFilter === 'Today' && row.ageDays > 0) return false;
+      if (auditDateRangeFilter === 'Last 7 days' && row.ageDays > 7) return false;
+      if (auditDateRangeFilter === 'Last 30 days' && row.ageDays > 30) return false;
+      if (auditDateRangeFilter === 'Custom') {
+        const from = auditCustomApplied?.from;
+        const to = auditCustomApplied?.to;
+        if (from && to) {
+          const fromS = startOfDay(from);
+          const toE = endOfDay(to);
+          const rowD = auditRowDay(row.ageDays);
+          if (isBefore(rowD, fromS) || isAfter(rowD, toE)) return false;
+        }
+      }
+      return true;
+    });
+  }, [
+    auditSearch,
+    auditUsernameFilter,
+    auditStatusFilter,
+    auditDateRangeFilter,
+    auditCustomApplied,
+  ]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <Navbar01
         appName={appName}
         onSignOut={onSignOut}
-        onNavigate={onNavigate}
+        onNavigate={requestAppNavigation}
         currentSection="administration"
         region={region}
         regions={regions}
@@ -595,7 +1335,7 @@ export default function AdministrationPage({
                           <button
                             type="button"
                             className="flex w-full items-center gap-2"
-                            onClick={() => setActiveSection(key)}
+                            onClick={() => requestSidebarSection(key)}
                           >
                             <Icon name={item.icon} size={18} />
                             <span>{item.label}</span>
@@ -609,7 +1349,7 @@ export default function AdministrationPage({
             </SidebarGroup>
           </SidebarContent>
         </Sidebar>
-        <SidebarInset className="min-w-0 overflow-hidden">
+        <SidebarInset className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
@@ -621,16 +1361,17 @@ export default function AdministrationPage({
               </BreadcrumbList>
             </Breadcrumb>
           </header>
-          <div className="flex flex-1 flex-col gap-4 p-4 overflow-auto">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4">
             {activeSection === 'access-control' && (
               <div className="space-y-6">
-                <Tabs value={accessControlTab} onValueChange={setAccessControlTab}>
+                <Tabs value={accessControlTab} onValueChange={requestAccessControlTab}>
                   <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm">
                     <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto">
                       <TabsTrigger value="users" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 gap-2">
                         Users
                         <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs tabular-nums">
-                          {ACCESS_CONTROL_USERS_DATA.length}
+                          {accessControlUsers.length}
                         </Badge>
                       </TabsTrigger>
                       <TabsTrigger value="authentication" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 gap-2">
@@ -642,7 +1383,7 @@ export default function AdministrationPage({
                       <TabsTrigger value="profiles" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 gap-2">
                         Profiles
                         <Badge variant="secondary" className="h-5 min-w-5 px-1.5 justify-center text-xs tabular-nums">
-                          3
+                          {profilesSidebarItems.length}
                         </Badge>
                       </TabsTrigger>
                       <TabsTrigger value="domains" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2 gap-2">
@@ -670,10 +1411,44 @@ export default function AdministrationPage({
                         />
                       </div>
                       <FilterSelect value={profileFilter} onValueChange={setProfileFilter} label="Profile" options={[...PROFILE_OPTIONS]} className="w-[130px]" />
-                      <FilterSelect value={departmentFilter} onValueChange={setDepartmentFilter} label="Department" options={[...DEPARTMENT_OPTIONS]} className="w-[130px]" />
-                      <FilterSelect value={locationFilter} onValueChange={setLocationFilter} label="Location" options={[...LOCATION_OPTIONS]} className="w-[130px]" />
+                      <div className="ml-auto flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="default"
+                          aria-label="Add user"
+                          onClick={() => {
+                            setAccessControlUserEditing(null);
+                            setAccessControlUserSheetOpen(true);
+                          }}
+                        >
+                          <Icon name="add" size={16} />
+                          Add user
+                        </Button>
+                      </div>
                     </div>
-                    <AccessControlUsersDataTable />
+                    <AccessControlUsersDataTable
+                      data={accessControlUsers}
+                      onEditUser={(row) => {
+                        setAccessControlUserEditing(row);
+                        setAccessControlUserSheetOpen(true);
+                      }}
+                    />
+                    <AccessControlUserSheet
+                      open={accessControlUserSheetOpen}
+                      onOpenChange={(open) => {
+                        setAccessControlUserSheetOpen(open);
+                        if (!open) setAccessControlUserEditing(null);
+                      }}
+                      user={accessControlUserEditing}
+                      onSave={(row) => {
+                        setAccessControlUsers((prev) => {
+                          const exists = prev.some((u) => u.id === row.id);
+                          if (exists) return prev.map((u) => (u.id === row.id ? row : u));
+                          return [...prev, row];
+                        });
+                        toast.success('User saved');
+                      }}
+                    />
                   </TabsContent>
 
                   <TabsContent value="authentication" className="mt-6">
@@ -704,7 +1479,7 @@ export default function AdministrationPage({
                                   >
                                     <RadioGroupItem id="auth-vsnet-only" value="vsnet-only" className="mt-0.5" />
                                     <div className="space-y-0.5">
-                                      <p className="text-sm font-medium text-foreground">VSNET Only</p>
+                                      <p className="text-sm font-medium text-foreground">VSNET only</p>
                                       <p className="text-sm text-muted-foreground">
                                         Users will be authenticated against VSNET&apos;s internal database.
                                       </p>
@@ -716,7 +1491,7 @@ export default function AdministrationPage({
                                   >
                                     <RadioGroupItem id="auth-external-only" value="external-only" className="mt-0.5" />
                                     <div className="space-y-0.5">
-                                      <p className="text-sm font-medium text-foreground">External Only</p>
+                                      <p className="text-sm font-medium text-foreground">External only</p>
                                       <p className="text-sm text-muted-foreground">
                                         Users will be authenticated against an external AAA server.
                                       </p>
@@ -737,7 +1512,7 @@ export default function AdministrationPage({
                                 </RadioGroup>
                               </div>
                               <div className="space-y-2">
-                                <Label htmlFor="external-auth-type">External Authentication Type</Label>
+                                <Label htmlFor="external-auth-type">External authentication type</Label>
                                 <Select value={externalAuthType} onValueChange={(value) => setExternalAuthType(value as typeof externalAuthType)}>
                                   <SelectTrigger id="external-auth-type" className="max-w-[280px]">
                                     <SelectValue placeholder="Select type" />
@@ -777,298 +1552,226 @@ export default function AdministrationPage({
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="profiles" className="mt-6">
-                    <div className="flex flex-col gap-6 lg:flex-row">
-                      <InternalSidebarList
-                        title="Profiles"
-                        items={profilesSidebarItems}
-                        selectedId={selectedProfileId}
-                        onSelect={setSelectedProfileId}
-                        showAddAction
-                        addAriaLabel="Add profile"
-                        onAddAction={() => {
-                          const nextId = `profile-${profilesSidebarItems.length + 1}`;
-                          const nextLabel = `Profile ${profilesSidebarItems.length + 1}`;
-                          setProfilesSidebarItems((prev) => [...prev, { id: nextId, label: nextLabel }]);
-                          setSelectedProfileId(nextId);
-                          setProfileAccessById((prev) => ({
-                            ...prev,
-                            [nextId]: {
-                              regions: accountRegions.length > 0 ? [accountRegions[0]] : [],
-                              adminOperations: [],
-                              applicationOperations: [],
-                            },
-                          }));
-                          toast.success(`Added ${nextLabel}`);
-                        }}
-                      />
-                      <div className="flex-1 space-y-4">
-                        <Card>
-                          <CardContent className="pt-6">
-                            <div className="mb-6 flex items-center justify-between">
-                              <h3 className="text-sm font-semibold text-foreground">{selectedProfileLabel}</h3>
-                            </div>
-                            <div className="space-y-5">
-                                <div>
-                                  <Label>Regions</Label>
-                                  <div className="mt-3 flex flex-wrap gap-2">
-                                    {selectedProfileAccess.regions.length > 0 ? (
-                                      selectedProfileAccess.regions.map((regionName) => (
-                                        <Badge key={`${selectedProfileId}-region-${regionName}`} variant="secondary" className="gap-1 pr-0.5">
-                                          {regionName}
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-4 w-4 rounded-sm"
-                                            aria-label={`Remove ${regionName}`}
-                                            onClick={() =>
-                                              updateSelectedProfileAccess({
-                                                regions: selectedProfileAccess.regions.filter((value) => value !== regionName),
-                                              })
-                                            }
-                                          >
-                                            <Icon name="close" size={12} />
-                                          </Button>
-                                        </Badge>
-                                      ))
-                                    ) : (
-                                      <p className="text-sm text-muted-foreground">No regions assigned.</p>
-                                    )}
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    className="mt-3 h-8 w-8"
-                                    aria-label="Add region"
-                                    disabled={availableProfileRegions.length === 0}
-                                    onClick={() => {
-                                      setPendingProfileRegions([]);
-                                      setAddRegionDialogOpen(true);
+                  <TabsContent value="profiles" className="mt-6 space-y-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="ml-auto flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="default"
+                          aria-label="Add profile"
+                          onClick={() => {
+                            const nextId = `profile-${profilesSidebarItems.length + 1}`;
+                            const nextLabel = `Profile ${profilesSidebarItems.length + 1}`;
+                            setProfilesSidebarItems((prev) => [...prev, { id: nextId, label: nextLabel }]);
+                            setProfileAccessById((prev) => ({
+                              ...prev,
+                              [nextId]: {
+                                regions: accountRegions.length > 0 ? [accountRegions[0]] : [],
+                                adminOperations: [],
+                                applicationOperations: [],
+                              },
+                            }));
+                            setProfileSheetMode('add');
+                            setProfileEditorId(nextId);
+                          }}
+                        >
+                          <Icon name="add" size={16} />
+                          Add profile
+                        </Button>
+                      </div>
+                    </div>
+
+                    <AccessControlProfilesDataTable
+                      data={profileTableRows}
+                      onEdit={(id) => {
+                        setProfileSheetMode('edit');
+                        setProfileEditorId(id);
+                      }}
+                      onDelete={(id) => {
+                        const name = profilesSidebarItems.find((p) => p.id === id)?.label ?? id;
+                        setAccessProfileDeleteTarget({ id, name });
+                      }}
+                    />
+
+                    <AlertDialog
+                      open={accessProfileDeleteTarget !== null}
+                      onOpenChange={(open) => {
+                        if (!open) setAccessProfileDeleteTarget(null);
+                      }}
+                    >
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete profile</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete{' '}
+                            <span className="font-medium text-foreground">
+                              {accessProfileDeleteTarget?.name ?? 'this profile'}
+                            </span>
+                            ? This cannot be undone. Users assigned to this profile may need to be reassigned.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                              const target = accessProfileDeleteTarget;
+                              if (!target) return;
+                              const { id, name } = target;
+                              if (profileEditorIdRef.current === id) {
+                                setProfileSheetMode(null);
+                                setProfileEditorId(null);
+                              }
+                              setProfilesSidebarItems((prev) => prev.filter((p) => p.id !== id));
+                              setProfileAccessById((prev) => {
+                                const next = { ...prev };
+                                delete next[id];
+                                return next;
+                              });
+                              setAccessProfileDeleteTarget(null);
+                              toast.success(`Deleted profile "${name}"`);
+                            }}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
+                    <Sheet
+                      open={profileEditorId !== null}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          const r = profileEditorCloseReasonRef.current;
+                          if (r === 'cancel' || r === 'save') {
+                            profileEditorCloseReasonRef.current = null;
+                            return;
+                          }
+                          profileEditorCloseReasonRef.current = null;
+                          dismissProfileEditor('overlay');
+                        }
+                      }}
+                    >
+                      <SheetContent side="right" className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-lg md:max-w-xl">
+                        <SheetHeader className="shrink-0 space-y-1.5 border-b border-border px-4 pb-4 pt-4 pr-12 text-left">
+                          <SheetTitle>
+                            {profileSheetMode === 'add' ? 'Add profile' : 'Edit profile'}
+                          </SheetTitle>
+                          <SheetDescription>
+                            {profileSheetMode === 'add'
+                              ? 'Name this profile and choose which regions and operations it may use.'
+                              : 'Update the profile name, regions, and operations for this access profile.'}
+                          </SheetDescription>
+                        </SheetHeader>
+                        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                        <div className="space-y-5">
+                                <div className="space-y-2">
+                                  <Label htmlFor="access-control-profile-name">Profile name</Label>
+                                  <Input
+                                    id="access-control-profile-name"
+                                    value={editorLabel}
+                                    onChange={(e) => {
+                                      if (!profileEditorId) return;
+                                      const v = e.target.value;
+                                      setProfilesSidebarItems((prev) =>
+                                        prev.map((p) =>
+                                          p.id === profileEditorId ? { ...p, label: v } : p,
+                                        ),
+                                      );
                                     }}
-                                  >
-                                    <Icon name="add" size={16} />
-                                  </Button>
+                                    placeholder="Profile name"
+                                    autoComplete="off"
+                                  />
                                 </div>
+                                <ProfileRegionsField
+                                  accountRegions={accountRegions}
+                                  selectedRegions={editorAccess.regions}
+                                  onRegionsChange={(regions) => applyEditorAccessPatch({ regions })}
+                                />
                                 <div>
                                   <Label>Admin operations</Label>
-                                  <div className="mt-3 flex flex-wrap gap-2">
-                                    {selectedProfileAccess.adminOperations.length > 0 ? (
-                                      selectedProfileAccess.adminOperations.map((operation) => (
-                                        <Badge key={`${selectedProfileId}-admin-op-${operation}`} variant="secondary" className="gap-1 pr-0.5">
-                                          {operation}
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-4 w-4 rounded-sm"
-                                            aria-label={`Remove ${operation}`}
-                                            onClick={() =>
-                                              updateSelectedProfileAccess({
-                                                adminOperations: selectedProfileAccess.adminOperations.filter((value) => value !== operation),
-                                              })
-                                            }
-                                          >
-                                            <Icon name="close" size={12} />
-                                          </Button>
-                                        </Badge>
-                                      ))
-                                    ) : (
-                                      <p className="text-sm text-muted-foreground">No admin operations assigned.</p>
-                                    )}
+                                  <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-md border border-border p-3">
+                                    {ADMIN_OPERATION_OPTIONS.map((operation) => (
+                                      <label
+                                        key={`${profileEditorId}-admin-op-${operation}`}
+                                        className="flex cursor-pointer items-center gap-2 text-sm"
+                                      >
+                                        <Checkbox
+                                          checked={editorAccess.adminOperations.includes(operation)}
+                                          onCheckedChange={(checked) => {
+                                            const on = Boolean(checked);
+                                            applyEditorAccessPatch({
+                                              adminOperations: on
+                                                ? [...editorAccess.adminOperations, operation]
+                                                : editorAccess.adminOperations.filter((o) => o !== operation),
+                                            });
+                                          }}
+                                        />
+                                        <span>{operation}</span>
+                                      </label>
+                                    ))}
                                   </div>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    className="mt-3 h-8 w-8"
-                                    aria-label="Add admin operation"
-                                    disabled={availableAdminOperations.length === 0}
-                                    onClick={() => {
-                                      setPendingAdminOperations([]);
-                                      setAddAdminOperationDialogOpen(true);
-                                    }}
-                                  >
-                                    <Icon name="add" size={16} />
-                                  </Button>
                                 </div>
                                 <div>
                                   <Label>Application operations</Label>
-                                  <div className="mt-3 flex flex-wrap gap-2">
-                                    {selectedProfileAccess.applicationOperations.length > 0 ? (
-                                      selectedProfileAccess.applicationOperations.map((operation) => (
-                                        <Badge key={`${selectedProfileId}-app-op-${operation}`} variant="secondary" className="gap-1 pr-0.5">
-                                          {operation}
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-4 w-4 rounded-sm"
-                                            aria-label={`Remove ${operation}`}
-                                            onClick={() =>
-                                              updateSelectedProfileAccess({
-                                                applicationOperations: selectedProfileAccess.applicationOperations.filter((value) => value !== operation),
-                                              })
-                                            }
-                                          >
-                                            <Icon name="close" size={12} />
-                                          </Button>
-                                        </Badge>
-                                      ))
-                                    ) : (
-                                      <p className="text-sm text-muted-foreground">No application operations assigned.</p>
-                                    )}
+                                  <div className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-md border border-border p-3">
+                                    {APPLICATION_OPERATION_OPTIONS.map((operation) => (
+                                      <label
+                                        key={`${profileEditorId}-app-op-${operation}`}
+                                        className="flex cursor-pointer items-center gap-2 text-sm"
+                                      >
+                                        <Checkbox
+                                          checked={editorAccess.applicationOperations.includes(operation)}
+                                          onCheckedChange={(checked) => {
+                                            const on = Boolean(checked);
+                                            applyEditorAccessPatch({
+                                              applicationOperations: on
+                                                ? [...editorAccess.applicationOperations, operation]
+                                                : editorAccess.applicationOperations.filter((o) => o !== operation),
+                                            });
+                                          }}
+                                        />
+                                        <span>{operation}</span>
+                                      </label>
+                                    ))}
                                   </div>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    className="mt-3 h-8 w-8"
-                                    aria-label="Add application operation"
-                                    disabled={availableApplicationOperations.length === 0}
-                                    onClick={() => {
-                                      setPendingApplicationOperations([]);
-                                      setAddApplicationOperationDialogOpen(true);
-                                    }}
-                                  >
-                                    <Icon name="add" size={16} />
-                                  </Button>
                                 </div>
-                              </div>
-                          </CardContent>
-                        </Card>
-                        <Dialog open={addRegionDialogOpen} onOpenChange={setAddRegionDialogOpen}>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Add region</DialogTitle>
-                            </DialogHeader>
-                            <div>
-                              <Label>Regions</Label>
-                              <div className="mt-3 space-y-2 max-h-56 overflow-auto">
-                                {availableProfileRegions.map((regionName) => (
-                                  <label key={`${selectedProfileId}-dialog-region-${regionName}`} className="flex items-center gap-2 text-sm cursor-pointer">
-                                    <Checkbox
-                                      checked={pendingProfileRegions.includes(regionName)}
-                                      onCheckedChange={(checked) => {
-                                        setPendingProfileRegions((prev) =>
-                                          checked
-                                            ? [...prev, regionName]
-                                            : prev.filter((value) => value !== regionName),
-                                        );
-                                      }}
-                                    />
-                                    <span>{regionName}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={() => setAddRegionDialogOpen(false)}>Cancel</Button>
-                              <Button
-                                onClick={() => {
-                                  if (pendingProfileRegions.length === 0) return;
-                                  updateSelectedProfileAccess({
-                                    regions: [...selectedProfileAccess.regions, ...pendingProfileRegions],
-                                  });
-                                  setPendingProfileRegions([]);
-                                  setAddRegionDialogOpen(false);
-                                }}
-                                disabled={pendingProfileRegions.length === 0}
-                              >
-                                Add
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                        <Dialog open={addAdminOperationDialogOpen} onOpenChange={setAddAdminOperationDialogOpen}>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Add admin operation</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-6">
-                              <Label>Admin operations</Label>
-                              <div className="space-y-2 max-h-56 overflow-auto">
-                                {availableAdminOperations.map((operation) => (
-                                  <label key={`${selectedProfileId}-dialog-admin-op-${operation}`} className="flex items-center gap-2 text-sm cursor-pointer">
-                                    <Checkbox
-                                      checked={pendingAdminOperations.includes(operation)}
-                                      onCheckedChange={(checked) => {
-                                        setPendingAdminOperations((prev) =>
-                                          checked
-                                            ? [...prev, operation]
-                                            : prev.filter((value) => value !== operation),
-                                        );
-                                      }}
-                                    />
-                                    <span>{operation}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={() => setAddAdminOperationDialogOpen(false)}>Cancel</Button>
-                              <Button
-                                onClick={() => {
-                                  if (pendingAdminOperations.length === 0) return;
-                                  updateSelectedProfileAccess({
-                                    adminOperations: [...selectedProfileAccess.adminOperations, ...pendingAdminOperations],
-                                  });
-                                  setPendingAdminOperations([]);
-                                  setAddAdminOperationDialogOpen(false);
-                                }}
-                                disabled={pendingAdminOperations.length === 0}
-                              >
-                                Add
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                        <Dialog open={addApplicationOperationDialogOpen} onOpenChange={setAddApplicationOperationDialogOpen}>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Add application operation</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-6">
-                              <Label>Application operations</Label>
-                              <div className="space-y-2 max-h-56 overflow-auto">
-                                {availableApplicationOperations.map((operation) => (
-                                  <label key={`${selectedProfileId}-dialog-application-op-${operation}`} className="flex items-center gap-2 text-sm cursor-pointer">
-                                    <Checkbox
-                                      checked={pendingApplicationOperations.includes(operation)}
-                                      onCheckedChange={(checked) => {
-                                        setPendingApplicationOperations((prev) =>
-                                          checked
-                                            ? [...prev, operation]
-                                            : prev.filter((value) => value !== operation),
-                                        );
-                                      }}
-                                    />
-                                    <span>{operation}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={() => setAddApplicationOperationDialogOpen(false)}>Cancel</Button>
-                              <Button
-                                onClick={() => {
-                                  if (pendingApplicationOperations.length === 0) return;
-                                  updateSelectedProfileAccess({
-                                    applicationOperations: [...selectedProfileAccess.applicationOperations, ...pendingApplicationOperations],
-                                  });
-                                  setPendingApplicationOperations([]);
-                                  setAddApplicationOperationDialogOpen(false);
-                                }}
-                                disabled={pendingApplicationOperations.length === 0}
-                              >
-                                Add
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    </div>
+                        </div>
+                        </div>
+                        <SheetFooter className="mt-auto shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/20 px-4 py-4">
+                          <div className="flex min-w-0 flex-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="gap-1.5 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => {
+                                if (!profileEditorId) return;
+                                const name =
+                                  profilesSidebarItems.find((p) => p.id === profileEditorId)?.label?.trim() ||
+                                  editorLabelTrimmed ||
+                                  'Profile';
+                                setAccessProfileDeleteTarget({ id: profileEditorId, name });
+                              }}
+                            >
+                              <Icon name="delete" size={18} />
+                              Delete profile
+                            </Button>
+                          </div>
+                          <div className="flex flex-row gap-2">
+                            <Button type="button" variant="outline" onClick={() => dismissProfileEditor('cancel')}>
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              disabled={!editorLabelTrimmed}
+                              onClick={() => dismissProfileEditor('save')}
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        </SheetFooter>
+                      </SheetContent>
+                    </Sheet>
                   </TabsContent>
 
                   <TabsContent value="domains" className="mt-6 space-y-4">
@@ -1080,6 +1783,7 @@ export default function AdministrationPage({
                         onSelect={setSelectedRegionSidebarId}
                         showAddAction
                         addAriaLabel="Add region"
+                        addButtonLabel="Add region"
                         onAddAction={() => {
                           const nextId = `region-${regionSidebarItems.length + 1}`;
                           const nextLabel = `Region ${regionSidebarItems.length + 1}`;
@@ -1099,41 +1803,86 @@ export default function AdministrationPage({
                                 value={regionNameValue}
                                 onChange={(e) => setRegionNameValue(e.target.value)}
                                 placeholder="Enter region name"
+                                disabled={regionSidebarItems.length === 0}
                               />
-                              {selectedRegionLabel !== '' && regionNameValue.trim() !== selectedRegionLabel && (
-                                <div className="mt-3 flex items-center gap-2">
+                              {selectedRegionSidebarId !== '' && regionSidebarItems.length > 0 && (
+                                <div className="mt-4 flex flex-wrap items-center gap-2">
                                   <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setRegionNameValue(selectedRegionLabel)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    disabled={regionNameValue.trim().length === 0}
+                                    className="gap-1.5 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
                                     onClick={() => {
-                                      const nextLabel = regionNameValue.trim();
-                                      if (!nextLabel) return;
-                                      setRegionSidebarItems((prev) =>
-                                        prev.map((item) =>
-                                          item.id === selectedRegionSidebarId
-                                            ? { ...item, label: nextLabel }
-                                            : item,
-                                        ),
-                                      );
-                                      toast.success('Region name updated');
+                                      setRegionDeleteTarget({
+                                        id: selectedRegionSidebarId,
+                                        name: selectedRegionLabel,
+                                      });
                                     }}
                                   >
-                                    Save
+                                    <Icon name="delete" size={18} />
+                                    Delete region
                                   </Button>
                                 </div>
                               )}
                             </div>
                           </CardContent>
                         </Card>
+
+                        <AlertDialog
+                          open={regionDeleteTarget !== null}
+                          onOpenChange={(open) => {
+                            if (!open) setRegionDeleteTarget(null);
+                          }}
+                        >
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete region</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete{' '}
+                                <span className="font-medium text-foreground">
+                                  {regionDeleteTarget?.name ?? 'this region'}
+                                </span>
+                                ? It will be removed from the catalog and unselected from any access profiles that
+                                included it.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => {
+                                  const target = regionDeleteTarget;
+                                  if (!target) return;
+                                  const { id: deleteId, name: deletedLabel } = target;
+                                  const idx = regionSidebarItems.findIndex((x) => x.id === deleteId);
+                                  const nextItems = regionSidebarItems.filter((x) => x.id !== deleteId);
+                                  const nextSelectedId =
+                                    nextItems.length === 0
+                                      ? ''
+                                      : nextItems[Math.min(idx, nextItems.length - 1)]!.id;
+
+                                  setRegionSidebarItems(nextItems);
+                                  setSelectedRegionSidebarId(nextSelectedId);
+                                  setProfileAccessById((prev) => {
+                                    const out: Record<string, AccessControlProfileAccess> = {};
+                                    for (const [pid, access] of Object.entries(prev)) {
+                                      out[pid] = {
+                                        ...access,
+                                        regions: access.regions.filter((r) => r !== deletedLabel),
+                                      };
+                                    }
+                                    return out;
+                                  });
+                                  onRegionsChange?.(nextItems.map((item) => item.label));
+                                  setRegionDeleteTarget(null);
+                                  toast.success(`Deleted region "${deletedLabel}"`);
+                                }}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </TabsContent>
@@ -1143,23 +1892,23 @@ export default function AdministrationPage({
                       <CardContent className="pt-6">
                         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                           <div>
-                            <Label htmlFor="password-age-days">Password Age (Days)*</Label>
+                            <Label htmlFor="password-age-days">Password age (days)*</Label>
                             <Input id="password-age-days" className="mt-3" type="number" value={passwordAgeDays} onChange={(e) => setPasswordAgeDays(e.target.value)} />
                           </div>
                           <div>
-                            <Label htmlFor="password-expiry-warning-days">Password Expiry Warning (Days)*</Label>
+                            <Label htmlFor="password-expiry-warning-days">Password expiry warning (days)*</Label>
                             <Input id="password-expiry-warning-days" className="mt-3" type="number" value={passwordExpiryWarningDays} onChange={(e) => setPasswordExpiryWarningDays(e.target.value)} />
                           </div>
                           <div>
-                            <Label htmlFor="password-min-length">Password Minimum Length*</Label>
+                            <Label htmlFor="password-min-length">Password minimum length*</Label>
                             <Input id="password-min-length" className="mt-3" type="number" value={passwordMinLength} onChange={(e) => setPasswordMinLength(e.target.value)} />
                           </div>
                           <div>
-                            <Label htmlFor="password-reuse-prevention-count">Password Reuse Prevention Count*</Label>
+                            <Label htmlFor="password-reuse-prevention-count">Password reuse prevention count*</Label>
                             <Input id="password-reuse-prevention-count" className="mt-3" type="number" value={passwordReusePreventionCount} onChange={(e) => setPasswordReusePreventionCount(e.target.value)} />
                           </div>
                           <div>
-                            <Label htmlFor="password-reuse-prevention-days">Password Reuse Prevention (Days)*</Label>
+                            <Label htmlFor="password-reuse-prevention-days">Password reuse prevention (days)*</Label>
                             <Input id="password-reuse-prevention-days" className="mt-3" type="number" value={passwordReusePreventionDays} onChange={(e) => setPasswordReusePreventionDays(e.target.value)} />
                           </div>
                           <div className="flex items-center gap-2 self-end md:col-span-2">
@@ -1170,11 +1919,11 @@ export default function AdministrationPage({
                             <div className="md:col-span-2 rounded-md border p-4">
                               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                                 <div>
-                                  <Label htmlFor="account-lockout-threshold">Account Lockout Threshold*</Label>
+                                  <Label htmlFor="account-lockout-threshold">Account lockout threshold*</Label>
                                   <Input id="account-lockout-threshold" className="mt-3" type="number" value={accountLockoutThreshold} onChange={(e) => setAccountLockoutThreshold(e.target.value)} />
                                 </div>
                                 <div>
-                                  <Label htmlFor="inactivity-logout-duration">Inactivity Logout Duration (Minutes)*</Label>
+                                  <Label htmlFor="inactivity-logout-duration">Inactivity logout duration (minutes)*</Label>
                                   <Input id="inactivity-logout-duration" className="mt-3" type="number" value={inactivityLogoutDurationMinutes} onChange={(e) => setInactivityLogoutDurationMinutes(e.target.value)} />
                                 </div>
                               </div>
@@ -1187,13 +1936,13 @@ export default function AdministrationPage({
                           {loginBannerEnabled && (
                             <div className="md:col-span-2 rounded-md border p-4">
                               <div>
-                                <Label htmlFor="banner-title">Banner Title*</Label>
+                                <Label htmlFor="banner-title">Banner title*</Label>
                                 <Input id="banner-title" className="mt-3" value={bannerTitle} onChange={(e) => setBannerTitle(e.target.value)} />
                               </div>
                             </div>
                           )}
                           <div className="md:col-span-2">
-                            <Label htmlFor="message-of-day">Message Of Day</Label>
+                            <Label htmlFor="message-of-day">Message of day</Label>
                             <Textarea id="message-of-day" className="mt-3 min-h-24" value={messageOfDay} onChange={(e) => setMessageOfDay(e.target.value)} />
                           </div>
                         </div>
@@ -1205,6 +1954,7 @@ export default function AdministrationPage({
             )}
 
             {activeSection === 'audit-trail' && (
+              <>
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="relative w-full sm:min-w-[220px] sm:max-w-[320px]">
@@ -1218,49 +1968,271 @@ export default function AdministrationPage({
                   </div>
                   <FilterSelect value={auditUsernameFilter} onValueChange={setAuditUsernameFilter} label="Username" options={auditUsernameOptions} className="w-[220px]" />
                   <FilterSelect value={auditStatusFilter} onValueChange={setAuditStatusFilter} label="Status" options={['All', 'Allowed', 'Denied']} className="w-[150px]" />
-                  <FilterSelect value={auditDateRangeFilter} onValueChange={(v) => setAuditDateRangeFilter(v as (typeof AUDIT_DATE_RANGE_OPTIONS)[number])} label="Date range" options={[...AUDIT_DATE_RANGE_OPTIONS]} className="w-[170px]" />
+                  <Popover
+                    modal={false}
+                    open={auditDateRangeFilter === 'Custom' && auditCustomOpen}
+                    onOpenChange={(open) => {
+                      if (auditDateRangeFilter !== 'Custom') {
+                        setAuditCustomOpen(false);
+                        return;
+                      }
+                      setAuditCustomOpen(open);
+                      setAuditCustomDraft(auditCustomAppliedRef.current);
+                    }}
+                  >
+                    <PopoverAnchor asChild>
+                      <div
+                        className={cn(
+                          'flex min-w-[170px] max-w-[min(320px,calc(100vw-2rem))] items-stretch overflow-hidden rounded-md border border-input bg-background shadow-sm transition-[color,box-shadow]',
+                          'focus-within:border-ring focus-within:ring-1 focus-within:ring-ring',
+                        )}
+                      >
+                        <Select value={auditDateRangeFilter} onValueChange={handleAuditDatePresetChange}>
+                          <SelectTrigger
+                            className={cn(
+                              'h-9 min-w-0 flex-1 rounded-none border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0',
+                              auditDateRangeFilter === 'Custom'
+                                ? 'rounded-l-md rounded-r-none pr-1'
+                                : 'rounded-md',
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                'truncate',
+                                auditDateRangeFilter === 'All' && 'text-muted-foreground',
+                              )}
+                            >
+                              {auditDateRangeFilter === 'All'
+                                ? 'Date range'
+                                : auditDateRangeFilter === 'Custom' &&
+                                    auditCustomApplied?.from &&
+                                    auditCustomApplied?.to
+                                  ? `${format(auditCustomApplied.from, 'MMM d, yyyy')} – ${format(auditCustomApplied.to, 'MMM d, yyyy')}`
+                                  : auditDateRangeFilter}
+                            </span>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AUDIT_DATE_RANGE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {auditDateRangeFilter === 'Custom' ? (
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 shrink-0 rounded-none rounded-r-md border-l border-input hover:bg-accent"
+                              aria-label="Open custom date range"
+                            >
+                              <Icon name="date_range" size={18} />
+                            </Button>
+                          </PopoverTrigger>
+                        ) : null}
+                      </div>
+                    </PopoverAnchor>
+                    {auditDateRangeFilter === 'Custom' ? (
+                      <PopoverContent
+                        className="w-max min-w-0 max-w-[calc(100vw-1rem)] border-border p-0"
+                        align="start"
+                        sideOffset={6}
+                      >
+                        <div className="flex flex-col">
+                          <Calendar
+                            mode="range"
+                            numberOfMonths={2}
+                            className="rounded-md [--cell-size:2rem]"
+                            defaultMonth={auditCustomDraft?.from ?? auditCustomDraft?.to ?? new Date()}
+                            selected={auditCustomDraft}
+                            onSelect={setAuditCustomDraft}
+                          />
+                          <div className="flex justify-end gap-2 border-t border-border px-3 py-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setAuditCustomDraft(auditCustomAppliedRef.current);
+                                setAuditCustomOpen(false);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="default"
+                              size="sm"
+                              disabled={!auditCustomDraft?.from || !auditCustomDraft?.to}
+                              onClick={() => {
+                                setAuditCustomApplied(auditCustomDraft);
+                                setAuditCustomOpen(false);
+                              }}
+                            >
+                              Apply
+                            </Button>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    ) : null}
+                  </Popover>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="sm:ml-auto shrink-0 gap-1.5"
+                    aria-label="Export audit trail"
+                    onClick={() => {
+                      const escapeCsv = (value: string | number) => {
+                        const s = String(value);
+                        if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+                        return s;
+                      };
+                      const header = [
+                        'Seq no.',
+                        'Operation time/date',
+                        'Username',
+                        'Operation name',
+                        'Operation status',
+                      ];
+                      const lines = [
+                        header.join(','),
+                        ...filteredAuditRows.map((row) =>
+                          [
+                            row.seqNo,
+                            row.operationDateTime,
+                            row.username,
+                            row.operationName,
+                            row.operationStatus,
+                          ]
+                            .map(escapeCsv)
+                            .join(','),
+                        ),
+                      ];
+                      const blob = new Blob([`\ufeff${lines.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `audit-trail-${new Date().toISOString().slice(0, 10)}.csv`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                      toast.success(
+                        filteredAuditRows.length === 0
+                          ? 'Exported audit trail (no rows matched filters)'
+                          : `Exported ${filteredAuditRows.length} row${filteredAuditRows.length === 1 ? '' : 's'}`,
+                      );
+                    }}
+                  >
+                    <Icon name="download" size={16} />
+                    Export
+                  </Button>
                 </div>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="overflow-hidden rounded-lg border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Seq no.</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Operation time/date</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Username</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Operation name</TableHead>
-                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Operation status</TableHead>
+                <div className="overflow-hidden rounded-lg border bg-card">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Seq no.</TableHead>
+                        <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Operation time/date</TableHead>
+                        <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Username</TableHead>
+                        <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Operation name</TableHead>
+                        <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Operation status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAuditRows.length > 0 ? (
+                        filteredAuditRows.map((row) => (
+                          <TableRow
+                            key={`audit-${row.seqNo}`}
+                            className="cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`View audit entry ${row.seqNo}`}
+                            onClick={() => setAuditDetailRow(row)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setAuditDetailRow(row);
+                              }
+                            }}
+                          >
+                            <TableCell className="px-4 py-3 tabular-nums">{row.seqNo}</TableCell>
+                            <TableCell className="px-4 py-3 whitespace-nowrap">{row.operationDateTime}</TableCell>
+                            <TableCell className="px-4 py-3">{row.username}</TableCell>
+                            <TableCell
+                              className="max-w-[min(280px,40vw)] px-4 py-3 truncate"
+                              title={row.operationName}
+                            >
+                              {row.operationName}
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <Badge variant={row.operationStatus === 'Allowed' ? 'secondary' : 'destructive'} className="font-normal">
+                                {row.operationStatus}
+                              </Badge>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredAuditRows.length > 0 ? (
-                            filteredAuditRows.map((row) => (
-                              <TableRow key={`audit-${row.seqNo}`}>
-                                <TableCell className="px-4 py-3 tabular-nums">{row.seqNo}</TableCell>
-                                <TableCell className="px-4 py-3">{row.operationDateTime}</TableCell>
-                                <TableCell className="px-4 py-3">{row.username}</TableCell>
-                                <TableCell className="px-4 py-3">{row.operationName}</TableCell>
-                                <TableCell className="px-4 py-3">
-                                  <Badge variant={row.operationStatus === 'Allowed' ? 'secondary' : 'destructive'} className="font-normal">
-                                    {row.operationStatus}
-                                  </Badge>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
-                                No audit records match the current filters.
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
+                            No audit records match the current filters.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
+
+              <Sheet
+                open={auditDetailRow !== null}
+                onOpenChange={(open) => {
+                  if (!open) setAuditDetailRow(null);
+                }}
+              >
+                <SheetContent side="right" className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-xl md:max-w-2xl">
+                  {auditDetailRow ? (
+                    <>
+                      <SheetHeader className="shrink-0 space-y-0 border-b border-border px-4 pb-4 pt-4 pr-12 text-left">
+                        <SheetTitle>Audit details</SheetTitle>
+                      </SheetHeader>
+                      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2">
+                        <div className="divide-y divide-border">
+                          <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
+                            <span className="text-muted-foreground text-sm">Seq no.</span>
+                            <span className="min-w-0 text-sm tabular-nums text-foreground">{auditDetailRow.seqNo}</span>
+                          </div>
+                          <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
+                            <span className="text-muted-foreground text-sm">Operation time & date</span>
+                            <span className="min-w-0 text-sm text-foreground">{auditDetailRow.operationDateTime}</span>
+                          </div>
+                          <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
+                            <span className="text-muted-foreground text-sm">User name</span>
+                            <span className="min-w-0 break-all text-sm text-foreground">{auditDetailRow.username}</span>
+                          </div>
+                          <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
+                            <span className="text-muted-foreground text-sm">Operation name</span>
+                            <p className="min-w-0 text-sm font-normal leading-relaxed text-foreground break-words [overflow-wrap:anywhere]">
+                              {auditDetailRow.operationName}
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
+                            <span className="text-muted-foreground text-sm">Operation status</span>
+                            <span className="min-w-0 text-sm text-foreground">{auditDetailRow.operationStatus}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <SheetFooter className="mt-auto shrink-0 flex justify-end border-t border-border px-4 py-4">
+                        <Button type="button" onClick={() => setAuditDetailRow(null)}>
+                          OK
+                        </Button>
+                      </SheetFooter>
+                    </>
+                  ) : null}
+                </SheetContent>
+              </Sheet>
+              </>
             )}
 
             {activeSection === 'northbound-interface' && (
@@ -1282,33 +2254,359 @@ export default function AdministrationPage({
 
                   <TabsContent value="alarm-forwarding" className="mt-6 space-y-4">
                     <div className="flex justify-end">
-                      <Button type="button" variant="outline" className="gap-1">
+                      <Button
+                        type="button"
+                        variant="default"
+                        aria-label="Add new SNMP managers group"
+                        onClick={() => {
+                          setSnmpManagersGroupEditIndex(null);
+                          setSnmpManagersGroupForm({ ...DEFAULT_SNMP_MANAGERS_GROUP_FORM });
+                          setSnmpManagersGroupSheetOpen(true);
+                        }}
+                      >
                         <Icon name="add" size={16} />
                         Add new snmp managers group
                       </Button>
                     </div>
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="overflow-hidden rounded-lg border">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Name</TableHead>
-                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Host name</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {ALARM_FORWARDING_ROWS.map((row) => (
-                                <TableRow key={row.name}>
-                                  <TableCell className="px-4 py-3">{row.name}</TableCell>
-                                  <TableCell className="px-4 py-3 font-mono text-sm">{row.hostName}</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                    <div className="overflow-hidden rounded-lg border bg-card">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Name</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Host name</TableHead>
+                            <TableHead className="w-14 px-2 py-3 text-right">
+                              <span className="sr-only">Actions</span>
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {alarmForwardingRows.map((row, idx) => (
+                            <TableRow key={`${row.hostName}-${idx}`}>
+                              <TableCell className="px-4 py-3">{row.name}</TableCell>
+                              <TableCell className="px-4 py-3 font-mono text-sm">{row.hostName}</TableCell>
+                              <TableCell className="px-2 py-3 text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      aria-label={`Actions for ${row.name}`}
+                                    >
+                                      <Icon name="more_vert" size={18} />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onSelect={() => {
+                                        setSnmpManagersGroupEditIndex(idx);
+                                        setSnmpManagersGroupForm({
+                                          ...DEFAULT_SNMP_MANAGERS_GROUP_FORM,
+                                          name: row.name,
+                                          hostName: row.hostName,
+                                        });
+                                        setSnmpManagersGroupSheetOpen(true);
+                                      }}
+                                    >
+                                      <Icon name="edit" size={16} className="mr-2" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onSelect={() => setAlarmForwardingDeleteIndex(idx)}
+                                    >
+                                      <Icon name="delete" size={16} className="mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <Sheet
+                      open={snmpManagersGroupSheetOpen}
+                      onOpenChange={(open) => {
+                        setSnmpManagersGroupSheetOpen(open);
+                        if (!open) {
+                          setSnmpManagersGroupForm({ ...DEFAULT_SNMP_MANAGERS_GROUP_FORM });
+                          setSnmpManagersGroupEditIndex(null);
+                        }
+                      }}
+                    >
+                      <SheetContent side="right" className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-lg">
+                        <SheetHeader className="shrink-0 space-y-0 border-b border-border px-4 pb-4 pt-4 pr-12 text-left">
+                          <SheetTitle>
+                            {snmpManagersGroupEditIndex !== null ? 'Edit SNMP managers group' : 'Add SNMP managers group'}
+                          </SheetTitle>
+                        </SheetHeader>
+                        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                          <div className="space-y-5">
+                              <div>
+                                <Label htmlFor="snmp-group-name">
+                                  Name <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                  id="snmp-group-name"
+                                  className="mt-3"
+                                  required
+                                  autoComplete="off"
+                                  value={snmpManagersGroupForm.name}
+                                  onChange={(e) =>
+                                    setSnmpManagersGroupForm((f) => ({ ...f, name: e.target.value }))
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="snmp-group-port">
+                                  Port <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                  id="snmp-group-port"
+                                  className="mt-3"
+                                  required
+                                  inputMode="numeric"
+                                  autoComplete="off"
+                                  value={snmpManagersGroupForm.port}
+                                  onChange={(e) =>
+                                    setSnmpManagersGroupForm((f) => ({ ...f, port: e.target.value }))
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id="snmp-group-enable"
+                                  checked={snmpManagersGroupForm.enable}
+                                  onCheckedChange={(checked) =>
+                                    setSnmpManagersGroupForm((f) => ({ ...f, enable: Boolean(checked) }))
+                                  }
+                                />
+                                <Label htmlFor="snmp-group-enable" className="cursor-pointer font-normal">
+                                  Enable
+                                </Label>
+                              </div>
+                              <div>
+                                <Label htmlFor="snmp-group-hostname">
+                                  Host name <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                  id="snmp-group-hostname"
+                                  className="mt-3 font-mono"
+                                  required
+                                  autoComplete="off"
+                                  value={snmpManagersGroupForm.hostName}
+                                  onChange={(e) =>
+                                    setSnmpManagersGroupForm((f) => ({ ...f, hostName: e.target.value }))
+                                  }
+                                />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id="snmp-group-heartbeat-trap"
+                                  checked={snmpManagersGroupForm.enableHeartbeatTrap}
+                                  onCheckedChange={(checked) =>
+                                    setSnmpManagersGroupForm((f) => ({
+                                      ...f,
+                                      enableHeartbeatTrap: Boolean(checked),
+                                    }))
+                                  }
+                                />
+                                <Label htmlFor="snmp-group-heartbeat-trap" className="cursor-pointer font-normal">
+                                  Enable heartbeat trap
+                                </Label>
+                              </div>
+                              <div>
+                                <Label htmlFor="snmp-group-heartbeat-interval">
+                                  Heartbeat interval (minutes) <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                  id="snmp-group-heartbeat-interval"
+                                  className="mt-3"
+                                  required
+                                  inputMode="numeric"
+                                  autoComplete="off"
+                                  value={snmpManagersGroupForm.heartbeatIntervalMinutes}
+                                  onChange={(e) =>
+                                    setSnmpManagersGroupForm((f) => ({
+                                      ...f,
+                                      heartbeatIntervalMinutes: e.target.value,
+                                    }))
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <Label>SNMP version</Label>
+                                <RadioGroup
+                                  value={snmpManagersGroupForm.snmpVersion}
+                                  onValueChange={(v) =>
+                                    setSnmpManagersGroupForm((f) => ({
+                                      ...f,
+                                      snmpVersion: v as SnmpManagersGroupVersion,
+                                    }))
+                                  }
+                                  className="mt-3 flex flex-wrap gap-6"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <RadioGroupItem id="snmp-group-v2c" value="v2c" />
+                                    <Label htmlFor="snmp-group-v2c" className="cursor-pointer font-normal">
+                                      V2C
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <RadioGroupItem id="snmp-group-v3" value="v3" />
+                                    <Label htmlFor="snmp-group-v3" className="cursor-pointer font-normal">
+                                      V3
+                                    </Label>
+                                  </div>
+                                </RadioGroup>
+                              </div>
+                              {snmpManagersGroupForm.snmpVersion === 'v2c' ? (
+                                <div>
+                                  <Label htmlFor="snmp-group-community">
+                                    Community <span className="text-destructive">*</span>
+                                  </Label>
+                                  <Input
+                                    id="snmp-group-community"
+                                    className="mt-3 font-mono"
+                                    required
+                                    autoComplete="off"
+                                    value={snmpManagersGroupForm.community}
+                                    onChange={(e) =>
+                                      setSnmpManagersGroupForm((f) => ({ ...f, community: e.target.value }))
+                                    }
+                                  />
+                                </div>
+                              ) : (
+                                <div>
+                                  <Label htmlFor="snmp-group-v3-user">
+                                    User name <span className="text-destructive">*</span>
+                                  </Label>
+                                  <Input
+                                    id="snmp-group-v3-user"
+                                    className="mt-3"
+                                    required
+                                    autoComplete="off"
+                                    value={snmpManagersGroupForm.v3UserName}
+                                    onChange={(e) =>
+                                      setSnmpManagersGroupForm((f) => ({ ...f, v3UserName: e.target.value }))
+                                    }
+                                  />
+                                </div>
+                              )}
+                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                        <SheetFooter className="mt-auto shrink-0 flex flex-row flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/20 px-4 py-4">
+                          <div className="min-w-0">
+                            {snmpManagersGroupEditIndex !== null ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="gap-1.5 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => {
+                                  if (snmpManagersGroupEditIndex !== null) {
+                                    setAlarmForwardingDeleteIndex(snmpManagersGroupEditIndex);
+                                  }
+                                }}
+                              >
+                                <Icon name="delete" size={16} />
+                                Delete
+                              </Button>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setSnmpManagersGroupSheetOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              const name = snmpManagersGroupForm.name.trim();
+                              const hostName = snmpManagersGroupForm.hostName.trim();
+                              const port = snmpManagersGroupForm.port.trim();
+                              const heartbeat = snmpManagersGroupForm.heartbeatIntervalMinutes.trim();
+                              if (!name || !hostName || !port || !heartbeat) {
+                                toast.error('Enter name, host name, port, and heartbeat interval.');
+                                return;
+                              }
+                              if (snmpManagersGroupForm.snmpVersion === 'v2c') {
+                                if (!snmpManagersGroupForm.community.trim()) {
+                                  toast.error('Enter community for SNMP V2C.');
+                                  return;
+                                }
+                              } else if (!snmpManagersGroupForm.v3UserName.trim()) {
+                                toast.error('Enter user name for SNMP V3.');
+                                return;
+                              }
+                              const editIdx = snmpManagersGroupEditIndex;
+                              setAlarmForwardingRows((prev) => {
+                                if (editIdx !== null) {
+                                  return prev.map((r, i) => (i === editIdx ? { name, hostName } : r));
+                                }
+                                return [...prev, { name, hostName }];
+                              });
+                              setSnmpManagersGroupSheetOpen(false);
+                              setSnmpManagersGroupForm({ ...DEFAULT_SNMP_MANAGERS_GROUP_FORM });
+                              setSnmpManagersGroupEditIndex(null);
+                              toast.success(
+                                editIdx !== null ? 'SNMP managers group updated' : 'SNMP managers group added',
+                              );
+                            }}
+                          >
+                            Save
+                          </Button>
+                          </div>
+                        </SheetFooter>
+                      </SheetContent>
+                    </Sheet>
+
+                    <AlertDialog
+                      open={alarmForwardingDeleteIndex !== null}
+                      onOpenChange={(open) => {
+                        if (!open) setAlarmForwardingDeleteIndex(null);
+                      }}
+                    >
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete SNMP managers group?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {(() => {
+                              const i = alarmForwardingDeleteIndex;
+                              if (i === null) {
+                                return 'Remove this SNMP managers group from alarm forwarding?';
+                              }
+                              const r = alarmForwardingRows[i];
+                              return `This will remove "${r?.name ?? ''}" (${r?.hostName ?? ''}) from alarm forwarding.`;
+                            })()}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                              const i = alarmForwardingDeleteIndex;
+                              if (i === null) return;
+                              setAlarmForwardingRows((prev) => prev.filter((_, idx) => idx !== i));
+                              setAlarmForwardingDeleteIndex(null);
+                              setSnmpManagersGroupSheetOpen(false);
+                              setSnmpManagersGroupForm({ ...DEFAULT_SNMP_MANAGERS_GROUP_FORM });
+                              setSnmpManagersGroupEditIndex(null);
+                              toast.success('SNMP managers group removed');
+                            }}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TabsContent>
 
                   <TabsContent value="snmp-agent" className="mt-6">
@@ -1317,11 +2615,11 @@ export default function AdministrationPage({
                         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                           <div className="flex items-center gap-2 md:col-span-2">
                             <Checkbox id="snmp-enable-internal-agent" checked={snmpEnableInternalAgent} onCheckedChange={(checked) => setSnmpEnableInternalAgent(Boolean(checked))} />
-                            <Label htmlFor="snmp-enable-internal-agent">Enable Internal SNMP Agent</Label>
+                            <Label htmlFor="snmp-enable-internal-agent">Enable internal SNMP agent</Label>
                           </div>
                           <div className="flex items-center gap-2 md:col-span-2">
                             <Checkbox id="snmp-enable-v2c" checked={snmpEnableV2c} onCheckedChange={(checked) => setSnmpEnableV2c(Boolean(checked))} />
-                            <Label htmlFor="snmp-enable-v2c">SNMP V2C</Label>
+                            <Label htmlFor="snmp-enable-v2c">SNMP v2c</Label>
                           </div>
                           <div>
                             <Label htmlFor="snmp-read-community">Read community</Label>
@@ -1333,15 +2631,15 @@ export default function AdministrationPage({
                           </div>
                           <div className="flex items-center gap-2 md:col-span-2">
                             <Checkbox id="snmp-enable-v3" checked={snmpEnableV3} onCheckedChange={(checked) => setSnmpEnableV3(Boolean(checked))} />
-                            <Label htmlFor="snmp-enable-v3">SNMP V3</Label>
+                            <Label htmlFor="snmp-enable-v3">SNMP v3</Label>
                           </div>
                           <div className="md:col-span-2 space-y-5">
                             <div>
-                              <Label htmlFor="snmp-engine-id">Engine id</Label>
+                              <Label htmlFor="snmp-engine-id">SNMP engine ID</Label>
                               <Input id="snmp-engine-id" className="mt-3" value={snmpEngineId} onChange={(e) => setSnmpEngineId(e.target.value)} />
                             </div>
                             <div>
-                              <Label htmlFor="snmp-user-name">User name</Label>
+                              <Label htmlFor="snmp-user-name">Username</Label>
                               <Input id="snmp-user-name" className="mt-3" value={snmpUserName} onChange={(e) => setSnmpUserName(e.target.value)} />
                             </div>
                             <div>
@@ -1350,7 +2648,7 @@ export default function AdministrationPage({
                             </div>
                             <div className="flex items-center gap-2">
                               <Checkbox id="snmp-change-auth-password" checked={snmpChangeAuthenticationPassword} onCheckedChange={(checked) => setSnmpChangeAuthenticationPassword(Boolean(checked))} />
-                              <Label htmlFor="snmp-change-auth-password">Change password authentication protocol</Label>
+                              <Label htmlFor="snmp-change-auth-password">Change authentication protocol password</Label>
                             </div>
                             <div>
                               <Label htmlFor="snmp-privacy-protocol">Privacy protocol</Label>
@@ -1358,7 +2656,7 @@ export default function AdministrationPage({
                             </div>
                             <div className="flex items-center gap-2">
                               <Checkbox id="snmp-change-privacy-password" checked={snmpChangePrivacyPassword} onCheckedChange={(checked) => setSnmpChangePrivacyPassword(Boolean(checked))} />
-                              <Label htmlFor="snmp-change-privacy-password">Change password privacy protocol</Label>
+                              <Label htmlFor="snmp-change-privacy-password">Change privacy protocol password</Label>
                             </div>
                           </div>
                         </div>
@@ -1366,45 +2664,338 @@ export default function AdministrationPage({
                     </Card>
                   </TabsContent>
 
-                  <TabsContent value="syslog-forwarding" className="mt-6">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="overflow-hidden rounded-lg border">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Host name</TableHead>
-                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Port</TableHead>
-                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Enable</TableHead>
-                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">List of enabled events</TableHead>
-                                <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Description</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {SYSLOG_FORWARDING_ROWS.map((row) => (
-                                <TableRow key={`${row.hostName}-${row.port}`}>
-                                  <TableCell className="px-4 py-3 font-mono text-sm">{row.hostName}</TableCell>
-                                  <TableCell className="px-4 py-3">{row.port}</TableCell>
-                                  <TableCell className="px-4 py-3">
-                                    <Switch checked={row.enabled} disabled />
-                                  </TableCell>
-                                  <TableCell className="px-4 py-3">
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {row.enabledEvents.map((eventName) => (
-                                        <Badge key={`${row.hostName}-${eventName}`} variant="secondary" className="font-normal">
-                                          {eventName}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="px-4 py-3 text-muted-foreground">{row.description}</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                  <TabsContent value="syslog-forwarding" className="mt-6 space-y-4">
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="default"
+                        aria-label="Add syslog collector"
+                        onClick={() => {
+                          setSyslogEditIndex(null);
+                          setSyslogForm({ ...DEFAULT_SYSLOG_FORWARDING_FORM });
+                          setSyslogSheetOpen(true);
+                        }}
+                      >
+                        <Icon name="add" size={16} />
+                        Add syslog collector
+                      </Button>
+                    </div>
+                    <div className="overflow-hidden rounded-lg border bg-card">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Host name</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Port</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Enable</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">List of enabled events</TableHead>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Description</TableHead>
+                            <TableHead className="w-14 px-2 py-3 text-right">
+                              <span className="sr-only">Actions</span>
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {syslogForwardingRows.map((row, idx) => (
+                            <TableRow key={`${row.hostName}-${row.port}-${idx}`}>
+                              <TableCell className="px-4 py-3 font-mono text-sm">{row.hostName}</TableCell>
+                              <TableCell className="px-4 py-3">{row.port}</TableCell>
+                              <TableCell className="px-4 py-3">
+                                <Switch
+                                  checked={row.enabled}
+                                  onCheckedChange={(checked) =>
+                                    setSyslogForwardingRows((prev) =>
+                                      prev.map((r, i) => (i === idx ? { ...r, enabled: Boolean(checked) } : r)),
+                                    )
+                                  }
+                                />
+                              </TableCell>
+                              <TableCell className="px-4 py-3">
+                                {syslogEventLabels(row).length > 0 ? (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {syslogEventLabels(row).map((eventName) => (
+                                      <Badge key={`${row.hostName}-${eventName}-${idx}`} variant="secondary" className="font-normal">
+                                        {eventName}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-muted-foreground">{row.description}</TableCell>
+                              <TableCell className="px-2 py-3 text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      aria-label={`Actions for ${row.hostName}`}
+                                    >
+                                      <Icon name="more_vert" size={18} />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onSelect={() => {
+                                        setSyslogEditIndex(idx);
+                                        setSyslogForm({
+                                          hostName: row.hostName,
+                                          port: row.port,
+                                          enabled: row.enabled,
+                                          enableAuditTrail: row.enableAuditTrail,
+                                          enableSystemEvent: row.enableSystemEvent,
+                                          description: row.description,
+                                        });
+                                        setSyslogSheetOpen(true);
+                                      }}
+                                    >
+                                      <Icon name="edit" size={16} className="mr-2" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onSelect={() => setSyslogDeleteIndex(idx)}
+                                    >
+                                      <Icon name="delete" size={16} className="mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <Sheet
+                      open={syslogSheetOpen}
+                      onOpenChange={(open) => {
+                        setSyslogSheetOpen(open);
+                        if (!open) {
+                          setSyslogForm({ ...DEFAULT_SYSLOG_FORWARDING_FORM });
+                          setSyslogEditIndex(null);
+                        }
+                      }}
+                    >
+                      <SheetContent side="right" className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-lg">
+                        <SheetHeader className="shrink-0 space-y-0 border-b border-border px-4 pb-4 pt-4 pr-12 text-left">
+                          <SheetTitle>
+                            {syslogEditIndex !== null ? 'Edit syslog collector' : 'Add syslog collector'}
+                          </SheetTitle>
+                        </SheetHeader>
+                        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                          <div className="rounded-lg border border-border bg-muted/10 p-4 md:p-5">
+                            <div className="space-y-5">
+                              <div>
+                                <Label htmlFor="syslog-form-host">
+                                  Host name <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                  id="syslog-form-host"
+                                  className="mt-3 font-mono"
+                                  required
+                                  autoComplete="off"
+                                  value={syslogForm.hostName}
+                                  onChange={(e) => setSyslogForm((f) => ({ ...f, hostName: e.target.value }))}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="syslog-form-port">
+                                  Port <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                  id="syslog-form-port"
+                                  className="mt-3"
+                                  required
+                                  inputMode="numeric"
+                                  autoComplete="off"
+                                  value={syslogForm.port}
+                                  onChange={(e) => setSyslogForm((f) => ({ ...f, port: e.target.value }))}
+                                />
+                              </div>
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    id="syslog-form-enabled"
+                                    checked={syslogForm.enabled}
+                                    onCheckedChange={(checked) =>
+                                      setSyslogForm((f) => ({ ...f, enabled: Boolean(checked) }))
+                                    }
+                                  />
+                                  <Label htmlFor="syslog-form-enabled" className="cursor-pointer font-normal">
+                                    Enable
+                                  </Label>
+                                </div>
+                                <div className="ml-6 space-y-3 border-l border-border pl-4">
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      id="syslog-form-audit-trail"
+                                      disabled={!syslogForm.enabled}
+                                      checked={syslogForm.enableAuditTrail}
+                                      onCheckedChange={(checked) =>
+                                        setSyslogForm((f) => ({ ...f, enableAuditTrail: Boolean(checked) }))
+                                      }
+                                    />
+                                    <Label
+                                      htmlFor="syslog-form-audit-trail"
+                                      className={cn(
+                                        'cursor-pointer font-normal',
+                                        !syslogForm.enabled && 'cursor-not-allowed opacity-50',
+                                      )}
+                                    >
+                                      Enable audit trail
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      id="syslog-form-system-event"
+                                      disabled={!syslogForm.enabled}
+                                      checked={syslogForm.enableSystemEvent}
+                                      onCheckedChange={(checked) =>
+                                        setSyslogForm((f) => ({ ...f, enableSystemEvent: Boolean(checked) }))
+                                      }
+                                    />
+                                    <Label
+                                      htmlFor="syslog-form-system-event"
+                                      className={cn(
+                                        'cursor-pointer font-normal',
+                                        !syslogForm.enabled && 'cursor-not-allowed opacity-50',
+                                      )}
+                                    >
+                                      Enable system event
+                                    </Label>
+                                  </div>
+                                </div>
+                              </div>
+                              <div>
+                                <Label htmlFor="syslog-form-description">
+                                  Description <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                  id="syslog-form-description"
+                                  className="mt-3"
+                                  required
+                                  autoComplete="off"
+                                  value={syslogForm.description}
+                                  onChange={(e) => setSyslogForm((f) => ({ ...f, description: e.target.value }))}
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                        <SheetFooter className="mt-auto shrink-0 flex flex-row flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/20 px-4 py-4">
+                          <div className="min-w-0">
+                            {syslogEditIndex !== null ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="gap-1.5 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => {
+                                  if (syslogEditIndex !== null) {
+                                    setSyslogDeleteIndex(syslogEditIndex);
+                                  }
+                                }}
+                              >
+                                <Icon name="delete" size={16} />
+                                Delete
+                              </Button>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button type="button" variant="outline" onClick={() => setSyslogSheetOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                const hostName = syslogForm.hostName.trim();
+                                const port = syslogForm.port.trim();
+                                const description = syslogForm.description.trim();
+                                if (!hostName || !port || !description) {
+                                  toast.error('Enter host name, port, and description.');
+                                  return;
+                                }
+                                if (
+                                  syslogForm.enabled &&
+                                  !syslogForm.enableAuditTrail &&
+                                  !syslogForm.enableSystemEvent
+                                ) {
+                                  toast.error('When the collector is enabled, select audit trail, system event, or both.');
+                                  return;
+                                }
+                                const row: SyslogForwardingRow = {
+                                  hostName,
+                                  port,
+                                  enabled: syslogForm.enabled,
+                                  enableAuditTrail: syslogForm.enableAuditTrail,
+                                  enableSystemEvent: syslogForm.enableSystemEvent,
+                                  description,
+                                };
+                                const editIdx = syslogEditIndex;
+                                setSyslogForwardingRows((prev) => {
+                                  if (editIdx !== null) {
+                                    return prev.map((r, i) => (i === editIdx ? row : r));
+                                  }
+                                  return [...prev, row];
+                                });
+                                setSyslogSheetOpen(false);
+                                setSyslogForm({ ...DEFAULT_SYSLOG_FORWARDING_FORM });
+                                setSyslogEditIndex(null);
+                                toast.success(
+                                  editIdx !== null ? 'Syslog collector updated' : 'Syslog collector added',
+                                );
+                              }}
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        </SheetFooter>
+                      </SheetContent>
+                    </Sheet>
+
+                    <AlertDialog
+                      open={syslogDeleteIndex !== null}
+                      onOpenChange={(open) => {
+                        if (!open) setSyslogDeleteIndex(null);
+                      }}
+                    >
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete syslog collector?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {(() => {
+                              const i = syslogDeleteIndex;
+                              if (i === null) {
+                                return 'Remove this syslog collector from the list?';
+                              }
+                              const r = syslogForwardingRows[i];
+                              return `This will remove "${r?.hostName ?? ''}" (port ${r?.port ?? ''}) from syslog forwarding.`;
+                            })()}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                              const i = syslogDeleteIndex;
+                              if (i === null) return;
+                              setSyslogForwardingRows((prev) => prev.filter((_, idx) => idx !== i));
+                              setSyslogDeleteIndex(null);
+                              setSyslogSheetOpen(false);
+                              setSyslogForm({ ...DEFAULT_SYSLOG_FORWARDING_FORM });
+                              setSyslogEditIndex(null);
+                              toast.success('Syslog collector removed');
+                            }}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TabsContent>
                 </Tabs>
               </div>
@@ -1424,159 +3015,269 @@ export default function AdministrationPage({
                     </TabsList>
                   </div>
 
-                  <TabsContent value="email-groups" className="mt-6">
-                    <div className="flex flex-col gap-6 lg:flex-row">
-                      <InternalSidebarList
-                        title="Email groups"
-                        items={emailGroupSidebarItems}
-                        selectedId={selectedEmailGroupId}
-                        onSelect={setSelectedEmailGroupId}
-                        showAddAction
-                        addAriaLabel="Add email group"
-                        onAddAction={() => {
-                          const nextIndex = emailGroupSidebarItems.length + 1;
-                          const nextId = `email-group-${nextIndex}`;
-                          const nextName = `Email Group ${nextIndex}`;
-                          setEmailGroupSidebarItems((prev) => [...prev, { id: nextId, label: nextName }]);
-                          setEmailGroupById((prev) => ({
-                            ...prev,
-                            [nextId]: { name: nextName, emailAddresses: [] },
-                          }));
-                          setSelectedEmailGroupId(nextId);
-                          toast.success(`Added ${nextName}`);
+                  <TabsContent value="email-groups" className="mt-6 space-y-4">
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="default"
+                        aria-label="Add email group"
+                        onClick={() => {
+                          setEmailGroupSheetEditId(null);
+                          setEmailGroupSheetName('');
+                          setEmailGroupSheetAddressesText('');
+                          setEmailGroupSheetOpen(true);
                         }}
-                      />
-                      <div className="flex-1 space-y-4">
-                        <Card>
-                          <CardContent className="pt-6">
-                            <div className="space-y-5">
-                              <div className="max-w-md">
-                                <Label htmlFor="email-group-name-field">Name</Label>
-                                <Input
-                                  id="email-group-name-field"
-                                  className="mt-3"
-                                  value={emailGroupNameValue}
-                                  onChange={(e) => setEmailGroupNameValue(e.target.value)}
-                                  placeholder="Enter group name"
-                                />
-                                {selectedEmailGroup.name !== '' && emailGroupNameValue.trim() !== selectedEmailGroup.name && (
-                                  <div className="mt-3 flex items-center gap-2">
-                                    <Button type="button" variant="outline" size="sm" onClick={() => setEmailGroupNameValue(selectedEmailGroup.name)}>
-                                      Cancel
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      disabled={emailGroupNameValue.trim().length === 0}
-                                      onClick={() => {
-                                        const nextName = emailGroupNameValue.trim();
-                                        if (!nextName) return;
-                                        setEmailGroupById((prev) => ({
-                                          ...prev,
-                                          [selectedEmailGroupId]: {
-                                            ...(prev[selectedEmailGroupId] ?? { name: '', emailAddresses: [] }),
-                                            name: nextName,
-                                          },
-                                        }));
-                                        setEmailGroupSidebarItems((prev) =>
-                                          prev.map((item) => (item.id === selectedEmailGroupId ? { ...item, label: nextName } : item)),
-                                        );
-                                        toast.success('Email group name updated');
-                                      }}
-                                    >
-                                      Save
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                              <div>
-                                <Label>Email addresses</Label>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {selectedEmailGroup.emailAddresses.length > 0 ? (
-                                    selectedEmailGroup.emailAddresses.map((address) => (
-                                      <Badge key={`${selectedEmailGroupId}-${address}`} variant="secondary" className="gap-1 pr-0.5">
-                                        {address}
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-4 w-4 rounded-sm"
-                                          aria-label={`Remove ${address}`}
-                                          onClick={() =>
-                                            setEmailGroupById((prev) => ({
-                                              ...prev,
-                                              [selectedEmailGroupId]: {
-                                                ...(prev[selectedEmailGroupId] ?? { name: '', emailAddresses: [] }),
-                                                emailAddresses: (prev[selectedEmailGroupId]?.emailAddresses ?? []).filter((email) => email !== address),
-                                              },
-                                            }))
-                                          }
-                                        >
-                                          <Icon name="close" size={12} />
-                                        </Button>
-                                      </Badge>
-                                    ))
+                      >
+                        <Icon name="add" size={16} />
+                        Add email group
+                      </Button>
+                    </div>
+                    <div className="overflow-hidden rounded-lg border bg-card">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="px-4 py-3 h-10 whitespace-nowrap">Name</TableHead>
+                            <TableHead className="px-4 py-3 h-10">Email addresses</TableHead>
+                            <TableHead className="w-14 px-2 py-3 text-right">
+                              <span className="sr-only">Actions</span>
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {emailGroupSidebarItems.map((item) => {
+                            const group = emailGroupById[item.id] ?? { name: item.label, emailAddresses: [] as string[] };
+                            return (
+                              <TableRow key={item.id}>
+                                <TableCell className="px-4 py-3 font-medium">{group.name}</TableCell>
+                                <TableCell className="px-4 py-3">
+                                  {group.emailAddresses.length > 0 ? (
+                                    <div className="flex max-w-xl flex-wrap gap-1.5">
+                                      {group.emailAddresses.map((address) => (
+                                        <Badge key={`${item.id}-${address}`} variant="secondary" className="font-normal">
+                                          {address}
+                                        </Badge>
+                                      ))}
+                                    </div>
                                   ) : (
-                                    <p className="text-sm text-muted-foreground">No email addresses added.</p>
+                                    <span className="text-sm text-muted-foreground">—</span>
                                   )}
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  className="mt-3 h-8 w-8"
-                                  aria-label="Add email address"
-                                  onClick={() => {
-                                    setPendingEmailAddress('');
-                                    setAddEmailAddressDialogOpen(true);
-                                  }}
-                                >
-                                  <Icon name="add" size={16} />
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                        <Dialog open={addEmailAddressDialogOpen} onOpenChange={setAddEmailAddressDialogOpen}>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Add email address</DialogTitle>
-                            </DialogHeader>
+                                </TableCell>
+                                <TableCell className="px-2 py-3 text-right">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        aria-label={`Actions for ${group.name}`}
+                                      >
+                                        <Icon name="more_vert" size={18} />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onSelect={() => {
+                                          setEmailGroupSheetEditId(item.id);
+                                          setEmailGroupSheetName(group.name);
+                                          setEmailGroupSheetAddressesText(group.emailAddresses.join('\n'));
+                                          setEmailGroupSheetOpen(true);
+                                        }}
+                                      >
+                                        <Icon name="edit" size={16} className="mr-2" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        disabled={emailGroupSidebarItems.length <= 1}
+                                        onSelect={() => {
+                                          if (emailGroupSidebarItems.length <= 1) {
+                                            toast.error('Keep at least one email group.');
+                                            return;
+                                          }
+                                          setEmailGroupDeleteId(item.id);
+                                        }}
+                                      >
+                                        <Icon name="delete" size={16} className="mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <Sheet
+                      open={emailGroupSheetOpen}
+                      onOpenChange={(open) => {
+                        setEmailGroupSheetOpen(open);
+                        if (!open) {
+                          setEmailGroupSheetEditId(null);
+                          setEmailGroupSheetName('');
+                          setEmailGroupSheetAddressesText('');
+                        }
+                      }}
+                    >
+                      <SheetContent side="right" className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-lg">
+                        <SheetHeader className="shrink-0 space-y-0 border-b border-border px-4 pb-4 pt-4 pr-12 text-left">
+                          <SheetTitle>
+                            {emailGroupSheetEditId !== null ? 'Edit email group' : 'Add email group'}
+                          </SheetTitle>
+                        </SheetHeader>
+                        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                          <div className="space-y-5">
                             <div>
-                              <Label htmlFor="email-group-address-input">Email address</Label>
+                              <Label htmlFor="email-group-sheet-name">
+                                Name <span className="text-destructive">*</span>
+                              </Label>
                               <Input
-                                id="email-group-address-input"
+                                id="email-group-sheet-name"
                                 className="mt-3"
-                                value={pendingEmailAddress}
-                                onChange={(e) => setPendingEmailAddress(e.target.value)}
-                                placeholder="name@example.com"
+                                autoComplete="off"
+                                value={emailGroupSheetName}
+                                onChange={(e) => setEmailGroupSheetName(e.target.value)}
+                                placeholder="Enter group name"
                               />
                             </div>
-                            <DialogFooter>
-                              <Button variant="outline" onClick={() => setAddEmailAddressDialogOpen(false)}>Cancel</Button>
+                            <div>
+                              <Label htmlFor="email-group-sheet-addresses">
+                                Email addresses
+                              </Label>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Enter one address per line, or separate with commas or semicolons.
+                              </p>
+                              <Textarea
+                                id="email-group-sheet-addresses"
+                                className="mt-2 min-h-32 font-mono text-sm"
+                                value={emailGroupSheetAddressesText}
+                                onChange={(e) => setEmailGroupSheetAddressesText(e.target.value)}
+                                placeholder={'noc@acme.com\noncall@acme.com'}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        {/* Plain div: SheetFooter defaults (flex-col-reverse sm:justify-end) hide the left Delete action on some breakpoints. */}
+                        <div className="mt-auto flex shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/20 px-4 py-4">
+                          <div className="flex min-w-0 flex-1">
+                            {emailGroupSheetEditId !== null ? (
                               <Button
-                                disabled={!pendingEmailAddress.trim()}
+                                type="button"
+                                variant="outline"
+                                className="gap-1.5 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                                disabled={emailGroupSidebarItems.length <= 1}
                                 onClick={() => {
-                                  const nextEmail = pendingEmailAddress.trim();
-                                  if (!nextEmail) return;
-                                  setEmailGroupById((prev) => ({
-                                    ...prev,
-                                    [selectedEmailGroupId]: {
-                                      ...(prev[selectedEmailGroupId] ?? { name: '', emailAddresses: [] }),
-                                      emailAddresses: [...new Set([...(prev[selectedEmailGroupId]?.emailAddresses ?? []), nextEmail])],
-                                    },
-                                  }));
-                                  setPendingEmailAddress('');
-                                  setAddEmailAddressDialogOpen(false);
+                                  if (emailGroupSheetEditId !== null) {
+                                    if (emailGroupSidebarItems.length <= 1) {
+                                      toast.error('Keep at least one email group.');
+                                      return;
+                                    }
+                                    setEmailGroupDeleteId(emailGroupSheetEditId);
+                                  }
                                 }}
                               >
-                                Add
+                                <Icon name="delete" size={16} />
+                                Delete group
                               </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    </div>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button type="button" variant="outline" onClick={() => setEmailGroupSheetOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                const name = emailGroupSheetName.trim();
+                                if (!name) {
+                                  toast.error('Enter a group name.');
+                                  return;
+                                }
+                                const emailAddresses = parseEmailAddressesText(emailGroupSheetAddressesText);
+                                const editId = emailGroupSheetEditId;
+                                if (editId !== null) {
+                                  setEmailGroupById((prev) => ({
+                                    ...prev,
+                                    [editId]: { name, emailAddresses },
+                                  }));
+                                  setEmailGroupSidebarItems((prev) =>
+                                    prev.map((it) => (it.id === editId ? { ...it, label: name } : it)),
+                                  );
+                                  toast.success('Email group updated');
+                                } else {
+                                  const nextNum =
+                                    emailGroupSidebarItems.reduce((acc, it) => {
+                                      const m = /^email-group-(\d+)$/.exec(it.id);
+                                      return m ? Math.max(acc, Number(m[1])) : acc;
+                                    }, 0) + 1;
+                                  const newId = `email-group-${nextNum}`;
+                                  setEmailGroupSidebarItems((prev) => [...prev, { id: newId, label: name }]);
+                                  setEmailGroupById((prev) => ({
+                                    ...prev,
+                                    [newId]: { name, emailAddresses },
+                                  }));
+                                  toast.success('Email group added');
+                                }
+                                setEmailGroupSheetOpen(false);
+                                setEmailGroupSheetEditId(null);
+                                setEmailGroupSheetName('');
+                                setEmailGroupSheetAddressesText('');
+                              }}
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+
+                    <AlertDialog
+                      open={emailGroupDeleteId !== null}
+                      onOpenChange={(open) => {
+                        if (!open) setEmailGroupDeleteId(null);
+                      }}
+                    >
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete email group?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {(() => {
+                              const id = emailGroupDeleteId;
+                              if (id === null) return 'Remove this email group?';
+                              const g = emailGroupById[id];
+                              return `This will remove “${g?.name ?? id}” and its saved addresses.`;
+                            })()}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                              const id = emailGroupDeleteId;
+                              if (id === null) return;
+                              setEmailGroupSidebarItems((prev) => prev.filter((it) => it.id !== id));
+                              setEmailGroupById((prev) => {
+                                const next = { ...prev };
+                                delete next[id];
+                                return next;
+                              });
+                              setEmailGroupDeleteId(null);
+                              setEmailGroupSheetOpen(false);
+                              setEmailGroupSheetEditId(null);
+                              setEmailGroupSheetName('');
+                              setEmailGroupSheetAddressesText('');
+                              toast.success('Email group removed');
+                            }}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TabsContent>
 
                   <TabsContent value="smtp" className="mt-6">
@@ -1600,7 +3301,7 @@ export default function AdministrationPage({
                             <Input id="smtp-server" className="mt-3" value={smtpServer} onChange={(e) => setSmtpServer(e.target.value)} />
                           </div>
                           <div>
-                            <Label htmlFor="smtp-port">SMTP Port*</Label>
+                            <Label htmlFor="smtp-port">SMTP port*</Label>
                             <Input id="smtp-port" className="mt-3" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} />
                           </div>
                           <div>
@@ -1628,14 +3329,18 @@ export default function AdministrationPage({
                             <Checkbox id="smtp-use-auth" checked={smtpUseAuthentication} onCheckedChange={(checked) => setSmtpUseAuthentication(Boolean(checked))} />
                             <Label htmlFor="smtp-use-auth">Use authentication</Label>
                           </div>
-                          <div>
-                            <Label htmlFor="smtp-user-name">User name</Label>
-                            <Input id="smtp-user-name" className="mt-3" value={smtpUserName} onChange={(e) => setSmtpUserName(e.target.value)} />
-                          </div>
-                          <div>
-                            <Label htmlFor="smtp-password">Password</Label>
-                            <Input id="smtp-password" className="mt-3" type="password" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
-                          </div>
+                          {smtpUseAuthentication ? (
+                            <div className="space-y-5 rounded-lg border border-border bg-muted/10 p-4 md:p-5">
+                              <div>
+                                <Label htmlFor="smtp-user-name">Username</Label>
+                                <Input id="smtp-user-name" className="mt-3" value={smtpUserName} onChange={(e) => setSmtpUserName(e.target.value)} />
+                              </div>
+                              <div>
+                                <Label htmlFor="smtp-password">Password</Label>
+                                <Input id="smtp-password" className="mt-3" type="password" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
+                              </div>
+                            </div>
+                          ) : null}
                           <div>
                             <Label htmlFor="smtp-test-email">Send test email</Label>
                             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1662,7 +3367,7 @@ export default function AdministrationPage({
             )}
 
             {activeSection === 'file-management' && (
-              <FileManagementPage />
+              <FileManagementPage fileMgmt={fileMgmt} setFileMgmt={setFileMgmt} />
             )}
 
             {activeSection === 'device-migration' && (
@@ -1682,15 +3387,21 @@ export default function AdministrationPage({
                     <div className="p-3 border-b border-border/80 bg-muted/20">
                       <div className="flex items-center justify-between gap-2">
                         <h3 className="text-sm font-semibold text-foreground truncate">TCA profiles</h3>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 rounded-md" aria-label="Add profile" onClick={() => { setNewProfileName(''); setNewProfileDesc(''); setAddProfileOpen(true); }}>
-                              <Icon name="add" size={16} />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Add profile</TooltipContent>
-                        </Tooltip>
                       </div>
+                      <Button
+                        type="button"
+                        variant="default"
+                        className="mt-2 w-full justify-center"
+                        aria-label="Add profile"
+                        onClick={() => {
+                          setNewProfileName('');
+                          setNewProfileDesc('');
+                          setAddProfileOpen(true);
+                        }}
+                      >
+                        <Icon name="add" size={16} className="shrink-0" />
+                        <span className="truncate">Add profile</span>
+                      </Button>
                       <div className="relative mt-3">
                         <Icon name="search" size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         <Input
@@ -1745,8 +3456,7 @@ export default function AdministrationPage({
                     })()}
 
                     {perfTab === 'thresholds' && (
-                      <Card>
-                        <CardContent className="pt-6 space-y-6">
+                      <div className="space-y-6">
                           {/* Name */}
                           <div className="flex items-start justify-between gap-4">
                             <div className="space-y-1">
@@ -1922,13 +3632,13 @@ export default function AdministrationPage({
                           <div className="space-y-3">
                             <div className="flex items-center justify-between gap-4">
                               <h4 className="text-sm font-semibold text-foreground">Actions</h4>
-                              <Button variant="outline" size="sm">
-                                <Icon name="add" size={16} className="mr-1.5" />
+                              <Button type="button" variant="default">
+                                <Icon name="add" size={16} />
                                 Add action
                               </Button>
                             </div>
                             <p className="text-sm text-muted-foreground">What actions should this profile take when triggered?</p>
-                            <div className="rounded-lg border">
+                            <div className="overflow-hidden rounded-lg border bg-card">
                               <Table>
                                 <TableHeader>
                                   <TableRow>
@@ -1968,8 +3678,8 @@ export default function AdministrationPage({
                           <div className="space-y-3">
                             <div className="flex items-center justify-between gap-4">
                               <h4 className="text-sm font-semibold text-foreground">Schedule</h4>
-                              <Button variant="outline" size="sm" disabled={scheduleKeys.length >= 2} onClick={() => { setNewSchedule({ days: [], allDay: true, startTime: '08:00', endTime: '18:00' }); setAddScheduleOpen(true); }}>
-                                <Icon name="add" size={16} className="mr-1.5" />
+                              <Button type="button" variant="default" disabled={scheduleKeys.length >= 2} onClick={() => { setNewSchedule({ days: [], allDay: true, startTime: '08:00', endTime: '18:00' }); setAddScheduleOpen(true); }}>
+                                <Icon name="add" size={16} />
                                 Add schedule
                               </Button>
                             </div>
@@ -2196,12 +3906,12 @@ export default function AdministrationPage({
                           <div className="space-y-3">
                             <div className="flex items-center justify-between gap-4">
                               <h4 className="text-sm font-semibold text-foreground">Alert when...</h4>
-                              <Button variant="outline" size="sm">
-                                <Icon name="add" size={16} className="mr-1.5" />
+                              <Button type="button" variant="default">
+                                <Icon name="add" size={16} />
                                 Add rule
                               </Button>
                             </div>
-                            <div className="rounded-lg border">
+                            <div className="overflow-hidden rounded-lg border bg-card">
                               <Table>
                                 <TableHeader>
                                   <TableRow>
@@ -2236,8 +3946,7 @@ export default function AdministrationPage({
                               </Table>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                      </div>
                     )}
 
                     {perfTab === 'devices' && (
@@ -2253,13 +3962,13 @@ export default function AdministrationPage({
                             />
                           </div>
                           <div className="ml-auto flex items-center gap-2">
-                            <Button variant="outline" size="sm">
-                              <Icon name="add" size={16} className="mr-1.5" />
+                            <Button type="button" variant="default">
+                              <Icon name="add" size={16} />
                               Add device
                             </Button>
                           </div>
                         </div>
-                        <div className="rounded-lg border">
+                        <div className="overflow-hidden rounded-lg border bg-card">
                           <Table>
                             <TableHeader>
                               <TableRow>
@@ -2316,9 +4025,50 @@ export default function AdministrationPage({
                 </p>
               </div>
             )}
+            </div>
+            {administrationPageDirty ? (
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border bg-muted/30 px-4 py-3">
+                <Button type="button" variant="outline" onClick={handleAdministrationCancelAll}>
+                  Cancel
+                </Button>
+                <Button type="button" onClick={handleAdministrationSaveAll}>
+                  Save
+                </Button>
+              </div>
+            ) : null}
           </div>
         </SidebarInset>
       </SidebarProvider>
+
+      <AlertDialog
+        open={adminNavigationBlockerOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            pendingAdminNavigationRef.current = null;
+            setAdminNavigationBlockerOpen(false);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. If you leave now, they will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                discardUnsavedAndNavigate();
+              }}
+            >
+              Leave
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

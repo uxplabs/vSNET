@@ -2772,6 +2772,7 @@ function DeviceDetailPage({
                       showAddAction
                       onAddAction={() => toast('Add floor action')}
                       addAriaLabel="Add floor"
+                      addButtonLabel="Add floor"
                       showSearch
                       searchValue={floorSearch}
                       onSearchChange={(value) =>
