@@ -461,3 +461,52 @@ body {
 [data-sidebar-page-bg] [data-sidebar="sidebar"] .bg-sidebar-accent {
   background-color: rgba(255, 255, 255, 0.1);
 }
+
+/* --- Form field control widths (`Field` + `controlSize`) --- */
+@layer components {
+  [data-slot='field'][data-field-size='xs'] {
+    --field-control-max: 80px;
+  }
+  [data-slot='field'][data-field-size='sm'] {
+    --field-control-max: 160px;
+  }
+  [data-slot='field'][data-field-size='md'] {
+    --field-control-max: 320px;
+  }
+  [data-slot='field'][data-field-size='lg'] {
+    --field-control-max: 480px;
+  }
+  [data-slot='field'][data-field-size='full'] {
+    --field-control-max: 720px;
+  }
+
+  [data-slot='field'][data-field-size]
+    > input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']),
+  [data-slot='field'][data-field-size] textarea,
+  [data-slot='field'][data-field-size] select,
+  [data-slot='field'][data-field-size] [data-slot='select-trigger'] {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  [data-slot='field'][data-field-size] > [data-slot='field-content'] {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  @media (min-width: 640px) {
+    [data-slot='field'][data-field-size]
+      > input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']),
+    [data-slot='field'][data-field-size] textarea,
+    [data-slot='field'][data-field-size] select,
+    [data-slot='field'][data-field-size] [data-slot='select-trigger'] {
+      max-width: var(--field-control-max);
+    }
+
+    [data-slot='field'][data-field-size] > [data-slot='field-content'] {
+      max-width: var(--field-control-max);
+    }
+  }
+}

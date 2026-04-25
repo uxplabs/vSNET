@@ -1,0 +1,173 @@
+/* AMS date-range grid (from Date Range Picker — Core standalone), scoped to audit popover.
+   Fixed 7-column track width so the grid (not arbitrary fr stretch) defines panel width. */
+.audit-ams-drp.drp {
+  --picker-accent: var(--ring);
+  --picker-accent-strong: var(--ring);
+  --picker-accent-foreground: #ffffff;
+  /* 7 × 2.25rem grid + horizontal padding — keep in sync with AdministrationPage audit popover width */
+  --audit-ams-grid-w: calc(7 * 2.25rem);
+
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.5rem 0.25rem;
+  font:
+    400 13px/1.3 var(--font-sans, 'Segoe UI', ui-sans-serif, system-ui, sans-serif);
+  color: var(--popover-foreground);
+}
+
+.audit-ams-drp.drp .audit-ams-drp__head {
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+  height: 28px;
+}
+
+.audit-ams-drp.drp .audit-ams-drp__title {
+  margin: 0;
+  text-align: center;
+  font:
+    600 14px/1 var(--font-sans, 'Segoe UI', ui-sans-serif, system-ui, sans-serif);
+  color: var(--foreground);
+  letter-spacing: -0.01em;
+}
+
+.audit-ams-drp.drp .audit-ams-drp__navbtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.audit-ams-drp.drp .audit-ams-drp__navbtn:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.audit-ams-drp.drp .audit-ams-drp__navbtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.audit-ams-drp.drp .drp__dow,
+.audit-ams-drp.drp .drp__week {
+  display: grid;
+  grid-template-columns: repeat(7, 2.25rem);
+  gap: 0;
+  width: var(--audit-ams-grid-w);
+}
+
+.audit-ams-drp.drp .drp__dow {
+  margin-bottom: 4px;
+}
+
+.audit-ams-drp.drp .drp__dow span {
+  text-align: center;
+  font:
+    400 12px/1 var(--font-sans, 'Segoe UI', ui-sans-serif, system-ui, sans-serif);
+  color: var(--muted-foreground);
+  padding: 6px 0;
+}
+
+.audit-ams-drp.drp .drp__cell {
+  position: relative;
+  height: 36px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font:
+    400 13px/1 var(--font-sans, 'Segoe UI', ui-sans-serif, system-ui, sans-serif);
+  color: var(--foreground);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  user-select: none;
+  overflow: visible;
+}
+
+.audit-ams-drp.drp .drp__cell:focus-visible {
+  outline: none;
+}
+
+.audit-ams-drp.drp .drp__cell:focus-visible .num {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.audit-ams-drp.drp .drp__cell.out {
+  color: color-mix(in oklch, var(--foreground) 35%, transparent);
+}
+
+.audit-ams-drp.drp .drp__cell::before {
+  content: '';
+  position: absolute;
+  inset: 2px 0;
+  background: transparent;
+  z-index: 0;
+}
+
+.audit-ams-drp.drp .drp__cell .num {
+  position: relative;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.audit-ams-drp.drp .drp__cell:hover .num {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.audit-ams-drp.drp .drp__cell.in::before {
+  background: color-mix(in oklch, var(--picker-accent) 16%, transparent);
+}
+
+.audit-ams-drp.drp .drp__cell.start::before {
+  background: color-mix(in oklch, var(--picker-accent) 16%, transparent);
+  left: 4px;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.audit-ams-drp.drp .drp__cell.end::before {
+  background: color-mix(in oklch, var(--picker-accent) 16%, transparent);
+  right: 4px;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.audit-ams-drp.drp .drp__cell.start .num,
+.audit-ams-drp.drp .drp__cell.end .num {
+  background: var(--picker-accent);
+  color: var(--picker-accent-foreground);
+  font-weight: 600;
+}
+
+.audit-ams-drp.drp .drp__cell.start.end::before {
+  background: transparent;
+}
+
+.audit-ams-drp.drp .drp__cell.today .num {
+  outline: 1px solid color-mix(in oklch, var(--picker-accent) 70%, transparent);
+  outline-offset: -1px;
+}
+
+.audit-ams-drp.drp .drp__cell.today.start .num,
+.audit-ams-drp.drp .drp__cell.today.end .num {
+  outline: 1px solid var(--picker-accent-foreground);
+}

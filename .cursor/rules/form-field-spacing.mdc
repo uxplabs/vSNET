@@ -1,0 +1,35 @@
+---
+description: Canonical vertical spacing for labeled form fields (Field / FieldGroup)
+globs: src/**/*.tsx
+alwaysApply: false
+---
+
+# Form field spacing
+
+Stacked labels and controls should follow **`src/components/ui/field.tsx`** primitives so spacing matches the design system and administration forms.
+
+## Within one field (label → control)
+
+- Use **`Field`** with **`FieldLabel`** and the control as siblings.
+- Vertical spacing is **`gap-4`** (16px / 1rem) — do not replace with ad‑hoc `space-y-2` / `mt-3` on the control.
+
+## Between separate fields (group to group)
+
+- Wrap stacked fields in **`FieldGroup`**.
+- Spacing between fields is **`gap-8`** (32px / 2rem). This is ~2× the label-to-control gap so groups read as distinct.
+
+## Dense layouts
+
+- Multi-column **grids** of short fields may use **`gap-6`** (24px) between cells when **`gap-8`** feels too loose (e.g. settings cards with many small inputs).
+
+## Checkbox / radio (control beside text)
+
+- Keep **`Checkbox` / `RadioGroupItem` + `Label`** in a row with **`gap-3`** (12px) between control and text unless a specific pattern already defines spacing.
+
+## React Hook Form (`FormItem`)
+
+- **`FormItem`** in `src/components/ui/form.tsx` uses **`space-y-4`** between label, control, description, and message — align new RHF forms with that stack.
+
+## Do not
+
+- Mix **`Label` + `className="mt-3"`** on inputs for vertical stacks; use **`Field` / `FieldLabel`** instead.

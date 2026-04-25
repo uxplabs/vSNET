@@ -47,6 +47,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { Field, FieldContent, FieldGroup, FieldLabel } from './ui/field';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Progress } from './ui/progress';
@@ -331,7 +332,51 @@ function ComponentsLibraryPage() {
         {(activeCategory === 'all' || activeCategory === 'forms') && (
           <section className="space-y-6">
             <CategoryHeader id="forms-section" title="Forms" description="Input components for collecting user data" />
-            
+
+            <Card id="form-field-spacing" className="scroll-mt-4 border-border/80 bg-muted/15">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Form field spacing</CardTitle>
+                <CardDescription>
+                  Canonical vertical rhythm when using{' '}
+                  <code className="rounded bg-background/80 px-1.5 py-0.5 text-xs font-mono">Field</code>,{' '}
+                  <code className="rounded bg-background/80 px-1.5 py-0.5 text-xs font-mono">FieldGroup</code>, and{' '}
+                  <code className="rounded bg-background/80 px-1.5 py-0.5 text-xs font-mono">FieldLabel</code> from{' '}
+                  <code className="rounded bg-background/80 px-1.5 py-0.5 text-xs font-mono">src/components/ui/field.tsx</code>
+                  — same pattern as administration forms and the demos below.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm text-muted-foreground">
+                <dl className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="font-medium text-foreground">Within one field</dt>
+                    <dd className="mt-1.5 leading-relaxed">
+                      Space from label to control: <span className="font-mono text-foreground">Field</span> vertical{' '}
+                      <span className="font-mono text-foreground">gap-4</span> (16px / 1rem).
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-foreground">Between field groups</dt>
+                    <dd className="mt-1.5 leading-relaxed">
+                      Space from one field block to the next: <span className="font-mono text-foreground">FieldGroup</span>{' '}
+                      <span className="font-mono text-foreground">gap-8</span> (32px / 2rem), roughly 2× the label-to-control gap.
+                    </dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="font-medium text-foreground">Dense multi-column grids</dt>
+                    <dd className="mt-1.5 leading-relaxed">
+                      Optional: use grid <span className="font-mono text-foreground">gap-6</span> (24px) between cells when many short fields make{' '}
+                      <span className="font-mono text-foreground">gap-8</span> feel too loose.
+                    </dd>
+                  </div>
+                </dl>
+                <p className="border-t border-border pt-3 text-xs leading-relaxed">
+                  React Hook Form: <span className="font-mono text-foreground">FormItem</span> in{' '}
+                  <span className="font-mono text-foreground">form.tsx</span> uses <span className="font-mono text-foreground">space-y-4</span> between label, control,
+                  description, and message.
+                </p>
+              </CardContent>
+            </Card>
+
             <div className="grid gap-6 md:grid-cols-2">
               {/* Button */}
               <ComponentCard id="button" title="Button" description="Clickable elements with multiple variants and sizes">
@@ -377,41 +422,45 @@ function ComponentsLibraryPage() {
               </ComponentCard>
 
               {/* Input */}
-              <ComponentCard id="input" title="Input" description="Text input with label and states">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="input-default">Default</Label>
+              <ComponentCard
+                id="input"
+                title="Input"
+                description="Use Field controlSize (xs–full) so width matches expected content; mobile stays full width."
+              >
+                <FieldGroup>
+                  <Field controlSize="md">
+                    <FieldLabel htmlFor="input-default">Default (md)</FieldLabel>
                     <Input id="input-default" placeholder="Enter text..." />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="input-disabled">Disabled</Label>
+                  </Field>
+                  <Field controlSize="md">
+                    <FieldLabel htmlFor="input-disabled">Disabled</FieldLabel>
                     <Input id="input-disabled" placeholder="Disabled input" disabled />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="input-icon">With icon</Label>
+                  </Field>
+                  <Field controlSize="full">
+                    <FieldLabel htmlFor="input-icon">With icon (full — typical search)</FieldLabel>
                     <div className="relative">
                       <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <Input id="input-icon" placeholder="Search..." className="pl-9" />
                     </div>
-                  </div>
-                </div>
+                  </Field>
+                </FieldGroup>
               </ComponentCard>
 
               {/* Textarea */}
               <ComponentCard id="textarea" title="Textarea" description="Multi-line text input">
-                <div className="space-y-2">
-                  <Label htmlFor="textarea-demo">Description</Label>
+                <Field controlSize="full">
+                  <FieldLabel htmlFor="textarea-demo">Description</FieldLabel>
                   <Textarea id="textarea-demo" placeholder="Enter a description..." rows={3} />
-                </div>
+                </Field>
               </ComponentCard>
 
               {/* Select */}
               <ComponentCard id="select" title="Select" description="Dropdown selection">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Default</Label>
+                <FieldGroup>
+                  <Field controlSize="sm">
+                    <FieldLabel htmlFor="select-demo-default">Default (sm)</FieldLabel>
                     <Select>
-                      <SelectTrigger className="w-[200px]">
+                      <SelectTrigger id="select-demo-default">
                         <SelectValue placeholder="Select option" />
                       </SelectTrigger>
                       <SelectContent>
@@ -420,77 +469,94 @@ function ComponentsLibraryPage() {
                         <SelectItem value="3">Option 3</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Disabled</Label>
+                  </Field>
+                  <Field controlSize="sm">
+                    <FieldLabel htmlFor="select-demo-disabled">Disabled</FieldLabel>
                     <Select disabled>
-                      <SelectTrigger className="w-[200px]">
+                      <SelectTrigger id="select-demo-disabled">
                         <SelectValue placeholder="Disabled" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="1">Option 1</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                </div>
+                  </Field>
+                </FieldGroup>
               </ComponentCard>
 
               {/* Checkbox */}
               <ComponentCard id="checkbox" title="Checkbox" description="Multiple selection control">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
+                <FieldGroup>
+                  <div className="flex items-center gap-3">
                     <Checkbox id="cb-1" checked={checkboxChecked} onCheckedChange={(v) => setCheckboxChecked(!!v)} />
-                    <Label htmlFor="cb-1">Accept terms and conditions</Label>
+                    <Label htmlFor="cb-1" className="font-normal leading-none">
+                      Accept terms and conditions
+                    </Label>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-3">
                     <Checkbox id="cb-2" defaultChecked />
-                    <Label htmlFor="cb-2">Checked by default</Label>
+                    <Label htmlFor="cb-2" className="font-normal leading-none">
+                      Checked by default
+                    </Label>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-3">
                     <Checkbox id="cb-3" disabled />
-                    <Label htmlFor="cb-3" className="text-muted-foreground">Disabled</Label>
+                    <Label htmlFor="cb-3" className="font-normal leading-none text-muted-foreground">
+                      Disabled
+                    </Label>
                   </div>
-                </div>
+                </FieldGroup>
               </ComponentCard>
 
               {/* Radio Group */}
               <ComponentCard id="radio-group" title="Radio Group" description="Single selection from options">
-                <RadioGroup defaultValue="option-1" className="space-y-2">
-                  <div className="flex items-center space-x-2">
+                <RadioGroup defaultValue="option-1" className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
                     <RadioGroupItem value="option-1" id="r-1" />
-                    <Label htmlFor="r-1">Option 1</Label>
+                    <Label htmlFor="r-1" className="font-normal leading-none">
+                      Option 1
+                    </Label>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-3">
                     <RadioGroupItem value="option-2" id="r-2" />
-                    <Label htmlFor="r-2">Option 2</Label>
+                    <Label htmlFor="r-2" className="font-normal leading-none">
+                      Option 2
+                    </Label>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-3">
                     <RadioGroupItem value="option-3" id="r-3" disabled />
-                    <Label htmlFor="r-3" className="text-muted-foreground">Option 3 (disabled)</Label>
+                    <Label htmlFor="r-3" className="font-normal leading-none text-muted-foreground">
+                      Option 3 (disabled)
+                    </Label>
                   </div>
                 </RadioGroup>
               </ComponentCard>
 
               {/* Switch */}
               <ComponentCard id="switch" title="Switch" description="Toggle on/off control">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="sw-1">Notifications</Label>
+                <FieldGroup>
+                  <Field orientation="horizontal" className="justify-between gap-4">
+                    <FieldLabel htmlFor="sw-1">Notifications</FieldLabel>
                     <Switch id="sw-1" checked={switchOn} onCheckedChange={setSwitchOn} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="sw-2" className="text-muted-foreground">Disabled</Label>
+                  </Field>
+                  <Field orientation="horizontal" className="justify-between gap-4">
+                    <FieldLabel htmlFor="sw-2" className="text-muted-foreground">
+                      Disabled
+                    </FieldLabel>
                     <Switch id="sw-2" disabled />
-                  </div>
-                </div>
+                  </Field>
+                </FieldGroup>
               </ComponentCard>
 
               {/* Slider */}
               <ComponentCard id="slider" title="Slider" description="Range input control">
-                <div className="space-y-4">
-                  <Slider value={sliderVal} onValueChange={setSliderVal} max={100} step={1} className="w-full" />
-                  <p className="text-sm text-muted-foreground">Value: {sliderVal[0]}</p>
-                </div>
+                <Field>
+                  <FieldLabel>Level</FieldLabel>
+                  <FieldContent>
+                    <Slider value={sliderVal} onValueChange={setSliderVal} max={100} step={1} className="w-full" />
+                    <p className="text-sm text-muted-foreground">Value: {sliderVal[0]}</p>
+                  </FieldContent>
+                </Field>
               </ComponentCard>
 
               {/* Toggle */}
@@ -1078,16 +1144,16 @@ function ComponentsLibraryPage() {
                         Make changes to your profile here. Click save when you're done.
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
+                    <FieldGroup className="py-4">
+                      <Field>
+                        <FieldLabel htmlFor="name">Name</FieldLabel>
                         <Input id="name" placeholder="Enter your name" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor="email">Email</FieldLabel>
                         <Input id="email" type="email" placeholder="Enter your email" />
-                      </div>
-                    </div>
+                      </Field>
+                    </FieldGroup>
                     <DialogFooter>
                       <Button variant="outline">Cancel</Button>
                       <Button>Save changes</Button>
@@ -1153,16 +1219,20 @@ function ComponentsLibraryPage() {
                       <p className="text-sm text-muted-foreground">
                         Set the dimensions for the layer.
                       </p>
-                      <div className="grid gap-2">
+                      <FieldGroup>
                         <div className="grid grid-cols-3 items-center gap-4">
-                          <Label htmlFor="width">Width</Label>
+                          <FieldLabel htmlFor="width" className="text-sm font-medium">
+                            Width
+                          </FieldLabel>
                           <Input id="width" defaultValue="100%" className="col-span-2 h-8" />
                         </div>
                         <div className="grid grid-cols-3 items-center gap-4">
-                          <Label htmlFor="height">Height</Label>
+                          <FieldLabel htmlFor="height" className="text-sm font-medium">
+                            Height
+                          </FieldLabel>
                           <Input id="height" defaultValue="auto" className="col-span-2 h-8" />
                         </div>
-                      </div>
+                      </FieldGroup>
                     </div>
                   </PopoverContent>
                 </Popover>

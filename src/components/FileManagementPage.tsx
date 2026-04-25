@@ -1,17 +1,20 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
 import { FilterSelect } from './ui/filter-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { Card, CardContent } from './ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Field, FieldLabel } from './ui/field';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
   FileManagementUsersDataTable,
   type FileManagementPersisted,
@@ -21,18 +24,151 @@ import { FileManagementUserSheet } from './file-management-user-sheet';
 
 const PERMISSIONS_OPTIONS = ['All', 'Read', 'Read, Write', 'Read, Write, Delete'] as const;
 
+function FileMgmtFormCardHeaderDivider() {
+  return <div className="-mx-6 border-t border-border/50" aria-hidden />;
+}
+
+type FileRetentionSlice = Pick<
+  FileManagementPersisted,
+  | 'pmDays'
+  | 'cmMb'
+  | 'cperDays'
+  | 'debugLogsDays'
+  | 'errorBundlesDays'
+  | 'deviceDbBackupsDays'
+  | 'amsDbBackupsMb'
+>;
+
+type FileSyncSlice = Pick<FileManagementPersisted, 'cmBackupAutoSync' | 'cmFileFormat' | 'deviceDbBackupAutoSync'>;
+
 export interface FileManagementPageProps {
   onBack?: () => void;
   fileMgmt: FileManagementPersisted;
   setFileMgmt: Dispatch<SetStateAction<FileManagementPersisted>>;
+  /** Incremented when administration restores a snapshot so inline edit modes reset. */
+  formsResetNonce?: number;
+  onInlineFormSaved?: () => void;
 }
 
-export default function FileManagementPage({ fileMgmt, setFileMgmt, onBack: _onBack }: FileManagementPageProps) {
+export default function FileManagementPage({
+  fileMgmt,
+  setFileMgmt,
+  formsResetNonce = 0,
+  onInlineFormSaved,
+  onBack: _onBack,
+}: FileManagementPageProps) {
   const [fileTab, setFileTab] = useState('users');
   const [fileUserSheetOpen, setFileUserSheetOpen] = useState(false);
   const [fileUserEditing, setFileUserEditing] = useState<FileManagementUserRow | null>(null);
   const [search, setSearch] = useState('');
   const [permissionsFilter, setPermissionsFilter] = useState<string>('All');
+
+  const retentionEditBaselineRef = useRef<FileRetentionSlice | null>(null);
+  const [retentionSectionMode, setRetentionSectionMode] = useState<'view' | 'edit'>('view');
+  const syncEditBaselineRef = useRef<FileSyncSlice | null>(null);
+  const [syncSectionMode, setSyncSectionMode] = useState<'view' | 'edit'>('view');
+
+  useEffect(() => {
+    setRetentionSectionMode('view');
+    setSyncSectionMode('view');
+    retentionEditBaselineRef.current = null;
+    syncEditBaselineRef.current = null;
+  }, [formsResetNonce]);
+
+  const collectRetentionSlice = useCallback((): FileRetentionSlice => {
+    return {
+      pmDays: fileMgmt.pmDays,
+      cmMb: fileMgmt.cmMb,
+      cperDays: fileMgmt.cperDays,
+      debugLogsDays: fileMgmt.debugLogsDays,
+      errorBundlesDays: fileMgmt.errorBundlesDays,
+      deviceDbBackupsDays: fileMgmt.deviceDbBackupsDays,
+      amsDbBackupsMb: fileMgmt.amsDbBackupsMb,
+    };
+  }, [
+    fileMgmt.pmDays,
+    fileMgmt.cmMb,
+    fileMgmt.cperDays,
+    fileMgmt.debugLogsDays,
+    fileMgmt.errorBundlesDays,
+    fileMgmt.deviceDbBackupsDays,
+    fileMgmt.amsDbBackupsMb,
+  ]);
+
+  const applyRetentionSlice = useCallback(
+    (v: FileRetentionSlice) => {
+      setFileMgmt((p) => ({ ...p, ...v }));
+    },
+    [setFileMgmt],
+  );
+
+  const startRetentionEdit = useCallback(() => {
+    retentionEditBaselineRef.current = structuredClone(collectRetentionSlice());
+    setRetentionSectionMode('edit');
+  }, [collectRetentionSlice]);
+
+  const cancelRetentionEdit = useCallback(() => {
+    const baseline = retentionEditBaselineRef.current;
+    if (baseline) applyRetentionSlice(baseline);
+    retentionEditBaselineRef.current = null;
+    setRetentionSectionMode('view');
+  }, [applyRetentionSlice]);
+
+  const saveRetention = useCallback(() => {
+    retentionEditBaselineRef.current = null;
+    toast.success('Retention policies saved');
+    onInlineFormSaved?.();
+    setRetentionSectionMode('view');
+  }, [onInlineFormSaved]);
+
+  const retentionEditDirty =
+    retentionSectionMode === 'edit' &&
+    retentionEditBaselineRef.current !== null &&
+    JSON.stringify(collectRetentionSlice()) !== JSON.stringify(retentionEditBaselineRef.current);
+
+  const collectSyncSlice = useCallback((): FileSyncSlice => {
+    return {
+      cmBackupAutoSync: fileMgmt.cmBackupAutoSync,
+      cmFileFormat: fileMgmt.cmFileFormat,
+      deviceDbBackupAutoSync: fileMgmt.deviceDbBackupAutoSync,
+    };
+  }, [fileMgmt.cmBackupAutoSync, fileMgmt.cmFileFormat, fileMgmt.deviceDbBackupAutoSync]);
+
+  const applySyncSlice = useCallback(
+    (v: FileSyncSlice) => {
+      setFileMgmt((p) => ({ ...p, ...v }));
+    },
+    [setFileMgmt],
+  );
+
+  const startSyncEdit = useCallback(() => {
+    syncEditBaselineRef.current = structuredClone(collectSyncSlice());
+    setSyncSectionMode('edit');
+  }, [collectSyncSlice]);
+
+  const cancelSyncEdit = useCallback(() => {
+    const baseline = syncEditBaselineRef.current;
+    if (baseline) applySyncSlice(baseline);
+    syncEditBaselineRef.current = null;
+    setSyncSectionMode('view');
+  }, [applySyncSlice]);
+
+  const saveSync = useCallback(() => {
+    syncEditBaselineRef.current = null;
+    toast.success('Sync options saved');
+    onInlineFormSaved?.();
+    setSyncSectionMode('view');
+  }, [onInlineFormSaved]);
+
+  const syncEditDirty =
+    syncSectionMode === 'edit' &&
+    syncEditBaselineRef.current !== null &&
+    JSON.stringify(collectSyncSlice()) !== JSON.stringify(syncEditBaselineRef.current);
+
+  /** Match Administration read-only kv spacing: `space-y-8` groups, inner `grid … gap-x-6 gap-y-3` or `space-y-3`, `Field` + `gap-1`. */
+  const roKvLabel = 'text-sm font-medium text-muted-foreground';
+  const roKvValue = 'text-sm font-semibold text-foreground leading-snug';
+  const roKvValueNums = cn(roKvValue, 'tabular-nums tracking-tight');
 
   const filteredFileUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -145,140 +281,243 @@ export default function FileManagementPage({ fileMgmt, setFileMgmt, onBack: _onB
 
         <TabsContent value="retention-policies" className="mt-6">
           <Card>
+            <CardHeader className="flex flex-col gap-6 space-y-0 p-6 pb-0">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1.5">
+                  <CardTitle>Retention policies</CardTitle>
+                  <CardDescription>How long or how much data to retain for each category.</CardDescription>
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                  {retentionSectionMode === 'view' ? (
+                    <Button type="button" className="sm:self-start" onClick={startRetentionEdit}>
+                      Edit
+                    </Button>
+                  ) : (
+                    <>
+                      <Button type="button" variant="outline" className="sm:self-start" onClick={cancelRetentionEdit}>
+                        Cancel
+                      </Button>
+                      <Button type="button" className="sm:self-start" disabled={!retentionEditDirty} onClick={saveRetention}>
+                        Save
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <FileMgmtFormCardHeaderDivider />
+            </CardHeader>
             <CardContent className="pt-6">
-              <form className="grid max-w-2xl gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="pm-days">PM (days)</Label>
-                  <Input
-                    id="pm-days"
-                    type="number"
-                    min={1}
-                    value={fileMgmt.pmDays}
-                    onChange={(e) => setFileMgmt((p) => ({ ...p, pmDays: e.target.value }))}
-                    className="w-full"
-                  />
+              {retentionSectionMode === 'view' ? (
+                <div className="max-w-2xl space-y-8">
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+                    <Field className="gap-1">
+                      <FieldLabel className={roKvLabel}>PM (days)</FieldLabel>
+                      <p className={roKvValueNums}>{fileMgmt.pmDays}</p>
+                    </Field>
+                    <Field className="gap-1">
+                      <FieldLabel className={roKvLabel}>CM (MB)</FieldLabel>
+                      <p className={roKvValueNums}>{fileMgmt.cmMb}</p>
+                    </Field>
+                    <Field className="gap-1">
+                      <FieldLabel className={roKvLabel}>CPER (days)</FieldLabel>
+                      <p className={roKvValueNums}>{fileMgmt.cperDays}</p>
+                    </Field>
+                    <Field className="gap-1">
+                      <FieldLabel className={roKvLabel}>Debug logs (days)</FieldLabel>
+                      <p className={roKvValueNums}>{fileMgmt.debugLogsDays}</p>
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+                    <Field className="gap-1">
+                      <FieldLabel className={roKvLabel}>Error bundles (days)</FieldLabel>
+                      <p className={roKvValueNums}>{fileMgmt.errorBundlesDays}</p>
+                    </Field>
+                    <Field className="gap-1">
+                      <FieldLabel className={roKvLabel}>Device database backups (days)</FieldLabel>
+                      <p className={roKvValueNums}>{fileMgmt.deviceDbBackupsDays}</p>
+                    </Field>
+                    <Field className="gap-1 sm:col-span-2">
+                      <FieldLabel className={roKvLabel}>AMS database backups (MB)</FieldLabel>
+                      <p className={roKvValueNums}>{fileMgmt.amsDbBackupsMb}</p>
+                    </Field>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cm-mb">CM (MB)</Label>
-                  <Input
-                    id="cm-mb"
-                    type="number"
-                    min={1}
-                    value={fileMgmt.cmMb}
-                    onChange={(e) => setFileMgmt((p) => ({ ...p, cmMb: e.target.value }))}
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cper-days">CPER (days)</Label>
-                  <Input
-                    id="cper-days"
-                    type="number"
-                    min={1}
-                    value={fileMgmt.cperDays}
-                    onChange={(e) => setFileMgmt((p) => ({ ...p, cperDays: e.target.value }))}
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="debug-logs-days">Debug logs (days)</Label>
-                  <Input
-                    id="debug-logs-days"
-                    type="number"
-                    min={1}
-                    value={fileMgmt.debugLogsDays}
-                    onChange={(e) => setFileMgmt((p) => ({ ...p, debugLogsDays: e.target.value }))}
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="error-bundles-days">Error bundles (days)</Label>
-                  <Input
-                    id="error-bundles-days"
-                    type="number"
-                    min={1}
-                    value={fileMgmt.errorBundlesDays}
-                    onChange={(e) => setFileMgmt((p) => ({ ...p, errorBundlesDays: e.target.value }))}
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="device-db-backups-days">Device database backups (days)</Label>
-                  <Input
-                    id="device-db-backups-days"
-                    type="number"
-                    min={1}
-                    value={fileMgmt.deviceDbBackupsDays}
-                    onChange={(e) => setFileMgmt((p) => ({ ...p, deviceDbBackupsDays: e.target.value }))}
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="ams-db-backups-mb">AMS database backups (MB)</Label>
-                  <Input
-                    id="ams-db-backups-mb"
-                    type="number"
-                    min={1}
-                    value={fileMgmt.amsDbBackupsMb}
-                    onChange={(e) => setFileMgmt((p) => ({ ...p, amsDbBackupsMb: e.target.value }))}
-                    className="w-full max-w-xs"
-                  />
-                </div>
-              </form>
+              ) : (
+                <form className="grid max-w-2xl gap-6 sm:grid-cols-2">
+                  <Field controlSize="xs">
+                    <FieldLabel htmlFor="pm-days">PM (days)</FieldLabel>
+                    <Input
+                      id="pm-days"
+                      type="number"
+                      min={1}
+                      value={fileMgmt.pmDays}
+                      onChange={(e) => setFileMgmt((p) => ({ ...p, pmDays: e.target.value }))}
+                    />
+                  </Field>
+                  <Field controlSize="xs">
+                    <FieldLabel htmlFor="cm-mb">CM (MB)</FieldLabel>
+                    <Input
+                      id="cm-mb"
+                      type="number"
+                      min={1}
+                      value={fileMgmt.cmMb}
+                      onChange={(e) => setFileMgmt((p) => ({ ...p, cmMb: e.target.value }))}
+                    />
+                  </Field>
+                  <Field controlSize="xs">
+                    <FieldLabel htmlFor="cper-days">CPER (days)</FieldLabel>
+                    <Input
+                      id="cper-days"
+                      type="number"
+                      min={1}
+                      value={fileMgmt.cperDays}
+                      onChange={(e) => setFileMgmt((p) => ({ ...p, cperDays: e.target.value }))}
+                    />
+                  </Field>
+                  <Field controlSize="xs">
+                    <FieldLabel htmlFor="debug-logs-days">Debug logs (days)</FieldLabel>
+                    <Input
+                      id="debug-logs-days"
+                      type="number"
+                      min={1}
+                      value={fileMgmt.debugLogsDays}
+                      onChange={(e) => setFileMgmt((p) => ({ ...p, debugLogsDays: e.target.value }))}
+                    />
+                  </Field>
+                  <Field controlSize="xs">
+                    <FieldLabel htmlFor="error-bundles-days">Error bundles (days)</FieldLabel>
+                    <Input
+                      id="error-bundles-days"
+                      type="number"
+                      min={1}
+                      value={fileMgmt.errorBundlesDays}
+                      onChange={(e) => setFileMgmt((p) => ({ ...p, errorBundlesDays: e.target.value }))}
+                    />
+                  </Field>
+                  <Field controlSize="xs">
+                    <FieldLabel htmlFor="device-db-backups-days">Device database backups (days)</FieldLabel>
+                    <Input
+                      id="device-db-backups-days"
+                      type="number"
+                      min={1}
+                      value={fileMgmt.deviceDbBackupsDays}
+                      onChange={(e) => setFileMgmt((p) => ({ ...p, deviceDbBackupsDays: e.target.value }))}
+                    />
+                  </Field>
+                  <Field className="sm:col-span-2" controlSize="xs">
+                    <FieldLabel htmlFor="ams-db-backups-mb">AMS database backups (MB)</FieldLabel>
+                    <Input
+                      id="ams-db-backups-mb"
+                      type="number"
+                      min={1}
+                      value={fileMgmt.amsDbBackupsMb}
+                      onChange={(e) => setFileMgmt((p) => ({ ...p, amsDbBackupsMb: e.target.value }))}
+                    />
+                  </Field>
+                </form>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="sync-options" className="mt-6">
           <Card>
-            <CardContent className="pt-6">
-              <div className="max-w-2xl space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      id="cm-backup-auto-sync"
-                      checked={fileMgmt.cmBackupAutoSync}
-                      onCheckedChange={(checked) =>
-                        setFileMgmt((p) => ({ ...p, cmBackupAutoSync: checked === true }))
-                      }
-                    />
-                    <Label htmlFor="cm-backup-auto-sync" className="cursor-pointer">
-                      CM backup auto sync
-                    </Label>
-                  </div>
-                  {fileMgmt.cmBackupAutoSync && (
-                    <div className="ml-7 space-y-2">
-                      <Label htmlFor="file-format">File format</Label>
-                      <Select
-                        value={fileMgmt.cmFileFormat}
-                        onValueChange={(v) => setFileMgmt((p) => ({ ...p, cmFileFormat: v }))}
-                      >
-                        <SelectTrigger id="file-format" className="w-[200px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="CSV">CSV</SelectItem>
-                          <SelectItem value="JSON">JSON</SelectItem>
-                          <SelectItem value="XML">XML</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+            <CardHeader className="flex flex-col gap-6 space-y-0 p-6 pb-0">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1.5">
+                  <CardTitle>Sync options</CardTitle>
+                  <CardDescription>Automatic sync for CM and device database backups.</CardDescription>
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                  {syncSectionMode === 'view' ? (
+                    <Button type="button" className="sm:self-start" onClick={startSyncEdit}>
+                      Edit
+                    </Button>
+                  ) : (
+                    <>
+                      <Button type="button" variant="outline" className="sm:self-start" onClick={cancelSyncEdit}>
+                        Cancel
+                      </Button>
+                      <Button type="button" className="sm:self-start" disabled={!syncEditDirty} onClick={saveSync}>
+                        Save
+                      </Button>
+                    </>
                   )}
                 </div>
-
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="device-db-backup-auto-sync"
-                    checked={fileMgmt.deviceDbBackupAutoSync}
-                    onCheckedChange={(checked) =>
-                      setFileMgmt((p) => ({ ...p, deviceDbBackupAutoSync: checked === true }))
-                    }
-                  />
-                  <Label htmlFor="device-db-backup-auto-sync" className="cursor-pointer">
-                    Device database backup auto sync
-                  </Label>
-                </div>
               </div>
+              <FileMgmtFormCardHeaderDivider />
+            </CardHeader>
+            <CardContent className="pt-6">
+              {syncSectionMode === 'view' ? (
+                <div className="max-w-2xl space-y-8">
+                  <div className="space-y-3">
+                    <Field className="gap-1">
+                      <FieldLabel className={roKvLabel}>CM backup auto sync</FieldLabel>
+                      <p className={roKvValue}>{fileMgmt.cmBackupAutoSync ? 'Yes' : 'No'}</p>
+                    </Field>
+                    {fileMgmt.cmBackupAutoSync ? (
+                      <Field className="gap-1">
+                        <FieldLabel className={roKvLabel}>File format</FieldLabel>
+                        <p className={roKvValue}>{fileMgmt.cmFileFormat}</p>
+                      </Field>
+                    ) : null}
+                  </div>
+                  <div className="space-y-3">
+                    <Field className="gap-1">
+                      <FieldLabel className={roKvLabel}>Device database backup auto sync</FieldLabel>
+                      <p className={roKvValue}>{fileMgmt.deviceDbBackupAutoSync ? 'Yes' : 'No'}</p>
+                    </Field>
+                  </div>
+                </div>
+              ) : (
+                <div className="max-w-2xl space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        id="cm-backup-auto-sync"
+                        checked={fileMgmt.cmBackupAutoSync}
+                        onCheckedChange={(checked) => setFileMgmt((p) => ({ ...p, cmBackupAutoSync: checked === true }))}
+                      />
+                      <Label htmlFor="cm-backup-auto-sync" className="cursor-pointer">
+                        CM backup auto sync
+                      </Label>
+                    </div>
+                    {fileMgmt.cmBackupAutoSync && (
+                      <div className="ml-7 space-y-2">
+                        <Field controlSize="sm">
+                          <FieldLabel htmlFor="file-format">File format</FieldLabel>
+                          <Select
+                            value={fileMgmt.cmFileFormat}
+                            onValueChange={(v) => setFileMgmt((p) => ({ ...p, cmFileFormat: v }))}
+                          >
+                            <SelectTrigger id="file-format">
+                              <SelectValue />
+                            </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CSV">CSV</SelectItem>
+                            <SelectItem value="JSON">JSON</SelectItem>
+                            <SelectItem value="XML">XML</SelectItem>
+                          </SelectContent>
+                          </Select>
+                        </Field>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="device-db-backup-auto-sync"
+                      checked={fileMgmt.deviceDbBackupAutoSync}
+                      onCheckedChange={(checked) =>
+                        setFileMgmt((p) => ({ ...p, deviceDbBackupAutoSync: checked === true }))
+                      }
+                    />
+                    <Label htmlFor="device-db-backup-auto-sync" className="cursor-pointer">
+                      Device database backup auto sync
+                    </Label>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

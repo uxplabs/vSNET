@@ -4,9 +4,11 @@ import { useState, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Icon } from './Icon';
 import { Input } from './ui/input';
+import { SearchInput } from './ui/search-input';
 import { FilterSelect } from './ui/filter-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { TooltipProvider } from './ui/tooltip';
+import { InternalSidebarList } from './ui/internal-sidebar-list';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,11 +41,7 @@ function getNotificationGroupsWithCounts(): { name: string; count: number }[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export interface FaultManagementPageProps {
-  onBack?: () => void;
-}
-
-export default function FaultManagementPage({ onBack: _onBack }: FaultManagementPageProps) {
+export default function FaultManagementPage() {
   const [faultTab, setFaultTab] = useState('events-configuration');
   const [search, setSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
@@ -110,59 +108,21 @@ export default function FaultManagementPage({ onBack: _onBack }: FaultManagement
         <TabsContent value="events-configuration" className="mt-6">
           <div className="flex gap-6">
             {/* Notification groups sidebar */}
-            <aside className="w-52 shrink-0 rounded-lg border bg-muted/30 border-border/80 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)] self-start">
-              <div className="p-3 border-b border-border/80 bg-muted/20">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-foreground truncate">Notification groups</h3>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 w-full justify-center"
-                  aria-label="Add notification group"
-                  onClick={() => setAddGroupDialogOpen(true)}
-                >
-                  <Icon name="add" size={16} className="mr-1.5 shrink-0" />
-                  <span className="truncate">Add notification group</span>
-                </Button>
-                <div className="relative mt-3">
-                  <Icon name="search" size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                  <Input
-                    placeholder="Search groups..."
-                    value={groupSearch}
-                    onChange={(e) => setGroupSearch(e.target.value)}
-                    className="h-8 pl-8 pr-2 w-full text-sm rounded-md bg-background border-border/80"
-                  />
-                </div>
-              </div>
-              <nav className="p-2 flex-1 min-h-0 overflow-y-auto">
-                {filteredGroups.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center">No groups match</p>
-                ) : (
-                  filteredGroups.map((group) => {
-                    const isSelected = selectedGroup === group.name;
-                    return (
-                      <button
-                        key={group.name}
-                        type="button"
-                        onClick={() => setSelectedGroup(group.name)}
-                        className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-md text-left text-sm transition-colors ${
-                          isSelected
-                            ? 'bg-accent text-accent-foreground font-medium'
-                            : 'hover:bg-muted/60 text-foreground'
-                        }`}
-                      >
-                        <span className="truncate min-w-0">{group.name}</span>
-                        <span className={`tabular-nums shrink-0 text-xs px-1.5 py-0.5 rounded ${isSelected ? 'bg-accent-foreground/10 text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
-                          {group.count}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </nav>
-            </aside>
+            <InternalSidebarList
+              title="Notification groups"
+              items={filteredGroups.map((g) => ({ id: g.name, label: g.name, count: g.count }))}
+              selectedId={selectedGroup}
+              onSelect={setSelectedGroup}
+              showAddAction
+              addActionPlacement="title-icon"
+              onAddAction={() => setAddGroupDialogOpen(true)}
+              addAriaLabel="Add notification group"
+              showSearch
+              searchValue={groupSearch}
+              onSearchChange={setGroupSearch}
+              searchPlaceholder="Search groups..."
+              emptyMessage="No groups match"
+            />
 
             {/* Main Content */}
             <div className="flex-1 min-w-0 space-y-4">
@@ -214,21 +174,19 @@ export default function FaultManagementPage({ onBack: _onBack }: FaultManagement
                   <>
                     {/* Search Filter Bar */}
                     <div className="flex flex-wrap items-center gap-3">
-                      <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
-                        <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Search..."
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                          className="pl-9 w-full"
-                        />
-                      </div>
+                      <SearchInput
+                        size="md"
+                        wrapperClassName="w-full sm:min-w-[200px] sm:max-w-[280px]"
+                        placeholder="Search..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
                       <FilterSelect value={categoryFilter} onValueChange={setCategoryFilter} label="Category" options={[...CATEGORY_OPTIONS]} className="w-[120px]" />
                       <FilterSelect value={severityFilter} onValueChange={setSeverityFilter} label="Severity" options={[...SEVERITY_OPTIONS]} className="w-[120px]" />
                       <FilterSelect value={snmpFilter} onValueChange={setSnmpFilter} label="SNMP" options={[...SNMP_OPTIONS]} className="w-[120px]" />
                       <FilterSelect value={emailFilter} onValueChange={setEmailFilter} label="Email" options={[...EMAIL_OPTIONS]} className="w-[120px]" />
                       <div className="ml-auto flex items-center gap-2">
-                        <Button type="button" variant="outline" size="sm">
+                        <Button type="button" aria-label="Add event">
                           <Icon name="add" size={16} className="mr-1.5" />
                           Add event
                         </Button>

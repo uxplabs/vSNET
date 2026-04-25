@@ -1,8 +1,8 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Icon } from '@/components/Icon';
+import { SearchInput } from '@/components/ui/search-input';
 
 export interface InternalSidebarListItem {
   id: string;
@@ -20,6 +20,8 @@ interface InternalSidebarListProps {
   addAriaLabel?: string;
   /** Visible label on the add button (e.g. "Add profile"). Defaults to "Add". */
   addButtonLabel?: string;
+  /** Where to place add action: full-row button or icon in title bar. */
+  addActionPlacement?: 'row' | 'title-icon';
   showSearch?: boolean;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -37,6 +39,7 @@ export function InternalSidebarList({
   onAddAction,
   addAriaLabel = 'Add item',
   addButtonLabel = 'Add',
+  addActionPlacement = 'row',
   showSearch = false,
   searchValue = '',
   onSearchChange,
@@ -49,8 +52,20 @@ export function InternalSidebarList({
       <div className="p-3 border-b border-border/80 bg-muted/20">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-foreground truncate">{title}</h3>
+          {showAddAction && onAddAction && addActionPlacement === 'title-icon' && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={addAriaLabel}
+              onClick={onAddAction}
+              className="h-8 w-8 shrink-0"
+            >
+              <Icon name="add" size={16} />
+            </Button>
+          )}
         </div>
-        {showAddAction && onAddAction && (
+        {showAddAction && onAddAction && addActionPlacement === 'row' && (
           <Button
             type="button"
             variant="outline"
@@ -64,15 +79,13 @@ export function InternalSidebarList({
           </Button>
         )}
         {showSearch && (
-          <div className="relative mt-3">
-            <Icon name="search" size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder={searchPlaceholder}
-              value={searchValue}
-              onChange={(e) => onSearchChange?.(e.target.value)}
-              className="h-8 pl-8 pr-2 w-full text-sm rounded-md bg-background border-border/80"
-            />
-          </div>
+          <SearchInput
+            wrapperClassName="mt-3"
+            size="sm"
+            placeholder={searchPlaceholder}
+            value={searchValue}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+          />
         )}
       </div>
       <nav className="p-2 flex-1 min-h-0 overflow-y-auto">

@@ -9,9 +9,10 @@ import { FilterSelect } from './ui/filter-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Switch } from './ui/switch';
 import { Checkbox } from './ui/checkbox';
+import { Field, FieldContent, FieldGroup, FieldLabel } from './ui/field';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Card, CardContent } from './ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,10 +40,9 @@ import {
 } from './ui/sheet';
 import { Textarea } from './ui/textarea';
 import { toast } from 'sonner';
-import { endOfDay, format, isAfter, isBefore, startOfDay, subDays } from 'date-fns';
+import { endOfDay, startOfDay, subDays } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import { Calendar } from './ui/calendar';
-import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './ui/popover';
+import { AuditDateRangeFilterField } from './audit-date-range-filter-field';
 import { cn } from '@/lib/utils';
 import { DeviceStatus } from './ui/device-status';
 import { DeviceLink } from './ui/device-link';
@@ -108,6 +108,7 @@ const SIDEBAR_ITEMS = [
 const PROFILE_OPTIONS = ['All', 'Administrator', 'Operator', 'Viewer'] as const;
 const ADMIN_OPERATION_OPTIONS = ['Configure Profile', 'System Administration', 'User Management'] as const;
 const AUDIT_DATE_RANGE_OPTIONS = ['All', 'Today', 'Last 7 days', 'Last 30 days', 'Custom'] as const;
+
 const APPLICATION_OPERATION_OPTIONS = [
   'Manage Label Management',
   'Manage Node',
@@ -301,6 +302,11 @@ interface ProfileEditorSessionSnapshot {
   label: string;
 }
 
+/** Light hairline between card title/description/actions and the form body; last child inside `CardHeader` (use `pb-0` on that header). Spacing from the title row uses the header `gap-*` only — no extra margin here — so it can match `pt-6`. */
+function AdminFormCardHeaderDivider() {
+  return <div className="-mx-6 border-t border-border/50" aria-hidden />;
+}
+
 type AdministrationNavigationIntent =
   | { kind: 'sidebar'; sectionKey: string }
   | { kind: 'accessControlTab'; tab: string }
@@ -351,6 +357,9 @@ interface AdministrationPersistedSnapshot {
   /** Present in new snapshots; absent in older serialized state. */
   fileManagement?: FileManagementPersisted;
 }
+
+type SnmpAgentFormValues = AdministrationPersistedSnapshot['snmp'];
+type SmtpFormValues = AdministrationPersistedSnapshot['smtp'];
 
 export const PERF_PROFILES_INIT: Record<string, ProfileData> = {
   'LTE Throughput Baseline': {
@@ -670,6 +679,8 @@ export default function AdministrationPage({
   const [loginBannerEnabled, setLoginBannerEnabled] = useState(DEFAULT_ACCESS_CONTROL_SETTINGS.loginBannerEnabled);
   const [bannerTitle, setBannerTitle] = useState(DEFAULT_ACCESS_CONTROL_SETTINGS.bannerTitle);
   const [messageOfDay, setMessageOfDay] = useState(DEFAULT_ACCESS_CONTROL_SETTINGS.messageOfDay);
+  const accessControlSettingsEditBaselineRef = useRef<AccessControlSettingsFormValues | null>(null);
+  const [accessControlSettingsSectionMode, setAccessControlSettingsSectionMode] = useState<'view' | 'edit'>('view');
   const [, setAccessControlSettingsBaseline] = useState<AccessControlSettingsFormValues>(() => ({
     ...DEFAULT_ACCESS_CONTROL_SETTINGS,
   }));
@@ -710,6 +721,7 @@ export default function AdministrationPage({
   const [emailGroupSheetAddressesText, setEmailGroupSheetAddressesText] = useState('');
   const [emailGroupDeleteId, setEmailGroupDeleteId] = useState<string | null>(null);
   const [fileMgmt, setFileMgmt] = useState<FileManagementPersisted>(() => createInitialFileManagementPersisted());
+  const [fileManagementFormsResetNonce, setFileManagementFormsResetNonce] = useState(0);
   const [smtpEnabled, setSmtpEnabled] = useState(true);
   const [smtpFromEmail, setSmtpFromEmail] = useState('alerts@acme.com');
   const [smtpEmailKey, setSmtpEmailKey] = useState('AMS-ALERTS');
@@ -731,18 +743,19 @@ export default function AdministrationPage({
   const [snmpChangeAuthenticationPassword, setSnmpChangeAuthenticationPassword] = useState(false);
   const [snmpPrivacyProtocol, setSnmpPrivacyProtocol] = useState('AES-256');
   const [snmpChangePrivacyPassword, setSnmpChangePrivacyPassword] = useState(false);
+  const snmpAgentEditBaselineRef = useRef<SnmpAgentFormValues | null>(null);
+  const [snmpAgentSectionMode, setSnmpAgentSectionMode] = useState<'view' | 'edit'>('view');
+  const smtpEditBaselineRef = useRef<SmtpFormValues | null>(null);
+  const [smtpSectionMode, setSmtpSectionMode] = useState<'view' | 'edit'>('view');
   const [auditSearch, setAuditSearch] = useState('');
   const [auditUsernameFilter, setAuditUsernameFilter] = useState('All');
   const [auditStatusFilter, setAuditStatusFilter] = useState('All');
   const [auditDateRangeFilter, setAuditDateRangeFilter] = useState<(typeof AUDIT_DATE_RANGE_OPTIONS)[number]>('All');
   const [auditCustomApplied, setAuditCustomApplied] = useState<DateRange | undefined>();
-  const [auditCustomDraft, setAuditCustomDraft] = useState<DateRange | undefined>();
-  const [auditCustomOpen, setAuditCustomOpen] = useState(false);
+  const [auditCustomTimezone, setAuditCustomTimezone] = useState(
+    () => (typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC'),
+  );
   const [auditDetailRow, setAuditDetailRow] = useState<AuditTrailRow | null>(null);
-  const auditCustomAppliedRef = useRef<DateRange | undefined>(undefined);
-  useEffect(() => {
-    auditCustomAppliedRef.current = auditCustomApplied;
-  }, [auditCustomApplied]);
   const [profileFilter, setProfileFilter] = useState<string>('All');
   const [accessControlUsers, setAccessControlUsers] = useState<AccessControlUserRow[]>(() => [...ACCESS_CONTROL_USERS_DATA]);
   const [accessControlUserSheetOpen, setAccessControlUserSheetOpen] = useState(false);
@@ -961,6 +974,214 @@ export default function AdministrationPage({
     setCommittedAdministrationJson(administrationPersistedJson);
   };
 
+  const scheduleBumpCommittedAdministration = useCallback(() => {
+    setTimeout(() => bumpCommittedAdministrationRef.current(), 0);
+  }, []);
+
+  const collectAccessControlSettingsForm = useCallback((): AccessControlSettingsFormValues => {
+    return {
+      passwordAgeDays,
+      passwordExpiryWarningDays,
+      passwordMinLength,
+      passwordReusePreventionCount,
+      passwordReusePreventionDays,
+      accountLockoutEnabled,
+      accountLockoutThreshold,
+      inactivityLogoutDurationMinutes,
+      loginBannerEnabled,
+      bannerTitle,
+      messageOfDay,
+    };
+  }, [
+    passwordAgeDays,
+    passwordExpiryWarningDays,
+    passwordMinLength,
+    passwordReusePreventionCount,
+    passwordReusePreventionDays,
+    accountLockoutEnabled,
+    accountLockoutThreshold,
+    inactivityLogoutDurationMinutes,
+    loginBannerEnabled,
+    bannerTitle,
+    messageOfDay,
+  ]);
+
+  const applyAccessControlSettingsForm = useCallback((v: AccessControlSettingsFormValues) => {
+    setPasswordAgeDays(v.passwordAgeDays);
+    setPasswordExpiryWarningDays(v.passwordExpiryWarningDays);
+    setPasswordMinLength(v.passwordMinLength);
+    setPasswordReusePreventionCount(v.passwordReusePreventionCount);
+    setPasswordReusePreventionDays(v.passwordReusePreventionDays);
+    setAccountLockoutEnabled(v.accountLockoutEnabled);
+    setAccountLockoutThreshold(v.accountLockoutThreshold);
+    setInactivityLogoutDurationMinutes(v.inactivityLogoutDurationMinutes);
+    setLoginBannerEnabled(v.loginBannerEnabled);
+    setBannerTitle(v.bannerTitle);
+    setMessageOfDay(v.messageOfDay);
+  }, []);
+
+  const startAccessControlSettingsEdit = useCallback(() => {
+    accessControlSettingsEditBaselineRef.current = structuredClone(collectAccessControlSettingsForm());
+    setAccessControlSettingsSectionMode('edit');
+  }, [collectAccessControlSettingsForm]);
+
+  const cancelAccessControlSettingsEdit = useCallback(() => {
+    const baseline = accessControlSettingsEditBaselineRef.current;
+    if (baseline) applyAccessControlSettingsForm(baseline);
+    accessControlSettingsEditBaselineRef.current = null;
+    setAccessControlSettingsSectionMode('view');
+  }, [applyAccessControlSettingsForm]);
+
+  const saveAccessControlSettings = useCallback(() => {
+    const next = collectAccessControlSettingsForm();
+    setAccessControlSettingsBaseline(next);
+    accessControlSettingsEditBaselineRef.current = null;
+    toast.success('Access control settings saved');
+    setTimeout(() => {
+      bumpCommittedAdministrationRef.current();
+    }, 0);
+    setAccessControlSettingsSectionMode('view');
+  }, [collectAccessControlSettingsForm]);
+
+  const accessControlSettingsEditDirty =
+    accessControlSettingsSectionMode === 'edit' &&
+    accessControlSettingsEditBaselineRef.current !== null &&
+    JSON.stringify(collectAccessControlSettingsForm()) !==
+      JSON.stringify(accessControlSettingsEditBaselineRef.current);
+
+  const collectSnmpAgentForm = useCallback((): SnmpAgentFormValues => {
+    return {
+      snmpEnableInternalAgent,
+      snmpEnableV2c,
+      snmpReadCommunity,
+      snmpWriteCommunity,
+      snmpEnableV3,
+      snmpEngineId,
+      snmpUserName,
+      snmpAuthenticationProtocol,
+      snmpChangeAuthenticationPassword,
+      snmpPrivacyProtocol,
+      snmpChangePrivacyPassword,
+    };
+  }, [
+    snmpEnableInternalAgent,
+    snmpEnableV2c,
+    snmpReadCommunity,
+    snmpWriteCommunity,
+    snmpEnableV3,
+    snmpEngineId,
+    snmpUserName,
+    snmpAuthenticationProtocol,
+    snmpChangeAuthenticationPassword,
+    snmpPrivacyProtocol,
+    snmpChangePrivacyPassword,
+  ]);
+
+  const applySnmpAgentForm = useCallback((v: SnmpAgentFormValues) => {
+    setSnmpEnableInternalAgent(v.snmpEnableInternalAgent);
+    setSnmpEnableV2c(v.snmpEnableV2c);
+    setSnmpReadCommunity(v.snmpReadCommunity);
+    setSnmpWriteCommunity(v.snmpWriteCommunity);
+    setSnmpEnableV3(v.snmpEnableV3);
+    setSnmpEngineId(v.snmpEngineId);
+    setSnmpUserName(v.snmpUserName);
+    setSnmpAuthenticationProtocol(v.snmpAuthenticationProtocol);
+    setSnmpChangeAuthenticationPassword(v.snmpChangeAuthenticationPassword);
+    setSnmpPrivacyProtocol(v.snmpPrivacyProtocol);
+    setSnmpChangePrivacyPassword(v.snmpChangePrivacyPassword);
+  }, []);
+
+  const startSnmpAgentEdit = useCallback(() => {
+    snmpAgentEditBaselineRef.current = structuredClone(collectSnmpAgentForm());
+    setSnmpAgentSectionMode('edit');
+  }, [collectSnmpAgentForm]);
+
+  const cancelSnmpAgentEdit = useCallback(() => {
+    const baseline = snmpAgentEditBaselineRef.current;
+    if (baseline) applySnmpAgentForm(baseline);
+    snmpAgentEditBaselineRef.current = null;
+    setSnmpAgentSectionMode('view');
+  }, [applySnmpAgentForm]);
+
+  const saveSnmpAgent = useCallback(() => {
+    snmpAgentEditBaselineRef.current = null;
+    toast.success('SNMP agent settings saved');
+    setTimeout(() => {
+      bumpCommittedAdministrationRef.current();
+    }, 0);
+    setSnmpAgentSectionMode('view');
+  }, []);
+
+  const snmpAgentEditDirty =
+    snmpAgentSectionMode === 'edit' &&
+    snmpAgentEditBaselineRef.current !== null &&
+    JSON.stringify(collectSnmpAgentForm()) !== JSON.stringify(snmpAgentEditBaselineRef.current);
+
+  const collectSmtpForm = useCallback((): SmtpFormValues => {
+    return {
+      smtpEnabled,
+      smtpFromEmail,
+      smtpEmailKey,
+      smtpServer,
+      smtpPort,
+      smtpSecurityMode,
+      smtpUseAuthentication,
+      smtpUserName,
+      smtpPassword,
+      smtpTestEmail,
+    };
+  }, [
+    smtpEnabled,
+    smtpFromEmail,
+    smtpEmailKey,
+    smtpServer,
+    smtpPort,
+    smtpSecurityMode,
+    smtpUseAuthentication,
+    smtpUserName,
+    smtpPassword,
+    smtpTestEmail,
+  ]);
+
+  const applySmtpForm = useCallback((v: SmtpFormValues) => {
+    setSmtpEnabled(v.smtpEnabled);
+    setSmtpFromEmail(v.smtpFromEmail);
+    setSmtpEmailKey(v.smtpEmailKey);
+    setSmtpServer(v.smtpServer);
+    setSmtpPort(v.smtpPort);
+    setSmtpSecurityMode(v.smtpSecurityMode);
+    setSmtpUseAuthentication(v.smtpUseAuthentication);
+    setSmtpUserName(v.smtpUserName);
+    setSmtpPassword(v.smtpPassword);
+    setSmtpTestEmail(v.smtpTestEmail);
+  }, []);
+
+  const startSmtpEdit = useCallback(() => {
+    smtpEditBaselineRef.current = structuredClone(collectSmtpForm());
+    setSmtpSectionMode('edit');
+  }, [collectSmtpForm]);
+
+  const cancelSmtpEdit = useCallback(() => {
+    const baseline = smtpEditBaselineRef.current;
+    if (baseline) applySmtpForm(baseline);
+    smtpEditBaselineRef.current = null;
+    setSmtpSectionMode('view');
+  }, [applySmtpForm]);
+
+  const saveSmtp = useCallback(() => {
+    smtpEditBaselineRef.current = null;
+    toast.success('SMTP settings saved');
+    setTimeout(() => {
+      bumpCommittedAdministrationRef.current();
+    }, 0);
+    setSmtpSectionMode('view');
+  }, []);
+
+  const smtpEditDirty =
+    smtpSectionMode === 'edit' &&
+    smtpEditBaselineRef.current !== null &&
+    JSON.stringify(collectSmtpForm()) !== JSON.stringify(smtpEditBaselineRef.current);
+
   const applyAdministrationPersistedSnapshot = useCallback((s: AdministrationPersistedSnapshot) => {
     setAccessControlUsers(s.accessControlUsers);
     setAuthSidebarSection(s.authSidebarSection);
@@ -1018,9 +1239,17 @@ export default function AdministrationPage({
     } else {
       setFileMgmt(createInitialFileManagementPersisted());
     }
+    setAccessControlSettingsSectionMode('view');
+    setSnmpAgentSectionMode('view');
+    setSmtpSectionMode('view');
+    accessControlSettingsEditBaselineRef.current = null;
+    snmpAgentEditBaselineRef.current = null;
+    smtpEditBaselineRef.current = null;
+    setFileManagementFormsResetNonce((n) => n + 1);
   }, []);
 
-  const handleAdministrationSaveAll = useCallback(() => {
+  /** Applies a trimmed region name from the field into the catalog and profile access (call `scheduleBumpCommittedAdministration` after to clear page dirty state). */
+  const syncSelectedRegionNameToCatalog = useCallback(() => {
     if (selectedRegionSidebarId && regionSidebarItems.length > 0) {
       const nextLabel = regionNameValue.trim();
       const prevLabel = selectedRegionLabel;
@@ -1047,59 +1276,7 @@ export default function AdministrationPage({
         onRegionsChange?.(nextRegionNames);
       }
     }
-
-    setAccessControlSettingsBaseline({
-      passwordAgeDays,
-      passwordExpiryWarningDays,
-      passwordMinLength,
-      passwordReusePreventionCount,
-      passwordReusePreventionDays,
-      accountLockoutEnabled,
-      accountLockoutThreshold,
-      inactivityLogoutDurationMinutes,
-      loginBannerEnabled,
-      bannerTitle,
-      messageOfDay,
-    });
-    if (profileEditorId) {
-      setProfileSheetMode(null);
-      setProfileEditorId(null);
-      setProfileEditorBaseline(null);
-    }
-    toast.success('All changes saved');
-    setTimeout(() => {
-      bumpCommittedAdministrationRef.current();
-    }, 0);
-  }, [
-    selectedRegionSidebarId,
-    regionSidebarItems,
-    regionNameValue,
-    selectedRegionLabel,
-    onRegionsChange,
-    passwordAgeDays,
-    passwordExpiryWarningDays,
-    passwordMinLength,
-    passwordReusePreventionCount,
-    passwordReusePreventionDays,
-    accountLockoutEnabled,
-    accountLockoutThreshold,
-    inactivityLogoutDurationMinutes,
-    loginBannerEnabled,
-    bannerTitle,
-    messageOfDay,
-    profileEditorId,
-  ]);
-
-  const handleAdministrationCancelAll = useCallback(() => {
-    if (committedAdministrationJson === null) return;
-    const data = JSON.parse(committedAdministrationJson) as AdministrationPersistedSnapshot;
-    applyAdministrationPersistedSnapshot(data);
-    if (profileEditorId) {
-      setProfileSheetMode(null);
-      setProfileEditorId(null);
-      setProfileEditorBaseline(null);
-    }
-  }, [committedAdministrationJson, applyAdministrationPersistedSnapshot, profileEditorId]);
+  }, [selectedRegionSidebarId, regionSidebarItems, regionNameValue, selectedRegionLabel, onRegionsChange]);
 
   const dismissProfileEditor = useCallback(
     (reason: 'save' | 'cancel' | 'overlay') => {
@@ -1253,13 +1430,9 @@ export default function AdministrationPage({
     const v = value as (typeof AUDIT_DATE_RANGE_OPTIONS)[number];
     setAuditDateRangeFilter(v);
     if (v === 'Custom') {
-      setAuditCustomDraft(auditCustomAppliedRef.current);
-      setAuditCustomOpen(true);
-    } else {
-      setAuditCustomApplied(undefined);
-      setAuditCustomDraft(undefined);
-      setAuditCustomOpen(false);
+      return;
     }
+    setAuditCustomApplied(undefined);
   }, []);
 
   const filteredAuditRows = useMemo(() => {
@@ -1279,10 +1452,11 @@ export default function AdministrationPage({
         const from = auditCustomApplied?.from;
         const to = auditCustomApplied?.to;
         if (from && to) {
-          const fromS = startOfDay(from);
-          const toE = endOfDay(to);
-          const rowD = auditRowDay(row.ageDays);
-          if (isBefore(rowD, fromS) || isAfter(rowD, toE)) return false;
+          const fromMs = from.getTime();
+          const toMs = to.getTime();
+          const rowDayStart = startOfDay(auditRowDay(row.ageDays)).getTime();
+          const rowDayEnd = endOfDay(auditRowDay(row.ageDays)).getTime();
+          if (toMs < rowDayStart || fromMs > rowDayEnd) return false;
         }
       }
       return true;
@@ -1294,6 +1468,423 @@ export default function AdministrationPage({
     auditDateRangeFilter,
     auditCustomApplied,
   ]);
+
+  /** Read-only admin kv blocks: outer `space-y-8` between major groups; inner stacks `space-y-3` for multiple kv rows, or `space-y-6` between one summary kv row and a following nested detail panel; grids `grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2`; each row `Field` with `className="gap-1"`; nested detail panels `rounded-md border border-border/80 bg-muted/20 p-3` + same inner grid. Form cards: `CardHeader` wraps title+actions in an inner flex row, then `<AdminFormCardHeaderDivider />`; header `space-y-0 gap-6 pb-0` (same 1.5rem as `p-6` top) so space above and below the title group matches; `CardContent` `className="pt-6"`. */
+  const roKvLabel = 'text-sm font-medium text-muted-foreground';
+  const roKvValue = 'text-sm font-semibold text-foreground leading-snug';
+  const roKvValueNums = cn(roKvValue, 'tabular-nums tracking-tight');
+
+  const renderAccessControlSettingsValuesView = () => (
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Password age (days)*</FieldLabel>
+          <p className={roKvValueNums}>{passwordAgeDays}</p>
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Password expiry warning (days)*</FieldLabel>
+          <p className={roKvValueNums}>{passwordExpiryWarningDays}</p>
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Password minimum length*</FieldLabel>
+          <p className={roKvValueNums}>{passwordMinLength}</p>
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Password reuse prevention count*</FieldLabel>
+          <p className={roKvValueNums}>{passwordReusePreventionCount}</p>
+        </Field>
+        <Field className="gap-1 md:col-span-2">
+          <FieldLabel className={roKvLabel}>Password reuse prevention (days)*</FieldLabel>
+          <p className={roKvValueNums}>{passwordReusePreventionDays}</p>
+        </Field>
+      </div>
+      <div className="space-y-6">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Account lockout</FieldLabel>
+          <p className={roKvValue}>{accountLockoutEnabled ? 'Yes' : 'No'}</p>
+        </Field>
+        {accountLockoutEnabled && (
+          <div className="rounded-md border border-border/80 bg-muted/20 p-3">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+              <Field className="gap-1">
+                <FieldLabel className={roKvLabel}>Account lockout threshold*</FieldLabel>
+                <p className={roKvValueNums}>{accountLockoutThreshold}</p>
+              </Field>
+              <Field className="gap-1">
+                <FieldLabel className={roKvLabel}>Inactivity logout duration (minutes)*</FieldLabel>
+                <p className={roKvValueNums}>{inactivityLogoutDurationMinutes}</p>
+              </Field>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="space-y-6">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Login banner enabled</FieldLabel>
+          <p className={roKvValue}>{loginBannerEnabled ? 'Yes' : 'No'}</p>
+        </Field>
+        {loginBannerEnabled && (
+          <div className="rounded-md border border-border/80 bg-muted/20 p-3">
+            <Field className="gap-1">
+              <FieldLabel className={roKvLabel}>Banner title*</FieldLabel>
+              <p className={roKvValue}>{bannerTitle}</p>
+            </Field>
+          </div>
+        )}
+      </div>
+      <Field className="gap-1">
+        <FieldLabel className={roKvLabel}>Message of day</FieldLabel>
+        <p className={cn(roKvValue, 'whitespace-pre-wrap')}>{messageOfDay}</p>
+      </Field>
+    </div>
+  );
+
+  const renderAccessControlSettingsEditFields = () => (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <Field controlSize="xs">
+        <FieldLabel htmlFor="password-age-days">Password age (days)*</FieldLabel>
+        <Input
+          id="password-age-days"
+          type="number"
+          value={passwordAgeDays}
+          onChange={(e) => setPasswordAgeDays(e.target.value)}
+        />
+      </Field>
+      <Field controlSize="xs">
+        <FieldLabel htmlFor="password-expiry-warning-days">Password expiry warning (days)*</FieldLabel>
+        <Input
+          id="password-expiry-warning-days"
+          type="number"
+          value={passwordExpiryWarningDays}
+          onChange={(e) => setPasswordExpiryWarningDays(e.target.value)}
+        />
+      </Field>
+      <Field controlSize="xs">
+        <FieldLabel htmlFor="password-min-length">Password minimum length*</FieldLabel>
+        <Input
+          id="password-min-length"
+          type="number"
+          value={passwordMinLength}
+          onChange={(e) => setPasswordMinLength(e.target.value)}
+        />
+      </Field>
+      <Field controlSize="xs">
+        <FieldLabel htmlFor="password-reuse-prevention-count">Password reuse prevention count*</FieldLabel>
+        <Input
+          id="password-reuse-prevention-count"
+          type="number"
+          value={passwordReusePreventionCount}
+          onChange={(e) => setPasswordReusePreventionCount(e.target.value)}
+        />
+      </Field>
+      <Field controlSize="xs">
+        <FieldLabel htmlFor="password-reuse-prevention-days">Password reuse prevention (days)*</FieldLabel>
+        <Input
+          id="password-reuse-prevention-days"
+          type="number"
+          value={passwordReusePreventionDays}
+          onChange={(e) => setPasswordReusePreventionDays(e.target.value)}
+        />
+      </Field>
+      <div className="flex items-center gap-2 self-end md:col-span-2">
+        <Checkbox
+          id="account-lockout-enabled"
+          checked={accountLockoutEnabled}
+          onCheckedChange={(checked) => setAccountLockoutEnabled(Boolean(checked))}
+        />
+        <Label htmlFor="account-lockout-enabled">Account lockout</Label>
+      </div>
+      {accountLockoutEnabled && (
+        <div className="md:col-span-2 rounded-md border p-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <Field controlSize="xs">
+              <FieldLabel htmlFor="account-lockout-threshold">Account lockout threshold*</FieldLabel>
+              <Input
+                id="account-lockout-threshold"
+                type="number"
+                value={accountLockoutThreshold}
+                onChange={(e) => setAccountLockoutThreshold(e.target.value)}
+              />
+            </Field>
+            <Field controlSize="xs">
+              <FieldLabel htmlFor="inactivity-logout-duration">Inactivity logout duration (minutes)*</FieldLabel>
+              <Input
+                id="inactivity-logout-duration"
+                type="number"
+                value={inactivityLogoutDurationMinutes}
+                onChange={(e) => setInactivityLogoutDurationMinutes(e.target.value)}
+              />
+            </Field>
+          </div>
+        </div>
+      )}
+      <div className="flex items-center gap-2 self-end md:col-span-2">
+        <Checkbox
+          id="login-banner-enabled"
+          checked={loginBannerEnabled}
+          onCheckedChange={(checked) => setLoginBannerEnabled(Boolean(checked))}
+        />
+        <Label htmlFor="login-banner-enabled">Login banner enabled</Label>
+      </div>
+      {loginBannerEnabled && (
+        <div className="md:col-span-2 rounded-md border p-4">
+          <Field controlSize="md">
+            <FieldLabel htmlFor="banner-title">Banner title*</FieldLabel>
+            <Input id="banner-title" value={bannerTitle} onChange={(e) => setBannerTitle(e.target.value)} />
+          </Field>
+        </div>
+      )}
+      <Field className="md:col-span-2" controlSize="full">
+        <FieldLabel htmlFor="message-of-day">Message of day</FieldLabel>
+        <Textarea id="message-of-day" className="min-h-24" value={messageOfDay} onChange={(e) => setMessageOfDay(e.target.value)} />
+      </Field>
+    </div>
+  );
+
+  const smtpSecurityModeLabel =
+    smtpSecurityMode === 'none' ? 'None' : smtpSecurityMode === 'starttls' ? 'STARTTLS' : 'SSL';
+
+  const renderSnmpAgentValuesView = () => (
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Enable internal SNMP agent</FieldLabel>
+          <p className={roKvValue}>{snmpEnableInternalAgent ? 'Yes' : 'No'}</p>
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>SNMP v2c</FieldLabel>
+          <p className={roKvValue}>{snmpEnableV2c ? 'Yes' : 'No'}</p>
+        </Field>
+      </div>
+      <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Read community</FieldLabel>
+          <p className={cn(roKvValue, 'font-mono')}>{snmpReadCommunity}</p>
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Write community</FieldLabel>
+          <p className={cn(roKvValue, 'font-mono')}>{snmpWriteCommunity}</p>
+        </Field>
+      </div>
+      <div className="space-y-6">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>SNMP v3</FieldLabel>
+          <p className={roKvValue}>{snmpEnableV3 ? 'Yes' : 'No'}</p>
+        </Field>
+        <div className="rounded-md border border-border/80 bg-muted/20 p-3">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+            <Field className="gap-1 md:col-span-2">
+              <FieldLabel className={roKvLabel}>SNMP engine ID</FieldLabel>
+              <p className={cn(roKvValue, 'font-mono break-all')}>{snmpEngineId}</p>
+            </Field>
+            <Field className="gap-1">
+              <FieldLabel className={roKvLabel}>Username</FieldLabel>
+              <p className={roKvValue}>{snmpUserName}</p>
+            </Field>
+            <Field className="gap-1">
+              <FieldLabel className={roKvLabel}>Authentication protocol</FieldLabel>
+              <p className={roKvValue}>{snmpAuthenticationProtocol}</p>
+            </Field>
+            <Field className="gap-1">
+              <FieldLabel className={roKvLabel}>Change authentication protocol password</FieldLabel>
+              <p className={roKvValue}>{snmpChangeAuthenticationPassword ? 'Yes' : 'No'}</p>
+            </Field>
+            <Field className="gap-1">
+              <FieldLabel className={roKvLabel}>Privacy protocol</FieldLabel>
+              <p className={roKvValue}>{snmpPrivacyProtocol}</p>
+            </Field>
+            <Field className="gap-1 md:col-span-2">
+              <FieldLabel className={roKvLabel}>Change privacy protocol password</FieldLabel>
+              <p className={roKvValue}>{snmpChangePrivacyPassword ? 'Yes' : 'No'}</p>
+            </Field>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSnmpAgentEditFields = () => (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="flex items-center gap-2 md:col-span-2">
+        <Checkbox id="snmp-enable-internal-agent" checked={snmpEnableInternalAgent} onCheckedChange={(checked) => setSnmpEnableInternalAgent(Boolean(checked))} />
+        <Label htmlFor="snmp-enable-internal-agent">Enable internal SNMP agent</Label>
+      </div>
+      <div className="flex items-center gap-2 md:col-span-2">
+        <Checkbox id="snmp-enable-v2c" checked={snmpEnableV2c} onCheckedChange={(checked) => setSnmpEnableV2c(Boolean(checked))} />
+        <Label htmlFor="snmp-enable-v2c">SNMP v2c</Label>
+      </div>
+      <Field controlSize="lg">
+        <FieldLabel htmlFor="snmp-read-community">Read community</FieldLabel>
+        <Input id="snmp-read-community" value={snmpReadCommunity} onChange={(e) => setSnmpReadCommunity(e.target.value)} />
+      </Field>
+      <Field controlSize="lg">
+        <FieldLabel htmlFor="snmp-write-community">Write community</FieldLabel>
+        <Input id="snmp-write-community" value={snmpWriteCommunity} onChange={(e) => setSnmpWriteCommunity(e.target.value)} />
+      </Field>
+      <div className="flex items-center gap-2 md:col-span-2">
+        <Checkbox id="snmp-enable-v3" checked={snmpEnableV3} onCheckedChange={(checked) => setSnmpEnableV3(Boolean(checked))} />
+        <Label htmlFor="snmp-enable-v3">SNMP v3</Label>
+      </div>
+      {snmpEnableV3 ? (
+        <div className="md:col-span-2 rounded-md border border-border/80 bg-muted/20 p-3">
+          <FieldGroup>
+            <Field controlSize="lg">
+              <FieldLabel htmlFor="snmp-engine-id">SNMP engine ID</FieldLabel>
+              <Input id="snmp-engine-id" value={snmpEngineId} onChange={(e) => setSnmpEngineId(e.target.value)} />
+            </Field>
+            <Field controlSize="md">
+              <FieldLabel htmlFor="snmp-user-name">Username</FieldLabel>
+              <Input id="snmp-user-name" value={snmpUserName} onChange={(e) => setSnmpUserName(e.target.value)} />
+            </Field>
+            <Field controlSize="sm">
+              <FieldLabel htmlFor="snmp-authentication-protocol">Authentication protocol</FieldLabel>
+              <Input id="snmp-authentication-protocol" value={snmpAuthenticationProtocol} onChange={(e) => setSnmpAuthenticationProtocol(e.target.value)} />
+            </Field>
+            <div className="flex items-center gap-2">
+              <Checkbox id="snmp-change-auth-password" checked={snmpChangeAuthenticationPassword} onCheckedChange={(checked) => setSnmpChangeAuthenticationPassword(Boolean(checked))} />
+              <Label htmlFor="snmp-change-auth-password">Change authentication protocol password</Label>
+            </div>
+            <Field controlSize="sm">
+              <FieldLabel htmlFor="snmp-privacy-protocol">Privacy protocol</FieldLabel>
+              <Input id="snmp-privacy-protocol" value={snmpPrivacyProtocol} onChange={(e) => setSnmpPrivacyProtocol(e.target.value)} />
+            </Field>
+            <div className="flex items-center gap-2">
+              <Checkbox id="snmp-change-privacy-password" checked={snmpChangePrivacyPassword} onCheckedChange={(checked) => setSnmpChangePrivacyPassword(Boolean(checked))} />
+              <Label htmlFor="snmp-change-privacy-password">Change privacy protocol password</Label>
+            </div>
+          </FieldGroup>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const renderSmtpValuesView = () => (
+    <div className="max-w-2xl space-y-8">
+      <div className="space-y-3">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Enable</FieldLabel>
+          <p className={roKvValue}>{smtpEnabled ? 'Yes' : 'No'}</p>
+        </Field>
+      </div>
+      <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>From email</FieldLabel>
+          <p className={roKvValue}>{smtpFromEmail}</p>
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Email key</FieldLabel>
+          <p className={roKvValue}>{smtpEmailKey}</p>
+        </Field>
+        <Field className="gap-1 md:col-span-2">
+          <FieldLabel className={roKvLabel}>SMTP server</FieldLabel>
+          <p className={roKvValue}>{smtpServer}</p>
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>SMTP port*</FieldLabel>
+          <p className={roKvValueNums}>{smtpPort}</p>
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Security</FieldLabel>
+          <p className={roKvValue}>{smtpSecurityModeLabel}</p>
+        </Field>
+      </div>
+      <div className="space-y-6">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Use authentication</FieldLabel>
+          <p className={roKvValue}>{smtpUseAuthentication ? 'Yes' : 'No'}</p>
+        </Field>
+        {smtpUseAuthentication ? (
+          <div className="rounded-md border border-border/80 bg-muted/20 p-3">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+              <Field className="gap-1">
+                <FieldLabel className={roKvLabel}>Username</FieldLabel>
+                <p className={roKvValue}>{smtpUserName}</p>
+              </Field>
+              <Field className="gap-1">
+                <FieldLabel className={roKvLabel}>Password</FieldLabel>
+                <p className={roKvValue}>{smtpPassword ? '••••••••' : '—'}</p>
+              </Field>
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <div className="space-y-3">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>Send test email</FieldLabel>
+          <p className={roKvValue}>{smtpTestEmail}</p>
+        </Field>
+      </div>
+    </div>
+  );
+
+  const renderSmtpEditFields = () => (
+    <FieldGroup className="max-w-2xl">
+      <div className="flex items-center gap-2">
+        <Checkbox id="smtp-enabled" checked={smtpEnabled} onCheckedChange={(checked) => setSmtpEnabled(Boolean(checked))} />
+        <Label htmlFor="smtp-enabled">Enable</Label>
+      </div>
+      <Field controlSize="lg">
+        <FieldLabel htmlFor="smtp-from-email">From email</FieldLabel>
+        <Input id="smtp-from-email" value={smtpFromEmail} onChange={(e) => setSmtpFromEmail(e.target.value)} />
+      </Field>
+      <Field controlSize="md">
+        <FieldLabel htmlFor="smtp-email-key">Email key</FieldLabel>
+        <Input id="smtp-email-key" value={smtpEmailKey} onChange={(e) => setSmtpEmailKey(e.target.value)} />
+      </Field>
+      <Field controlSize="lg">
+        <FieldLabel htmlFor="smtp-server">SMTP server</FieldLabel>
+        <Input id="smtp-server" value={smtpServer} onChange={(e) => setSmtpServer(e.target.value)} />
+      </Field>
+      <Field controlSize="xs">
+        <FieldLabel htmlFor="smtp-port">SMTP port*</FieldLabel>
+        <Input id="smtp-port" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} />
+      </Field>
+      <Field>
+        <FieldLabel>Security</FieldLabel>
+        <RadioGroup value={smtpSecurityMode} onValueChange={(value) => setSmtpSecurityMode(value as 'none' | 'starttls' | 'ssl')} className="flex flex-wrap gap-6">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <RadioGroupItem id="smtp-security-none" value="none" />
+            <Label htmlFor="smtp-security-none">None</Label>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <RadioGroupItem id="smtp-security-starttls" value="starttls" />
+            <Label htmlFor="smtp-security-starttls">STARTTLS</Label>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <RadioGroupItem id="smtp-security-ssl" value="ssl" />
+            <Label htmlFor="smtp-security-ssl">SSL</Label>
+          </label>
+        </RadioGroup>
+      </Field>
+      <div className="flex items-center gap-2">
+        <Checkbox id="smtp-use-auth" checked={smtpUseAuthentication} onCheckedChange={(checked) => setSmtpUseAuthentication(Boolean(checked))} />
+        <Label htmlFor="smtp-use-auth">Use authentication</Label>
+      </div>
+      {smtpUseAuthentication ? (
+        <FieldGroup className="rounded-lg border border-border bg-muted/10 p-4 md:p-5">
+          <Field controlSize="md">
+            <FieldLabel htmlFor="smtp-user-name">Username</FieldLabel>
+            <Input id="smtp-user-name" value={smtpUserName} onChange={(e) => setSmtpUserName(e.target.value)} />
+          </Field>
+          <Field controlSize="md">
+            <FieldLabel htmlFor="smtp-password">Password</FieldLabel>
+            <Input id="smtp-password" type="password" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
+          </Field>
+        </FieldGroup>
+      ) : null}
+      <Field controlSize="full">
+        <FieldLabel htmlFor="smtp-test-email">Send test email</FieldLabel>
+        <FieldContent>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input id="smtp-test-email" value={smtpTestEmail} onChange={(e) => setSmtpTestEmail(e.target.value)} />
+            <Button type="button" onClick={() => toast.success(`Test email sent to ${smtpTestEmail}`)}>
+              Send
+            </Button>
+          </div>
+        </FieldContent>
+      </Field>
+    </FieldGroup>
+  );
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
@@ -1447,6 +2038,7 @@ export default function AdministrationPage({
                           return [...prev, row];
                         });
                         toast.success('User saved');
+                        scheduleBumpCommittedAdministration();
                       }}
                     />
                   </TabsContent>
@@ -1511,10 +2103,10 @@ export default function AdministrationPage({
                                   </Label>
                                 </RadioGroup>
                               </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="external-auth-type">External authentication type</Label>
+                              <Field controlSize="sm">
+                                <FieldLabel htmlFor="external-auth-type">External authentication type</FieldLabel>
                                 <Select value={externalAuthType} onValueChange={(value) => setExternalAuthType(value as typeof externalAuthType)}>
-                                  <SelectTrigger id="external-auth-type" className="max-w-[280px]">
+                                  <SelectTrigger id="external-auth-type">
                                     <SelectValue placeholder="Select type" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1523,7 +2115,7 @@ export default function AdministrationPage({
                                     <SelectItem value="saml">SAML</SelectItem>
                                   </SelectContent>
                                 </Select>
-                              </div>
+                              </Field>
                             </CardContent>
                           </Card>
                         )}
@@ -1664,9 +2256,9 @@ export default function AdministrationPage({
                           </SheetDescription>
                         </SheetHeader>
                         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-                        <div className="space-y-5">
-                                <div className="space-y-2">
-                                  <Label htmlFor="access-control-profile-name">Profile name</Label>
+                        <FieldGroup>
+                                <Field controlSize="md">
+                                  <FieldLabel htmlFor="access-control-profile-name">Profile name</FieldLabel>
                                   <Input
                                     id="access-control-profile-name"
                                     value={editorLabel}
@@ -1682,15 +2274,15 @@ export default function AdministrationPage({
                                     placeholder="Profile name"
                                     autoComplete="off"
                                   />
-                                </div>
+                                </Field>
                                 <ProfileRegionsField
                                   accountRegions={accountRegions}
                                   selectedRegions={editorAccess.regions}
                                   onRegionsChange={(regions) => applyEditorAccessPatch({ regions })}
                                 />
-                                <div>
-                                  <Label>Admin operations</Label>
-                                  <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-md border border-border p-3">
+                                <Field>
+                                  <FieldLabel>Admin operations</FieldLabel>
+                                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-border p-3">
                                     {ADMIN_OPERATION_OPTIONS.map((operation) => (
                                       <label
                                         key={`${profileEditorId}-admin-op-${operation}`}
@@ -1711,10 +2303,10 @@ export default function AdministrationPage({
                                       </label>
                                     ))}
                                   </div>
-                                </div>
-                                <div>
-                                  <Label>Application operations</Label>
-                                  <div className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-md border border-border p-3">
+                                </Field>
+                                <Field>
+                                  <FieldLabel>Application operations</FieldLabel>
+                                  <div className="max-h-72 space-y-2 overflow-y-auto rounded-md border border-border p-3">
                                     {APPLICATION_OPERATION_OPTIONS.map((operation) => (
                                       <label
                                         key={`${profileEditorId}-app-op-${operation}`}
@@ -1735,8 +2327,8 @@ export default function AdministrationPage({
                                       </label>
                                     ))}
                                   </div>
-                                </div>
-                        </div>
+                                </Field>
+                        </FieldGroup>
                         </div>
                         <SheetFooter className="mt-auto shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/20 px-4 py-4">
                           <div className="flex min-w-0 flex-1">
@@ -1790,18 +2382,22 @@ export default function AdministrationPage({
                           setRegionSidebarItems((prev) => [...prev, { id: nextId, label: nextLabel }]);
                           setSelectedRegionSidebarId(nextId);
                           toast.success(`Added ${nextLabel}`);
+                          scheduleBumpCommittedAdministration();
                         }}
                       />
                       <div className="flex-1 space-y-4">
                         <Card>
                           <CardContent className="pt-6">
-                            <div className="max-w-md">
-                              <Label htmlFor="region-name-field">Region name</Label>
+                            <Field className="max-w-md">
+                              <FieldLabel htmlFor="region-name-field">Region name</FieldLabel>
                               <Input
                                 id="region-name-field"
-                                className="mt-3"
                                 value={regionNameValue}
                                 onChange={(e) => setRegionNameValue(e.target.value)}
+                                onBlur={() => {
+                                  syncSelectedRegionNameToCatalog();
+                                  scheduleBumpCommittedAdministration();
+                                }}
                                 placeholder="Enter region name"
                                 disabled={regionSidebarItems.length === 0}
                               />
@@ -1824,7 +2420,7 @@ export default function AdministrationPage({
                                   </Button>
                                 </div>
                               )}
-                            </div>
+                            </Field>
                           </CardContent>
                         </Card>
 
@@ -1876,6 +2472,7 @@ export default function AdministrationPage({
                                   onRegionsChange?.(nextItems.map((item) => item.label));
                                   setRegionDeleteTarget(null);
                                   toast.success(`Deleted region "${deletedLabel}"`);
+                                  scheduleBumpCommittedAdministration();
                                 }}
                               >
                                 Delete
@@ -1889,63 +2486,42 @@ export default function AdministrationPage({
 
                   <TabsContent value="settings" className="mt-6">
                     <Card>
-                      <CardContent className="pt-6">
-                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                          <div>
-                            <Label htmlFor="password-age-days">Password age (days)*</Label>
-                            <Input id="password-age-days" className="mt-3" type="number" value={passwordAgeDays} onChange={(e) => setPasswordAgeDays(e.target.value)} />
+                      <CardHeader className="flex flex-col gap-6 space-y-0 p-6 pb-0">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1.5">
+                            <CardTitle>Settings</CardTitle>
+                            <CardDescription>
+                              Password policy, account lockout, and login banner. Choose Edit to change values inline.
+                            </CardDescription>
                           </div>
-                          <div>
-                            <Label htmlFor="password-expiry-warning-days">Password expiry warning (days)*</Label>
-                            <Input id="password-expiry-warning-days" className="mt-3" type="number" value={passwordExpiryWarningDays} onChange={(e) => setPasswordExpiryWarningDays(e.target.value)} />
-                          </div>
-                          <div>
-                            <Label htmlFor="password-min-length">Password minimum length*</Label>
-                            <Input id="password-min-length" className="mt-3" type="number" value={passwordMinLength} onChange={(e) => setPasswordMinLength(e.target.value)} />
-                          </div>
-                          <div>
-                            <Label htmlFor="password-reuse-prevention-count">Password reuse prevention count*</Label>
-                            <Input id="password-reuse-prevention-count" className="mt-3" type="number" value={passwordReusePreventionCount} onChange={(e) => setPasswordReusePreventionCount(e.target.value)} />
-                          </div>
-                          <div>
-                            <Label htmlFor="password-reuse-prevention-days">Password reuse prevention (days)*</Label>
-                            <Input id="password-reuse-prevention-days" className="mt-3" type="number" value={passwordReusePreventionDays} onChange={(e) => setPasswordReusePreventionDays(e.target.value)} />
-                          </div>
-                          <div className="flex items-center gap-2 self-end md:col-span-2">
-                            <Checkbox id="account-lockout-enabled" checked={accountLockoutEnabled} onCheckedChange={(checked) => setAccountLockoutEnabled(Boolean(checked))} />
-                            <Label htmlFor="account-lockout-enabled">Account lockout</Label>
-                          </div>
-                          {accountLockoutEnabled && (
-                            <div className="md:col-span-2 rounded-md border p-4">
-                              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                                <div>
-                                  <Label htmlFor="account-lockout-threshold">Account lockout threshold*</Label>
-                                  <Input id="account-lockout-threshold" className="mt-3" type="number" value={accountLockoutThreshold} onChange={(e) => setAccountLockoutThreshold(e.target.value)} />
-                                </div>
-                                <div>
-                                  <Label htmlFor="inactivity-logout-duration">Inactivity logout duration (minutes)*</Label>
-                                  <Input id="inactivity-logout-duration" className="mt-3" type="number" value={inactivityLogoutDurationMinutes} onChange={(e) => setInactivityLogoutDurationMinutes(e.target.value)} />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 self-end md:col-span-2">
-                            <Checkbox id="login-banner-enabled" checked={loginBannerEnabled} onCheckedChange={(checked) => setLoginBannerEnabled(Boolean(checked))} />
-                            <Label htmlFor="login-banner-enabled">Login banner enabled</Label>
-                          </div>
-                          {loginBannerEnabled && (
-                            <div className="md:col-span-2 rounded-md border p-4">
-                              <div>
-                                <Label htmlFor="banner-title">Banner title*</Label>
-                                <Input id="banner-title" className="mt-3" value={bannerTitle} onChange={(e) => setBannerTitle(e.target.value)} />
-                              </div>
-                            </div>
-                          )}
-                          <div className="md:col-span-2">
-                            <Label htmlFor="message-of-day">Message of day</Label>
-                            <Textarea id="message-of-day" className="mt-3 min-h-24" value={messageOfDay} onChange={(e) => setMessageOfDay(e.target.value)} />
+                          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                            {accessControlSettingsSectionMode === 'view' ? (
+                              <Button type="button" className="sm:self-start" onClick={startAccessControlSettingsEdit}>
+                                Edit
+                              </Button>
+                            ) : (
+                              <>
+                                <Button type="button" variant="outline" className="sm:self-start" onClick={cancelAccessControlSettingsEdit}>
+                                  Cancel
+                                </Button>
+                                <Button
+                                  type="button"
+                                  className="sm:self-start"
+                                  disabled={!accessControlSettingsEditDirty}
+                                  onClick={saveAccessControlSettings}
+                                >
+                                  Save
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
+                        <AdminFormCardHeaderDivider />
+                      </CardHeader>
+                      <CardContent className="pt-6">
+                        {accessControlSettingsSectionMode === 'view'
+                          ? renderAccessControlSettingsValuesView()
+                          : renderAccessControlSettingsEditFields()}
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -1968,116 +2544,15 @@ export default function AdministrationPage({
                   </div>
                   <FilterSelect value={auditUsernameFilter} onValueChange={setAuditUsernameFilter} label="Username" options={auditUsernameOptions} className="w-[220px]" />
                   <FilterSelect value={auditStatusFilter} onValueChange={setAuditStatusFilter} label="Status" options={['All', 'Allowed', 'Denied']} className="w-[150px]" />
-                  <Popover
-                    modal={false}
-                    open={auditDateRangeFilter === 'Custom' && auditCustomOpen}
-                    onOpenChange={(open) => {
-                      if (auditDateRangeFilter !== 'Custom') {
-                        setAuditCustomOpen(false);
-                        return;
-                      }
-                      setAuditCustomOpen(open);
-                      setAuditCustomDraft(auditCustomAppliedRef.current);
-                    }}
-                  >
-                    <PopoverAnchor asChild>
-                      <div
-                        className={cn(
-                          'flex min-w-[170px] max-w-[min(320px,calc(100vw-2rem))] items-stretch overflow-hidden rounded-md border border-input bg-background shadow-sm transition-[color,box-shadow]',
-                          'focus-within:border-ring focus-within:ring-1 focus-within:ring-ring',
-                        )}
-                      >
-                        <Select value={auditDateRangeFilter} onValueChange={handleAuditDatePresetChange}>
-                          <SelectTrigger
-                            className={cn(
-                              'h-9 min-w-0 flex-1 rounded-none border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0',
-                              auditDateRangeFilter === 'Custom'
-                                ? 'rounded-l-md rounded-r-none pr-1'
-                                : 'rounded-md',
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                'truncate',
-                                auditDateRangeFilter === 'All' && 'text-muted-foreground',
-                              )}
-                            >
-                              {auditDateRangeFilter === 'All'
-                                ? 'Date range'
-                                : auditDateRangeFilter === 'Custom' &&
-                                    auditCustomApplied?.from &&
-                                    auditCustomApplied?.to
-                                  ? `${format(auditCustomApplied.from, 'MMM d, yyyy')} – ${format(auditCustomApplied.to, 'MMM d, yyyy')}`
-                                  : auditDateRangeFilter}
-                            </span>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {AUDIT_DATE_RANGE_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {auditDateRangeFilter === 'Custom' ? (
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 shrink-0 rounded-none rounded-r-md border-l border-input hover:bg-accent"
-                              aria-label="Open custom date range"
-                            >
-                              <Icon name="date_range" size={18} />
-                            </Button>
-                          </PopoverTrigger>
-                        ) : null}
-                      </div>
-                    </PopoverAnchor>
-                    {auditDateRangeFilter === 'Custom' ? (
-                      <PopoverContent
-                        className="w-max min-w-0 max-w-[calc(100vw-1rem)] border-border p-0"
-                        align="start"
-                        sideOffset={6}
-                      >
-                        <div className="flex flex-col">
-                          <Calendar
-                            mode="range"
-                            numberOfMonths={2}
-                            className="rounded-md [--cell-size:2rem]"
-                            defaultMonth={auditCustomDraft?.from ?? auditCustomDraft?.to ?? new Date()}
-                            selected={auditCustomDraft}
-                            onSelect={setAuditCustomDraft}
-                          />
-                          <div className="flex justify-end gap-2 border-t border-border px-3 py-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setAuditCustomDraft(auditCustomAppliedRef.current);
-                                setAuditCustomOpen(false);
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="default"
-                              size="sm"
-                              disabled={!auditCustomDraft?.from || !auditCustomDraft?.to}
-                              onClick={() => {
-                                setAuditCustomApplied(auditCustomDraft);
-                                setAuditCustomOpen(false);
-                              }}
-                            >
-                              Apply
-                            </Button>
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    ) : null}
-                  </Popover>
+                  <AuditDateRangeFilterField
+                    presets={AUDIT_DATE_RANGE_OPTIONS}
+                    value={auditDateRangeFilter}
+                    onValueChange={handleAuditDatePresetChange}
+                    customApplied={auditCustomApplied}
+                    onCustomAppliedChange={setAuditCustomApplied}
+                    timezone={auditCustomTimezone}
+                    onTimezoneChange={setAuditCustomTimezone}
+                  />
                   <Button
                     type="button"
                     variant="outline"
@@ -2199,27 +2674,27 @@ export default function AdministrationPage({
                       </SheetHeader>
                       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2">
                         <div className="divide-y divide-border">
-                          <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
-                            <span className="text-muted-foreground text-sm">Seq no.</span>
-                            <span className="min-w-0 text-sm tabular-nums text-foreground">{auditDetailRow.seqNo}</span>
+                          <div className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
+                            <span className={roKvLabel}>Seq no.</span>
+                            <span className={cn('min-w-0', roKvValueNums)}>{auditDetailRow.seqNo}</span>
                           </div>
-                          <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
-                            <span className="text-muted-foreground text-sm">Operation time & date</span>
-                            <span className="min-w-0 text-sm text-foreground">{auditDetailRow.operationDateTime}</span>
+                          <div className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
+                            <span className={roKvLabel}>Operation time & date</span>
+                            <span className={cn('min-w-0', roKvValue)}>{auditDetailRow.operationDateTime}</span>
                           </div>
-                          <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
-                            <span className="text-muted-foreground text-sm">User name</span>
-                            <span className="min-w-0 break-all text-sm text-foreground">{auditDetailRow.username}</span>
+                          <div className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
+                            <span className={roKvLabel}>User name</span>
+                            <span className={cn('min-w-0 break-all', roKvValue)}>{auditDetailRow.username}</span>
                           </div>
-                          <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
-                            <span className="text-muted-foreground text-sm">Operation name</span>
-                            <p className="min-w-0 text-sm font-normal leading-relaxed text-foreground break-words [overflow-wrap:anywhere]">
+                          <div className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
+                            <span className={roKvLabel}>Operation name</span>
+                            <p className={cn(roKvValue, 'min-w-0 font-normal leading-relaxed break-words [overflow-wrap:anywhere]')}>
                               {auditDetailRow.operationName}
                             </p>
                           </div>
-                          <div className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
-                            <span className="text-muted-foreground text-sm">Operation status</span>
-                            <span className="min-w-0 text-sm text-foreground">{auditDetailRow.operationStatus}</span>
+                          <div className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-[minmax(10rem,12rem)_1fr] sm:items-start sm:gap-x-6">
+                            <span className={roKvLabel}>Operation status</span>
+                            <span className={cn('min-w-0', roKvValue)}>{auditDetailRow.operationStatus}</span>
                           </div>
                         </div>
                       </div>
@@ -2345,14 +2820,13 @@ export default function AdministrationPage({
                           </SheetTitle>
                         </SheetHeader>
                         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-                          <div className="space-y-5">
-                              <div>
-                                <Label htmlFor="snmp-group-name">
+                          <FieldGroup>
+                              <Field controlSize="md">
+                                <FieldLabel htmlFor="snmp-group-name">
                                   Name <span className="text-destructive">*</span>
-                                </Label>
+                                </FieldLabel>
                                 <Input
                                   id="snmp-group-name"
-                                  className="mt-3"
                                   required
                                   autoComplete="off"
                                   value={snmpManagersGroupForm.name}
@@ -2360,14 +2834,13 @@ export default function AdministrationPage({
                                     setSnmpManagersGroupForm((f) => ({ ...f, name: e.target.value }))
                                   }
                                 />
-                              </div>
-                              <div>
-                                <Label htmlFor="snmp-group-port">
+                              </Field>
+                              <Field controlSize="xs">
+                                <FieldLabel htmlFor="snmp-group-port">
                                   Port <span className="text-destructive">*</span>
-                                </Label>
+                                </FieldLabel>
                                 <Input
                                   id="snmp-group-port"
-                                  className="mt-3"
                                   required
                                   inputMode="numeric"
                                   autoComplete="off"
@@ -2376,7 +2849,7 @@ export default function AdministrationPage({
                                     setSnmpManagersGroupForm((f) => ({ ...f, port: e.target.value }))
                                   }
                                 />
-                              </div>
+                              </Field>
                               <div className="flex items-center gap-2">
                                 <Checkbox
                                   id="snmp-group-enable"
@@ -2389,13 +2862,13 @@ export default function AdministrationPage({
                                   Enable
                                 </Label>
                               </div>
-                              <div>
-                                <Label htmlFor="snmp-group-hostname">
+                              <Field controlSize="lg">
+                                <FieldLabel htmlFor="snmp-group-hostname">
                                   Host name <span className="text-destructive">*</span>
-                                </Label>
+                                </FieldLabel>
                                 <Input
                                   id="snmp-group-hostname"
-                                  className="mt-3 font-mono"
+                                  className="font-mono"
                                   required
                                   autoComplete="off"
                                   value={snmpManagersGroupForm.hostName}
@@ -2403,7 +2876,7 @@ export default function AdministrationPage({
                                     setSnmpManagersGroupForm((f) => ({ ...f, hostName: e.target.value }))
                                   }
                                 />
-                              </div>
+                              </Field>
                               <div className="flex items-center gap-2">
                                 <Checkbox
                                   id="snmp-group-heartbeat-trap"
@@ -2419,13 +2892,12 @@ export default function AdministrationPage({
                                   Enable heartbeat trap
                                 </Label>
                               </div>
-                              <div>
-                                <Label htmlFor="snmp-group-heartbeat-interval">
+                              <Field controlSize="xs">
+                                <FieldLabel htmlFor="snmp-group-heartbeat-interval">
                                   Heartbeat interval (minutes) <span className="text-destructive">*</span>
-                                </Label>
+                                </FieldLabel>
                                 <Input
                                   id="snmp-group-heartbeat-interval"
-                                  className="mt-3"
                                   required
                                   inputMode="numeric"
                                   autoComplete="off"
@@ -2437,9 +2909,9 @@ export default function AdministrationPage({
                                     }))
                                   }
                                 />
-                              </div>
-                              <div>
-                                <Label>SNMP version</Label>
+                              </Field>
+                              <Field>
+                                <FieldLabel>SNMP version</FieldLabel>
                                 <RadioGroup
                                   value={snmpManagersGroupForm.snmpVersion}
                                   onValueChange={(v) =>
@@ -2448,7 +2920,7 @@ export default function AdministrationPage({
                                       snmpVersion: v as SnmpManagersGroupVersion,
                                     }))
                                   }
-                                  className="mt-3 flex flex-wrap gap-6"
+                                  className="flex flex-wrap gap-6"
                                 >
                                   <div className="flex items-center gap-2">
                                     <RadioGroupItem id="snmp-group-v2c" value="v2c" />
@@ -2463,15 +2935,15 @@ export default function AdministrationPage({
                                     </Label>
                                   </div>
                                 </RadioGroup>
-                              </div>
+                              </Field>
                               {snmpManagersGroupForm.snmpVersion === 'v2c' ? (
-                                <div>
-                                  <Label htmlFor="snmp-group-community">
+                                <Field controlSize="lg">
+                                  <FieldLabel htmlFor="snmp-group-community">
                                     Community <span className="text-destructive">*</span>
-                                  </Label>
+                                  </FieldLabel>
                                   <Input
                                     id="snmp-group-community"
-                                    className="mt-3 font-mono"
+                                    className="font-mono"
                                     required
                                     autoComplete="off"
                                     value={snmpManagersGroupForm.community}
@@ -2479,15 +2951,14 @@ export default function AdministrationPage({
                                       setSnmpManagersGroupForm((f) => ({ ...f, community: e.target.value }))
                                     }
                                   />
-                                </div>
+                                </Field>
                               ) : (
-                                <div>
-                                  <Label htmlFor="snmp-group-v3-user">
+                                <Field controlSize="md">
+                                  <FieldLabel htmlFor="snmp-group-v3-user">
                                     User name <span className="text-destructive">*</span>
-                                  </Label>
+                                  </FieldLabel>
                                   <Input
                                     id="snmp-group-v3-user"
-                                    className="mt-3"
                                     required
                                     autoComplete="off"
                                     value={snmpManagersGroupForm.v3UserName}
@@ -2495,9 +2966,9 @@ export default function AdministrationPage({
                                       setSnmpManagersGroupForm((f) => ({ ...f, v3UserName: e.target.value }))
                                     }
                                   />
-                                </div>
+                                </Field>
                               )}
-                          </div>
+                          </FieldGroup>
                         </div>
                         <SheetFooter className="mt-auto shrink-0 flex flex-row flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/20 px-4 py-4">
                           <div className="min-w-0">
@@ -2558,6 +3029,7 @@ export default function AdministrationPage({
                               toast.success(
                                 editIdx !== null ? 'SNMP managers group updated' : 'SNMP managers group added',
                               );
+                              scheduleBumpCommittedAdministration();
                             }}
                           >
                             Save
@@ -2600,6 +3072,7 @@ export default function AdministrationPage({
                               setSnmpManagersGroupForm({ ...DEFAULT_SNMP_MANAGERS_GROUP_FORM });
                               setSnmpManagersGroupEditIndex(null);
                               toast.success('SNMP managers group removed');
+                              scheduleBumpCommittedAdministration();
                             }}
                           >
                             Delete
@@ -2611,55 +3084,33 @@ export default function AdministrationPage({
 
                   <TabsContent value="snmp-agent" className="mt-6">
                     <Card>
-                      <CardContent className="pt-6">
-                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                          <div className="flex items-center gap-2 md:col-span-2">
-                            <Checkbox id="snmp-enable-internal-agent" checked={snmpEnableInternalAgent} onCheckedChange={(checked) => setSnmpEnableInternalAgent(Boolean(checked))} />
-                            <Label htmlFor="snmp-enable-internal-agent">Enable internal SNMP agent</Label>
+                      <CardHeader className="flex flex-col gap-6 space-y-0 p-6 pb-0">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1.5">
+                            <CardTitle>SNMP agent</CardTitle>
+                            <CardDescription>Internal agent, community strings, and SNMP v3 parameters.</CardDescription>
                           </div>
-                          <div className="flex items-center gap-2 md:col-span-2">
-                            <Checkbox id="snmp-enable-v2c" checked={snmpEnableV2c} onCheckedChange={(checked) => setSnmpEnableV2c(Boolean(checked))} />
-                            <Label htmlFor="snmp-enable-v2c">SNMP v2c</Label>
-                          </div>
-                          <div>
-                            <Label htmlFor="snmp-read-community">Read community</Label>
-                            <Input id="snmp-read-community" className="mt-3" value={snmpReadCommunity} onChange={(e) => setSnmpReadCommunity(e.target.value)} />
-                          </div>
-                          <div>
-                            <Label htmlFor="snmp-write-community">Write community</Label>
-                            <Input id="snmp-write-community" className="mt-3" value={snmpWriteCommunity} onChange={(e) => setSnmpWriteCommunity(e.target.value)} />
-                          </div>
-                          <div className="flex items-center gap-2 md:col-span-2">
-                            <Checkbox id="snmp-enable-v3" checked={snmpEnableV3} onCheckedChange={(checked) => setSnmpEnableV3(Boolean(checked))} />
-                            <Label htmlFor="snmp-enable-v3">SNMP v3</Label>
-                          </div>
-                          <div className="md:col-span-2 space-y-5">
-                            <div>
-                              <Label htmlFor="snmp-engine-id">SNMP engine ID</Label>
-                              <Input id="snmp-engine-id" className="mt-3" value={snmpEngineId} onChange={(e) => setSnmpEngineId(e.target.value)} />
-                            </div>
-                            <div>
-                              <Label htmlFor="snmp-user-name">Username</Label>
-                              <Input id="snmp-user-name" className="mt-3" value={snmpUserName} onChange={(e) => setSnmpUserName(e.target.value)} />
-                            </div>
-                            <div>
-                              <Label htmlFor="snmp-authentication-protocol">Authentication protocol</Label>
-                              <Input id="snmp-authentication-protocol" className="mt-3" value={snmpAuthenticationProtocol} onChange={(e) => setSnmpAuthenticationProtocol(e.target.value)} />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Checkbox id="snmp-change-auth-password" checked={snmpChangeAuthenticationPassword} onCheckedChange={(checked) => setSnmpChangeAuthenticationPassword(Boolean(checked))} />
-                              <Label htmlFor="snmp-change-auth-password">Change authentication protocol password</Label>
-                            </div>
-                            <div>
-                              <Label htmlFor="snmp-privacy-protocol">Privacy protocol</Label>
-                              <Input id="snmp-privacy-protocol" className="mt-3" value={snmpPrivacyProtocol} onChange={(e) => setSnmpPrivacyProtocol(e.target.value)} />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Checkbox id="snmp-change-privacy-password" checked={snmpChangePrivacyPassword} onCheckedChange={(checked) => setSnmpChangePrivacyPassword(Boolean(checked))} />
-                              <Label htmlFor="snmp-change-privacy-password">Change privacy protocol password</Label>
-                            </div>
+                          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                            {snmpAgentSectionMode === 'view' ? (
+                              <Button type="button" className="sm:self-start" onClick={startSnmpAgentEdit}>
+                                Edit
+                              </Button>
+                            ) : (
+                              <>
+                                <Button type="button" variant="outline" className="sm:self-start" onClick={cancelSnmpAgentEdit}>
+                                  Cancel
+                                </Button>
+                                <Button type="button" className="sm:self-start" disabled={!snmpAgentEditDirty} onClick={saveSnmpAgent}>
+                                  Save
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
+                        <AdminFormCardHeaderDivider />
+                      </CardHeader>
+                      <CardContent className="pt-6">
+                        {snmpAgentSectionMode === 'view' ? renderSnmpAgentValuesView() : renderSnmpAgentEditFields()}
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -2702,11 +3153,12 @@ export default function AdministrationPage({
                               <TableCell className="px-4 py-3">
                                 <Switch
                                   checked={row.enabled}
-                                  onCheckedChange={(checked) =>
+                                  onCheckedChange={(checked) => {
                                     setSyslogForwardingRows((prev) =>
                                       prev.map((r, i) => (i === idx ? { ...r, enabled: Boolean(checked) } : r)),
-                                    )
-                                  }
+                                    );
+                                    scheduleBumpCommittedAdministration();
+                                  }}
                                 />
                               </TableCell>
                               <TableCell className="px-4 py-3">
@@ -2788,34 +3240,33 @@ export default function AdministrationPage({
                         </SheetHeader>
                         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
                           <div className="rounded-lg border border-border bg-muted/10 p-4 md:p-5">
-                            <div className="space-y-5">
-                              <div>
-                                <Label htmlFor="syslog-form-host">
+                            <FieldGroup>
+                              <Field controlSize="lg">
+                                <FieldLabel htmlFor="syslog-form-host">
                                   Host name <span className="text-destructive">*</span>
-                                </Label>
+                                </FieldLabel>
                                 <Input
                                   id="syslog-form-host"
-                                  className="mt-3 font-mono"
+                                  className="font-mono"
                                   required
                                   autoComplete="off"
                                   value={syslogForm.hostName}
                                   onChange={(e) => setSyslogForm((f) => ({ ...f, hostName: e.target.value }))}
                                 />
-                              </div>
-                              <div>
-                                <Label htmlFor="syslog-form-port">
+                              </Field>
+                              <Field controlSize="xs">
+                                <FieldLabel htmlFor="syslog-form-port">
                                   Port <span className="text-destructive">*</span>
-                                </Label>
+                                </FieldLabel>
                                 <Input
                                   id="syslog-form-port"
-                                  className="mt-3"
                                   required
                                   inputMode="numeric"
                                   autoComplete="off"
                                   value={syslogForm.port}
                                   onChange={(e) => setSyslogForm((f) => ({ ...f, port: e.target.value }))}
                                 />
-                              </div>
+                              </Field>
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2">
                                   <Checkbox
@@ -2870,20 +3321,19 @@ export default function AdministrationPage({
                                   </div>
                                 </div>
                               </div>
-                              <div>
-                                <Label htmlFor="syslog-form-description">
+                              <Field controlSize="lg">
+                                <FieldLabel htmlFor="syslog-form-description">
                                   Description <span className="text-destructive">*</span>
-                                </Label>
+                                </FieldLabel>
                                 <Input
                                   id="syslog-form-description"
-                                  className="mt-3"
                                   required
                                   autoComplete="off"
                                   value={syslogForm.description}
                                   onChange={(e) => setSyslogForm((f) => ({ ...f, description: e.target.value }))}
                                 />
-                              </div>
-                            </div>
+                              </Field>
+                            </FieldGroup>
                           </div>
                         </div>
                         <SheetFooter className="mt-auto shrink-0 flex flex-row flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/20 px-4 py-4">
@@ -2947,6 +3397,7 @@ export default function AdministrationPage({
                                 toast.success(
                                   editIdx !== null ? 'Syslog collector updated' : 'Syslog collector added',
                                 );
+                                scheduleBumpCommittedAdministration();
                               }}
                             >
                               Save
@@ -2989,6 +3440,7 @@ export default function AdministrationPage({
                               setSyslogForm({ ...DEFAULT_SYSLOG_FORWARDING_FORM });
                               setSyslogEditIndex(null);
                               toast.success('Syslog collector removed');
+                              scheduleBumpCommittedAdministration();
                             }}
                           >
                             Delete
@@ -3129,36 +3581,37 @@ export default function AdministrationPage({
                           </SheetTitle>
                         </SheetHeader>
                         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-                          <div className="space-y-5">
-                            <div>
-                              <Label htmlFor="email-group-sheet-name">
+                          <FieldGroup>
+                            <Field controlSize="md">
+                              <FieldLabel htmlFor="email-group-sheet-name">
                                 Name <span className="text-destructive">*</span>
-                              </Label>
+                              </FieldLabel>
                               <Input
                                 id="email-group-sheet-name"
-                                className="mt-3"
                                 autoComplete="off"
                                 value={emailGroupSheetName}
                                 onChange={(e) => setEmailGroupSheetName(e.target.value)}
                                 placeholder="Enter group name"
                               />
-                            </div>
-                            <div>
-                              <Label htmlFor="email-group-sheet-addresses">
+                            </Field>
+                            <Field controlSize="full">
+                              <FieldLabel htmlFor="email-group-sheet-addresses">
                                 Email addresses
-                              </Label>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Enter one address per line, or separate with commas or semicolons.
-                              </p>
-                              <Textarea
-                                id="email-group-sheet-addresses"
-                                className="mt-2 min-h-32 font-mono text-sm"
-                                value={emailGroupSheetAddressesText}
-                                onChange={(e) => setEmailGroupSheetAddressesText(e.target.value)}
-                                placeholder={'noc@acme.com\noncall@acme.com'}
-                              />
-                            </div>
-                          </div>
+                              </FieldLabel>
+                              <FieldContent>
+                                <p className="text-xs text-muted-foreground">
+                                  Enter one address per line, or separate with commas or semicolons.
+                                </p>
+                                <Textarea
+                                  id="email-group-sheet-addresses"
+                                  className="min-h-32 font-mono text-sm"
+                                  value={emailGroupSheetAddressesText}
+                                  onChange={(e) => setEmailGroupSheetAddressesText(e.target.value)}
+                                  placeholder={'noc@acme.com\noncall@acme.com'}
+                                />
+                              </FieldContent>
+                            </Field>
+                          </FieldGroup>
                         </div>
                         {/* Plain div: SheetFooter defaults (flex-col-reverse sm:justify-end) hide the left Delete action on some breakpoints. */}
                         <div className="mt-auto flex shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/20 px-4 py-4">
@@ -3225,6 +3678,7 @@ export default function AdministrationPage({
                                 setEmailGroupSheetEditId(null);
                                 setEmailGroupSheetName('');
                                 setEmailGroupSheetAddressesText('');
+                                scheduleBumpCommittedAdministration();
                               }}
                             >
                               Save
@@ -3271,6 +3725,7 @@ export default function AdministrationPage({
                               setEmailGroupSheetName('');
                               setEmailGroupSheetAddressesText('');
                               toast.success('Email group removed');
+                              scheduleBumpCommittedAdministration();
                             }}
                           >
                             Delete
@@ -3282,75 +3737,33 @@ export default function AdministrationPage({
 
                   <TabsContent value="smtp" className="mt-6">
                     <Card>
-                      <CardContent className="pt-6">
-                        <div className="space-y-5 max-w-2xl">
-                          <div className="flex items-center gap-2">
-                            <Checkbox id="smtp-enabled" checked={smtpEnabled} onCheckedChange={(checked) => setSmtpEnabled(Boolean(checked))} />
-                            <Label htmlFor="smtp-enabled">Enable</Label>
+                      <CardHeader className="flex flex-col gap-6 space-y-0 p-6 pb-0">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1.5">
+                            <CardTitle>SMTP</CardTitle>
+                            <CardDescription>Outbound mail server and authentication for notifications.</CardDescription>
                           </div>
-                          <div>
-                            <Label htmlFor="smtp-from-email">From email</Label>
-                            <Input id="smtp-from-email" className="mt-3" value={smtpFromEmail} onChange={(e) => setSmtpFromEmail(e.target.value)} />
-                          </div>
-                          <div>
-                            <Label htmlFor="smtp-email-key">Email key</Label>
-                            <Input id="smtp-email-key" className="mt-3" value={smtpEmailKey} onChange={(e) => setSmtpEmailKey(e.target.value)} />
-                          </div>
-                          <div>
-                            <Label htmlFor="smtp-server">SMTP server</Label>
-                            <Input id="smtp-server" className="mt-3" value={smtpServer} onChange={(e) => setSmtpServer(e.target.value)} />
-                          </div>
-                          <div>
-                            <Label htmlFor="smtp-port">SMTP port*</Label>
-                            <Input id="smtp-port" className="mt-3" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} />
-                          </div>
-                          <div>
-                            <Label>Security</Label>
-                            <RadioGroup
-                              value={smtpSecurityMode}
-                              onValueChange={(value) => setSmtpSecurityMode(value as 'none' | 'starttls' | 'ssl')}
-                              className="mt-3 flex flex-wrap gap-6"
-                            >
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <RadioGroupItem id="smtp-security-none" value="none" />
-                                <Label htmlFor="smtp-security-none">None</Label>
-                              </label>
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <RadioGroupItem id="smtp-security-starttls" value="starttls" />
-                                <Label htmlFor="smtp-security-starttls">STARTTLS</Label>
-                              </label>
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <RadioGroupItem id="smtp-security-ssl" value="ssl" />
-                                <Label htmlFor="smtp-security-ssl">SSL</Label>
-                              </label>
-                            </RadioGroup>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Checkbox id="smtp-use-auth" checked={smtpUseAuthentication} onCheckedChange={(checked) => setSmtpUseAuthentication(Boolean(checked))} />
-                            <Label htmlFor="smtp-use-auth">Use authentication</Label>
-                          </div>
-                          {smtpUseAuthentication ? (
-                            <div className="space-y-5 rounded-lg border border-border bg-muted/10 p-4 md:p-5">
-                              <div>
-                                <Label htmlFor="smtp-user-name">Username</Label>
-                                <Input id="smtp-user-name" className="mt-3" value={smtpUserName} onChange={(e) => setSmtpUserName(e.target.value)} />
-                              </div>
-                              <div>
-                                <Label htmlFor="smtp-password">Password</Label>
-                                <Input id="smtp-password" className="mt-3" type="password" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
-                              </div>
-                            </div>
-                          ) : null}
-                          <div>
-                            <Label htmlFor="smtp-test-email">Send test email</Label>
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <Input id="smtp-test-email" className="max-w-md" value={smtpTestEmail} onChange={(e) => setSmtpTestEmail(e.target.value)} />
-                              <Button type="button" onClick={() => toast.success(`Test email sent to ${smtpTestEmail}`)}>
-                                Send
+                          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                            {smtpSectionMode === 'view' ? (
+                              <Button type="button" className="sm:self-start" onClick={startSmtpEdit}>
+                                Edit
                               </Button>
-                            </div>
+                            ) : (
+                              <>
+                                <Button type="button" variant="outline" className="sm:self-start" onClick={cancelSmtpEdit}>
+                                  Cancel
+                                </Button>
+                                <Button type="button" className="sm:self-start" disabled={!smtpEditDirty} onClick={saveSmtp}>
+                                  Save
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
+                        <AdminFormCardHeaderDivider />
+                      </CardHeader>
+                      <CardContent className="pt-6">
+                        {smtpSectionMode === 'view' ? renderSmtpValuesView() : renderSmtpEditFields()}
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -3367,7 +3780,16 @@ export default function AdministrationPage({
             )}
 
             {activeSection === 'file-management' && (
-              <FileManagementPage fileMgmt={fileMgmt} setFileMgmt={setFileMgmt} />
+              <FileManagementPage
+                fileMgmt={fileMgmt}
+                setFileMgmt={setFileMgmt}
+                formsResetNonce={fileManagementFormsResetNonce}
+                onInlineFormSaved={() => {
+                  setTimeout(() => {
+                    bumpCommittedAdministrationRef.current();
+                  }, 0);
+                }}
+              />
             )}
 
             {activeSection === 'device-migration' && (
@@ -3460,7 +3882,7 @@ export default function AdministrationPage({
                           {/* Name */}
                           <div className="flex items-start justify-between gap-4">
                             <div className="space-y-1">
-                              <h4 className="text-sm font-medium text-muted-foreground">Name</h4>
+                              <h4 className={roKvLabel}>Name</h4>
                               {perfNameEditing ? (
                                 <Input
                                   autoFocus
@@ -3475,7 +3897,7 @@ export default function AdministrationPage({
                                   className="group/name relative inline-flex items-center gap-1.5 rounded-md px-2 py-1 -mx-2 -my-1 cursor-pointer transition-colors hover:bg-muted/60"
                                   onClick={() => setPerfNameEditing(true)}
                                 >
-                                  <p className="text-sm">{perfName}</p>
+                                  <p className={roKvValue}>{perfName}</p>
                                   <Icon name="edit" size={14} className="text-muted-foreground opacity-0 group-hover/name:opacity-100 transition-opacity" />
                                 </div>
                               )}
@@ -3604,7 +4026,7 @@ export default function AdministrationPage({
 
                           {/* Description */}
                           <div className="space-y-1">
-                            <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                            <h4 className={roKvLabel}>Description</h4>
                             {perfDescEditing ? (
                               <textarea
                                 autoFocus
@@ -3620,7 +4042,7 @@ export default function AdministrationPage({
                                 className="group/desc inline-flex items-start gap-1.5 rounded-md px-2 py-1.5 -mx-2 -my-1.5 cursor-pointer transition-colors hover:bg-muted/60"
                                 onClick={() => setPerfDescEditing(true)}
                               >
-                                <p className="text-sm text-foreground">{perfDescription}</p>
+                                <p className={roKvValue}>{perfDescription}</p>
                                 <Icon name="edit" size={14} className="shrink-0 mt-0.5 text-muted-foreground opacity-0 group-hover/desc:opacity-100 transition-opacity" />
                               </div>
                             )}
@@ -3717,12 +4139,12 @@ export default function AdministrationPage({
                                   <div className="flex items-center gap-6">
                                     <div className="flex items-center gap-2 text-sm">
                                       <Icon name="calendar_today" size={16} className="text-muted-foreground" />
-                                      <span className="font-medium">{daysLabel}</span>
-                                      {daysLabel !== daysShort && <span className="text-muted-foreground">{daysShort}</span>}
+                                      <span className={roKvValue}>{daysLabel}</span>
+                                      {daysLabel !== daysShort && <span className="text-sm font-medium text-muted-foreground">{daysShort}</span>}
                                     </div>
                                     <div className="flex items-center gap-2 text-sm">
                                       <Icon name="schedule" size={16} className="text-muted-foreground" />
-                                      <span className="font-medium">{timeLabel}</span>
+                                      <span className={roKvValue}>{timeLabel}</span>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
@@ -3802,12 +4224,12 @@ export default function AdministrationPage({
                                   {!currentSchedule.allDay && (
                                     <div className="flex items-center gap-3">
                                       <div className="space-y-1.5 flex-1">
-                                        <Label className="text-xs text-muted-foreground">Start time</Label>
+                                        <Label className={roKvLabel}>Start time</Label>
                                         <Input type="time" value={currentSchedule.startTime} onChange={(e) => updateCurrentSchedule({ startTime: e.target.value })} className="h-9" />
                                       </div>
                                       <span className="text-muted-foreground mt-5">–</span>
                                       <div className="space-y-1.5 flex-1">
-                                        <Label className="text-xs text-muted-foreground">End time</Label>
+                                        <Label className={roKvLabel}>End time</Label>
                                         <Input type="time" value={currentSchedule.endTime} onChange={(e) => updateCurrentSchedule({ endTime: e.target.value })} className="h-9" />
                                       </div>
                                     </div>
@@ -3870,12 +4292,12 @@ export default function AdministrationPage({
                                   {!newSchedule.allDay && (
                                     <div className="flex items-center gap-3">
                                       <div className="space-y-1.5 flex-1">
-                                        <Label className="text-xs text-muted-foreground">Start time</Label>
+                                        <Label className={roKvLabel}>Start time</Label>
                                         <Input type="time" value={newSchedule.startTime} onChange={(e) => setNewSchedule((prev) => ({ ...prev, startTime: e.target.value }))} className="h-9" />
                                       </div>
                                       <span className="text-muted-foreground mt-5">–</span>
                                       <div className="space-y-1.5 flex-1">
-                                        <Label className="text-xs text-muted-foreground">End time</Label>
+                                        <Label className={roKvLabel}>End time</Label>
                                         <Input type="time" value={newSchedule.endTime} onChange={(e) => setNewSchedule((prev) => ({ ...prev, endTime: e.target.value }))} className="h-9" />
                                       </div>
                                     </div>
@@ -4026,16 +4448,6 @@ export default function AdministrationPage({
               </div>
             )}
             </div>
-            {administrationPageDirty ? (
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border bg-muted/30 px-4 py-3">
-                <Button type="button" variant="outline" onClick={handleAdministrationCancelAll}>
-                  Cancel
-                </Button>
-                <Button type="button" onClick={handleAdministrationSaveAll}>
-                  Save
-                </Button>
-              </div>
-            ) : null}
           </div>
         </SidebarInset>
       </SidebarProvider>

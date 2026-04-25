@@ -3,9 +3,9 @@
 import * as React from 'react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
+import { Field, FieldContent, FieldGroup, FieldLabel } from './ui/field';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import type { FileManagementUserRow } from './file-management-users-data-table';
 
@@ -173,83 +173,84 @@ export function FileManagementUserSheet({
         </SheetHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          <div className="space-y-5">
-            <div>
-              <Label htmlFor="fm-user-name">
+          <FieldGroup>
+            <Field controlSize="md">
+              <FieldLabel htmlFor="fm-user-name">
                 User <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="fm-user-name"
-                className="mt-3"
-                autoComplete="off"
-                value={form.user}
-                onChange={(e) => update({ user: e.target.value })}
-                placeholder="username"
-                disabled={isEdit}
-              />
-              {isEdit ? (
-                <p className="mt-1.5 text-xs text-muted-foreground">User name cannot be changed after the account is created.</p>
-              ) : null}
-            </div>
-            <div>
-              <Label htmlFor="fm-user-password">
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="fm-user-name"
+                  autoComplete="off"
+                  value={form.user}
+                  onChange={(e) => update({ user: e.target.value })}
+                  placeholder="username"
+                  disabled={isEdit}
+                />
+                {isEdit ? (
+                  <p className="text-xs text-muted-foreground">User name cannot be changed after the account is created.</p>
+                ) : null}
+              </FieldContent>
+            </Field>
+            <Field controlSize="md">
+              <FieldLabel htmlFor="fm-user-password">
                 Password {!isEdit ? <span className="text-destructive">*</span> : null}
-              </Label>
+              </FieldLabel>
               <Input
                 id="fm-user-password"
                 type="password"
-                className="mt-3"
                 autoComplete="new-password"
                 value={form.password}
                 onChange={(e) => update({ password: e.target.value })}
                 placeholder={isEdit ? 'Leave blank to keep current password' : 'Enter password'}
               />
-            </div>
-            <div>
-              <Label htmlFor="fm-user-description">
+            </Field>
+            <Field controlSize="lg">
+              <FieldLabel htmlFor="fm-user-description">
                 Description <span className="text-destructive">*</span>
-              </Label>
+              </FieldLabel>
               <Input
                 id="fm-user-description"
-                className="mt-3"
                 value={form.description}
                 onChange={(e) => update({ description: e.target.value })}
                 placeholder="Role or purpose for this account"
               />
-            </div>
-            <div>
-              <Label className="text-base">Permissions</Label>
-              <p className="mt-1 text-xs text-muted-foreground">Write requires Read. Delete requires Read and Write.</p>
-              <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/10 p-4">
-                <label htmlFor="fm-perm-read" className="flex cursor-pointer items-center gap-2">
-                  <Checkbox
-                    id="fm-perm-read"
-                    checked={form.permRead}
-                    onCheckedChange={(v) => setPermRead(v === true)}
-                  />
-                  <span className="text-sm font-normal">Read</span>
-                </label>
-                <label htmlFor="fm-perm-write" className="flex cursor-pointer items-center gap-2">
-                  <Checkbox
-                    id="fm-perm-write"
-                    checked={form.permWrite}
-                    onCheckedChange={(v) => setPermWrite(v === true)}
-                    disabled={!form.permRead}
-                  />
-                  <span className="text-sm font-normal">Write</span>
-                </label>
-                <label htmlFor="fm-perm-delete" className="flex cursor-pointer items-center gap-2">
-                  <Checkbox
-                    id="fm-perm-delete"
-                    checked={form.permDelete}
-                    onCheckedChange={(v) => setPermDelete(v === true)}
-                    disabled={!form.permRead || !form.permWrite}
-                  />
-                  <span className="text-sm font-normal">Delete</span>
-                </label>
-              </div>
-            </div>
-          </div>
+            </Field>
+            <Field>
+              <FieldLabel className="text-base">Permissions</FieldLabel>
+              <FieldContent>
+                <p className="text-xs text-muted-foreground">Write requires Read. Delete requires Read and Write.</p>
+                <div className="space-y-3 rounded-lg border border-border bg-muted/10 p-4">
+                  <label htmlFor="fm-perm-read" className="flex cursor-pointer items-center gap-2">
+                    <Checkbox
+                      id="fm-perm-read"
+                      checked={form.permRead}
+                      onCheckedChange={(v) => setPermRead(v === true)}
+                    />
+                    <span className="text-sm font-normal">Read</span>
+                  </label>
+                  <label htmlFor="fm-perm-write" className="flex cursor-pointer items-center gap-2">
+                    <Checkbox
+                      id="fm-perm-write"
+                      checked={form.permWrite}
+                      onCheckedChange={(v) => setPermWrite(v === true)}
+                      disabled={!form.permRead}
+                    />
+                    <span className="text-sm font-normal">Write</span>
+                  </label>
+                  <label htmlFor="fm-perm-delete" className="flex cursor-pointer items-center gap-2">
+                    <Checkbox
+                      id="fm-perm-delete"
+                      checked={form.permDelete}
+                      onCheckedChange={(v) => setPermDelete(v === true)}
+                      disabled={!form.permRead || !form.permWrite}
+                    />
+                    <span className="text-sm font-normal">Delete</span>
+                  </label>
+                </div>
+              </FieldContent>
+            </Field>
+          </FieldGroup>
         </div>
 
         <div className="mt-auto flex shrink-0 flex-row flex-wrap items-center justify-end gap-2 border-t border-border bg-muted/20 px-4 py-4">
