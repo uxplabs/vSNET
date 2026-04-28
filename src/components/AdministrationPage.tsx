@@ -804,9 +804,15 @@ export default function AdministrationPage({
   };
 
   const activeLabel = SIDEBAR_ITEMS.find((item) => toKey(item.label) === activeSection)?.label ?? activeSection;
-  const accountRegions = (regions && regions.length > 0)
-    ? regions
-    : (region ? [region] : ['Pacific Northwest']);
+  const accountRegions = useMemo(
+    () =>
+      regions && regions.length > 0
+        ? regions
+        : region
+          ? [region]
+          : ['Pacific Northwest'],
+    [regions, region],
+  );
   const selectedRegionLabel = regionSidebarItems.find((item) => item.id === selectedRegionSidebarId)?.label ?? '';
   useEffect(() => {
     setRegionNameValue(selectedRegionLabel);
@@ -1435,6 +1441,22 @@ export default function AdministrationPage({
     setAuditCustomApplied(undefined);
   }, []);
 
+  const filteredAccessControlUsers = useMemo(() => {
+    let rows = accessControlUsers;
+    const q = search.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((u) =>
+        [u.user, u.profile, u.department, u.location, u.email, u.phone].some((field) =>
+          field.toLowerCase().includes(q),
+        ),
+      );
+    }
+    if (profileFilter !== 'All') {
+      rows = rows.filter((u) => u.profile === profileFilter);
+    }
+    return rows;
+  }, [accessControlUsers, search, profileFilter]);
+
   const filteredAuditRows = useMemo(() => {
     const auditRowDay = (ageDays: number) => startOfDay(subDays(new Date(), ageDays));
     return AUDIT_TRAIL_ROWS.filter((row) => {
@@ -1468,6 +1490,83 @@ export default function AdministrationPage({
     auditDateRangeFilter,
     auditCustomApplied,
   ]);
+
+  const auditActiveFilterChips = useMemo(() => {
+    const list: { key: string; label: string; onClear: () => void }[] = [];
+    if (auditUsernameFilter !== 'All') {
+      list.push({
+        key: 'user',
+        label: `Username: ${auditUsernameFilter}`,
+        onClear: () => setAuditUsernameFilter('All'),
+      });
+    }
+    if (auditStatusFilter !== 'All') {
+      list.push({
+        key: 'status',
+        label: `Status: ${auditStatusFilter}`,
+        onClear: () => setAuditStatusFilter('All'),
+      });
+    }
+    if (auditDateRangeFilter !== 'All') {
+      list.push({
+        key: 'date',
+        label:
+          auditDateRangeFilter === 'Custom' && auditCustomApplied?.from && auditCustomApplied?.to
+            ? 'Date: custom range'
+            : `Date: ${auditDateRangeFilter}`,
+        onClear: () => {
+          setAuditDateRangeFilter('All');
+          setAuditCustomApplied(undefined);
+        },
+      });
+    }
+    if (auditSearch.trim()) {
+      list.push({
+        key: 'search',
+        label: `Search: "${auditSearch.trim()}"`,
+        onClear: () => setAuditSearch(''),
+      });
+    }
+    return list;
+  }, [
+    auditUsernameFilter,
+    auditStatusFilter,
+    auditDateRangeFilter,
+    auditCustomApplied,
+    auditSearch,
+  ]);
+
+  const clearAuditFilters = useCallback(() => {
+    setAuditSearch('');
+    setAuditUsernameFilter('All');
+    setAuditStatusFilter('All');
+    setAuditDateRangeFilter('All');
+    setAuditCustomApplied(undefined);
+  }, []);
+
+  const accessControlUsersActiveFilters = useMemo(() => {
+    const list: { key: string; label: string; onClear: () => void }[] = [];
+    if (profileFilter !== 'All') {
+      list.push({
+        key: 'profile',
+        label: `Profile: ${profileFilter}`,
+        onClear: () => setProfileFilter('All'),
+      });
+    }
+    if (search.trim()) {
+      list.push({
+        key: 'search',
+        label: `Search: "${search.trim()}"`,
+        onClear: () => setSearch(''),
+      });
+    }
+    return list;
+  }, [profileFilter, search]);
+
+  const clearAccessControlUsersFilters = useCallback(() => {
+    setSearch('');
+    setProfileFilter('All');
+  }, []);
 
   /** Read-only admin kv blocks: outer `space-y-8` between major groups; inner stacks `space-y-3` for multiple kv rows, or `space-y-6` between one summary kv row and a following nested detail panel; grids `grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2`; each row `Field` with `className="gap-1"`; nested detail panels `rounded-md border border-border/80 bg-muted/20 p-3` + same inner grid. Form cards: `CardHeader` wraps title+actions in an inner flex row, then `<AdminFormCardHeaderDivider />`; header `space-y-0 gap-6 pb-0` (same 1.5rem as `p-6` top) so space above and below the title group matches; `CardContent` `className="pt-6"`. */
   const roKvLabel = 'text-sm font-medium text-muted-foreground';
@@ -1540,104 +1639,115 @@ export default function AdministrationPage({
   );
 
   const renderAccessControlSettingsEditFields = () => (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-      <Field controlSize="xs">
-        <FieldLabel htmlFor="password-age-days">Password age (days)*</FieldLabel>
-        <Input
-          id="password-age-days"
-          type="number"
-          value={passwordAgeDays}
-          onChange={(e) => setPasswordAgeDays(e.target.value)}
-        />
-      </Field>
-      <Field controlSize="xs">
-        <FieldLabel htmlFor="password-expiry-warning-days">Password expiry warning (days)*</FieldLabel>
-        <Input
-          id="password-expiry-warning-days"
-          type="number"
-          value={passwordExpiryWarningDays}
-          onChange={(e) => setPasswordExpiryWarningDays(e.target.value)}
-        />
-      </Field>
-      <Field controlSize="xs">
-        <FieldLabel htmlFor="password-min-length">Password minimum length*</FieldLabel>
-        <Input
-          id="password-min-length"
-          type="number"
-          value={passwordMinLength}
-          onChange={(e) => setPasswordMinLength(e.target.value)}
-        />
-      </Field>
-      <Field controlSize="xs">
-        <FieldLabel htmlFor="password-reuse-prevention-count">Password reuse prevention count*</FieldLabel>
-        <Input
-          id="password-reuse-prevention-count"
-          type="number"
-          value={passwordReusePreventionCount}
-          onChange={(e) => setPasswordReusePreventionCount(e.target.value)}
-        />
-      </Field>
-      <Field controlSize="xs">
-        <FieldLabel htmlFor="password-reuse-prevention-days">Password reuse prevention (days)*</FieldLabel>
-        <Input
-          id="password-reuse-prevention-days"
-          type="number"
-          value={passwordReusePreventionDays}
-          onChange={(e) => setPasswordReusePreventionDays(e.target.value)}
-        />
-      </Field>
-      <div className="flex items-center gap-2 self-end md:col-span-2">
-        <Checkbox
-          id="account-lockout-enabled"
-          checked={accountLockoutEnabled}
-          onCheckedChange={(checked) => setAccountLockoutEnabled(Boolean(checked))}
-        />
-        <Label htmlFor="account-lockout-enabled">Account lockout</Label>
+    <div className="space-y-10">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Field controlSize="xs">
+          <FieldLabel htmlFor="password-age-days">Password age (days)*</FieldLabel>
+          <Input
+            id="password-age-days"
+            type="number"
+            value={passwordAgeDays}
+            onChange={(e) => setPasswordAgeDays(e.target.value)}
+          />
+        </Field>
+        <Field controlSize="xs">
+          <FieldLabel htmlFor="password-expiry-warning-days">Password expiry warning (days)*</FieldLabel>
+          <Input
+            id="password-expiry-warning-days"
+            type="number"
+            value={passwordExpiryWarningDays}
+            onChange={(e) => setPasswordExpiryWarningDays(e.target.value)}
+          />
+        </Field>
+        <Field controlSize="xs">
+          <FieldLabel htmlFor="password-min-length">Password minimum length*</FieldLabel>
+          <Input
+            id="password-min-length"
+            type="number"
+            value={passwordMinLength}
+            onChange={(e) => setPasswordMinLength(e.target.value)}
+          />
+        </Field>
+        <Field controlSize="xs">
+          <FieldLabel htmlFor="password-reuse-prevention-count">Password reuse prevention count*</FieldLabel>
+          <Input
+            id="password-reuse-prevention-count"
+            type="number"
+            value={passwordReusePreventionCount}
+            onChange={(e) => setPasswordReusePreventionCount(e.target.value)}
+          />
+        </Field>
+        <Field controlSize="xs">
+          <FieldLabel htmlFor="password-reuse-prevention-days">Password reuse prevention (days)*</FieldLabel>
+          <Input
+            id="password-reuse-prevention-days"
+            type="number"
+            value={passwordReusePreventionDays}
+            onChange={(e) => setPasswordReusePreventionDays(e.target.value)}
+          />
+        </Field>
       </div>
-      {accountLockoutEnabled && (
-        <div className="md:col-span-2 rounded-md border p-4">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <Field controlSize="xs">
-              <FieldLabel htmlFor="account-lockout-threshold">Account lockout threshold*</FieldLabel>
-              <Input
-                id="account-lockout-threshold"
-                type="number"
-                value={accountLockoutThreshold}
-                onChange={(e) => setAccountLockoutThreshold(e.target.value)}
-              />
-            </Field>
-            <Field controlSize="xs">
-              <FieldLabel htmlFor="inactivity-logout-duration">Inactivity logout duration (minutes)*</FieldLabel>
-              <Input
-                id="inactivity-logout-duration"
-                type="number"
-                value={inactivityLogoutDurationMinutes}
-                onChange={(e) => setInactivityLogoutDurationMinutes(e.target.value)}
-              />
+
+      <div className="space-y-4 border-t border-border/60 pt-6">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="account-lockout-enabled"
+            checked={accountLockoutEnabled}
+            onCheckedChange={(checked) => setAccountLockoutEnabled(Boolean(checked))}
+          />
+          <Label htmlFor="account-lockout-enabled">Account lockout</Label>
+        </div>
+        {accountLockoutEnabled && (
+          <div className="rounded-md border p-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field controlSize="xs">
+                <FieldLabel htmlFor="account-lockout-threshold">Account lockout threshold*</FieldLabel>
+                <Input
+                  id="account-lockout-threshold"
+                  type="number"
+                  value={accountLockoutThreshold}
+                  onChange={(e) => setAccountLockoutThreshold(e.target.value)}
+                />
+              </Field>
+              <Field controlSize="xs">
+                <FieldLabel htmlFor="inactivity-logout-duration">Inactivity logout duration (minutes)*</FieldLabel>
+                <Input
+                  id="inactivity-logout-duration"
+                  type="number"
+                  value={inactivityLogoutDurationMinutes}
+                  onChange={(e) => setInactivityLogoutDurationMinutes(e.target.value)}
+                />
+              </Field>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4 border-t border-border/60 pt-6">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="login-banner-enabled"
+            checked={loginBannerEnabled}
+            onCheckedChange={(checked) => setLoginBannerEnabled(Boolean(checked))}
+          />
+          <Label htmlFor="login-banner-enabled">Login banner enabled</Label>
+        </div>
+        {loginBannerEnabled && (
+          <div className="rounded-md border p-3">
+            <Field controlSize="md">
+              <FieldLabel htmlFor="banner-title">Banner title*</FieldLabel>
+              <Input id="banner-title" value={bannerTitle} onChange={(e) => setBannerTitle(e.target.value)} />
             </Field>
           </div>
-        </div>
-      )}
-      <div className="flex items-center gap-2 self-end md:col-span-2">
-        <Checkbox
-          id="login-banner-enabled"
-          checked={loginBannerEnabled}
-          onCheckedChange={(checked) => setLoginBannerEnabled(Boolean(checked))}
-        />
-        <Label htmlFor="login-banner-enabled">Login banner enabled</Label>
+        )}
       </div>
-      {loginBannerEnabled && (
-        <div className="md:col-span-2 rounded-md border p-4">
-          <Field controlSize="md">
-            <FieldLabel htmlFor="banner-title">Banner title*</FieldLabel>
-            <Input id="banner-title" value={bannerTitle} onChange={(e) => setBannerTitle(e.target.value)} />
-          </Field>
-        </div>
-      )}
-      <Field className="md:col-span-2" controlSize="full">
-        <FieldLabel htmlFor="message-of-day">Message of day</FieldLabel>
-        <Textarea id="message-of-day" className="min-h-24" value={messageOfDay} onChange={(e) => setMessageOfDay(e.target.value)} />
-      </Field>
+
+      <div className="border-t border-border/60 pt-6">
+        <Field controlSize="full">
+          <FieldLabel htmlFor="message-of-day">Message of day</FieldLabel>
+          <Textarea id="message-of-day" className="min-h-24" value={messageOfDay} onChange={(e) => setMessageOfDay(e.target.value)} />
+        </Field>
+      </div>
     </div>
   );
 
@@ -1989,41 +2099,80 @@ export default function AdministrationPage({
                     </TabsList>
                   </div>
 
-                  <TabsContent value="users" className="mt-6 space-y-4">
-                    {/* Search and filters */}
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
-                        <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Search users..."
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                          className="pl-9 w-full"
-                        />
+                  <TabsContent value="users" className="mt-6">
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
+                        <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
+                          <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder="Search users..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-9 w-full min-w-0"
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4 min-w-0">
+                          <FilterSelect
+                            value={profileFilter}
+                            onValueChange={setProfileFilter}
+                            label="Profile"
+                            options={[...PROFILE_OPTIONS]}
+                            className="w-[130px]"
+                          />
+                        </div>
+                        <div className="ml-auto flex items-center gap-2 shrink-0">
+                          <Button
+                            type="button"
+                            variant="default"
+                            aria-label="Add user"
+                            onClick={() => {
+                              setAccessControlUserEditing(null);
+                              setAccessControlUserSheetOpen(true);
+                            }}
+                          >
+                            <Icon name="add" size={16} />
+                            Add user
+                          </Button>
+                        </div>
                       </div>
-                      <FilterSelect value={profileFilter} onValueChange={setProfileFilter} label="Profile" options={[...PROFILE_OPTIONS]} className="w-[130px]" />
-                      <div className="ml-auto flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="default"
-                          aria-label="Add user"
-                          onClick={() => {
-                            setAccessControlUserEditing(null);
-                            setAccessControlUserSheetOpen(true);
-                          }}
-                        >
-                          <Icon name="add" size={16} />
-                          Add user
-                        </Button>
+                      <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                        <span className="text-sm text-muted-foreground">
+                          {filteredAccessControlUsers.length}{' '}
+                          {filteredAccessControlUsers.length === 1 ? 'result' : 'results'}
+                        </span>
+                        {accessControlUsersActiveFilters.map((f) => (
+                          <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
+                            {f.label}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
+                              onClick={f.onClear}
+                              aria-label={`Clear ${f.label}`}
+                            >
+                              <Icon name="close" size={12} aria-hidden />
+                            </Button>
+                          </Badge>
+                        ))}
+                        {accessControlUsersActiveFilters.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={clearAccessControlUsersFilters}
+                          >
+                            Clear all
+                          </Button>
+                        )}
                       </div>
+                      <AccessControlUsersDataTable
+                        data={filteredAccessControlUsers}
+                        onEditUser={(row) => {
+                          setAccessControlUserEditing(row);
+                          setAccessControlUserSheetOpen(true);
+                        }}
+                      />
                     </div>
-                    <AccessControlUsersDataTable
-                      data={accessControlUsers}
-                      onEditUser={(row) => {
-                        setAccessControlUserEditing(row);
-                        setAccessControlUserSheetOpen(true);
-                      }}
-                    />
                     <AccessControlUserSheet
                       open={accessControlUserSheetOpen}
                       onOpenChange={(open) => {
@@ -2054,6 +2203,7 @@ export default function AdministrationPage({
                           { id: 'saml', label: 'SAML' },
                         ]}
                         selectedId={authSidebarSection}
+                        addActionPlacement="title-icon"
                         onSelect={(id) => setAuthSidebarSection(id as typeof authSidebarSection)}
                       />
                       <div className="flex-1 space-y-4">
@@ -2144,13 +2294,14 @@ export default function AdministrationPage({
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="profiles" className="mt-6 space-y-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="ml-auto flex items-center gap-2">
+                  <TabsContent value="profiles" className="mt-6">
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0 justify-end">
                         <Button
                           type="button"
                           variant="default"
                           aria-label="Add profile"
+                          className="sm:ml-auto shrink-0"
                           onClick={() => {
                             const nextId = `profile-${profilesSidebarItems.length + 1}`;
                             const nextLabel = `Profile ${profilesSidebarItems.length + 1}`;
@@ -2171,19 +2322,24 @@ export default function AdministrationPage({
                           Add profile
                         </Button>
                       </div>
-                    </div>
+                      <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                        <span className="text-sm text-muted-foreground">
+                          {profileTableRows.length} {profileTableRows.length === 1 ? 'result' : 'results'}
+                        </span>
+                      </div>
 
-                    <AccessControlProfilesDataTable
-                      data={profileTableRows}
-                      onEdit={(id) => {
-                        setProfileSheetMode('edit');
-                        setProfileEditorId(id);
-                      }}
-                      onDelete={(id) => {
-                        const name = profilesSidebarItems.find((p) => p.id === id)?.label ?? id;
-                        setAccessProfileDeleteTarget({ id, name });
-                      }}
-                    />
+                      <AccessControlProfilesDataTable
+                        data={profileTableRows}
+                        onEdit={(id) => {
+                          setProfileSheetMode('edit');
+                          setProfileEditorId(id);
+                        }}
+                        onDelete={(id) => {
+                          const name = profilesSidebarItems.find((p) => p.id === id)?.label ?? id;
+                          setAccessProfileDeleteTarget({ id, name });
+                        }}
+                      />
+                    </div>
 
                     <AlertDialog
                       open={accessProfileDeleteTarget !== null}
@@ -2374,6 +2530,7 @@ export default function AdministrationPage({
                         selectedId={selectedRegionSidebarId}
                         onSelect={setSelectedRegionSidebarId}
                         showAddAction
+                        addActionPlacement="title-icon"
                         addAriaLabel="Add region"
                         addButtonLabel="Add region"
                         onAddAction={() => {
@@ -2531,17 +2688,18 @@ export default function AdministrationPage({
 
             {activeSection === 'audit-trail' && (
               <>
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="relative w-full sm:min-w-[220px] sm:max-w-[320px]">
+              <div className="flex flex-col min-w-0 space-y-0">
+                <div className="flex flex-col xl:flex-row xl:flex-wrap xl:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
+                  <div className="relative w-full min-w-0 xl:flex-1 xl:max-w-[320px] xl:min-w-[100px]">
                     <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="Search audit trail..."
                       value={auditSearch}
                       onChange={(e) => setAuditSearch(e.target.value)}
-                      className="pl-9 w-full"
+                      className="pl-9 w-full min-w-0"
                     />
                   </div>
+                  <div className="flex flex-wrap items-center gap-4 min-w-0 xl:flex-1">
                   <FilterSelect value={auditUsernameFilter} onValueChange={setAuditUsernameFilter} label="Username" options={auditUsernameOptions} className="w-[220px]" />
                   <FilterSelect value={auditStatusFilter} onValueChange={setAuditStatusFilter} label="Status" options={['All', 'Allowed', 'Denied']} className="w-[150px]" />
                   <AuditDateRangeFilterField
@@ -2603,6 +2761,36 @@ export default function AdministrationPage({
                     <Icon name="download" size={16} />
                     Export
                   </Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                  <span className="text-sm text-muted-foreground">
+                    {filteredAuditRows.length} {filteredAuditRows.length === 1 ? 'result' : 'results'}
+                  </span>
+                  {auditActiveFilterChips.map((f) => (
+                    <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
+                      {f.label}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
+                        onClick={f.onClear}
+                        aria-label={`Clear ${f.label}`}
+                      >
+                        <Icon name="close" size={12} aria-hidden />
+                      </Button>
+                    </Badge>
+                  ))}
+                  {auditActiveFilterChips.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={clearAuditFilters}
+                    >
+                      Clear all
+                    </Button>
+                  )}
                 </div>
                 <div className="overflow-hidden rounded-lg border bg-card">
                   <Table>
@@ -2727,23 +2915,31 @@ export default function AdministrationPage({
                     </TabsList>
                   </div>
 
-                  <TabsContent value="alarm-forwarding" className="mt-6 space-y-4">
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        variant="default"
-                        aria-label="Add new SNMP managers group"
-                        onClick={() => {
-                          setSnmpManagersGroupEditIndex(null);
-                          setSnmpManagersGroupForm({ ...DEFAULT_SNMP_MANAGERS_GROUP_FORM });
-                          setSnmpManagersGroupSheetOpen(true);
-                        }}
-                      >
-                        <Icon name="add" size={16} />
-                        Add new snmp managers group
-                      </Button>
-                    </div>
-                    <div className="overflow-hidden rounded-lg border bg-card">
+                  <TabsContent value="alarm-forwarding" className="mt-6">
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex justify-end pb-4 mb-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="default"
+                          aria-label="Add new SNMP managers group"
+                          className="shrink-0"
+                          onClick={() => {
+                            setSnmpManagersGroupEditIndex(null);
+                            setSnmpManagersGroupForm({ ...DEFAULT_SNMP_MANAGERS_GROUP_FORM });
+                            setSnmpManagersGroupSheetOpen(true);
+                          }}
+                        >
+                          <Icon name="add" size={16} />
+                          Add new snmp managers group
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                        <span className="text-sm text-muted-foreground">
+                          {alarmForwardingRows.length}{' '}
+                          {alarmForwardingRows.length === 1 ? 'result' : 'results'}
+                        </span>
+                      </div>
+                      <div className="overflow-hidden rounded-lg border bg-card">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -2801,6 +2997,7 @@ export default function AdministrationPage({
                           ))}
                         </TableBody>
                       </Table>
+                    </div>
                     </div>
 
                     <Sheet
@@ -3115,23 +3312,31 @@ export default function AdministrationPage({
                     </Card>
                   </TabsContent>
 
-                  <TabsContent value="syslog-forwarding" className="mt-6 space-y-4">
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        variant="default"
-                        aria-label="Add syslog collector"
-                        onClick={() => {
-                          setSyslogEditIndex(null);
-                          setSyslogForm({ ...DEFAULT_SYSLOG_FORWARDING_FORM });
-                          setSyslogSheetOpen(true);
-                        }}
-                      >
-                        <Icon name="add" size={16} />
-                        Add syslog collector
-                      </Button>
-                    </div>
-                    <div className="overflow-hidden rounded-lg border bg-card">
+                  <TabsContent value="syslog-forwarding" className="mt-6">
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex justify-end pb-4 mb-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="default"
+                          aria-label="Add syslog collector"
+                          className="shrink-0"
+                          onClick={() => {
+                            setSyslogEditIndex(null);
+                            setSyslogForm({ ...DEFAULT_SYSLOG_FORWARDING_FORM });
+                            setSyslogSheetOpen(true);
+                          }}
+                        >
+                          <Icon name="add" size={16} />
+                          Add syslog collector
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                        <span className="text-sm text-muted-foreground">
+                          {syslogForwardingRows.length}{' '}
+                          {syslogForwardingRows.length === 1 ? 'result' : 'results'}
+                        </span>
+                      </div>
+                      <div className="overflow-hidden rounded-lg border bg-card">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -3220,6 +3425,7 @@ export default function AdministrationPage({
                           ))}
                         </TableBody>
                       </Table>
+                    </div>
                     </div>
 
                     <Sheet
@@ -4371,51 +4577,88 @@ export default function AdministrationPage({
                       </div>
                     )}
 
-                    {perfTab === 'devices' && (
-                      <div className="space-y-4">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
-                            <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                              placeholder="Search devices..."
-                              value={perfSearch}
-                              onChange={(e) => setPerfSearch(e.target.value)}
-                              className="pl-9 w-full"
-                            />
+                    {perfTab === 'devices' && (() => {
+                      const count = currentProfileData.devices;
+                      const DEVICE_NAMES = ['SEA-SN-4012','PDX-CU-2201','VAN-RCP-1180','SEA-SN-4055','PDX-SN-3312','VAN-SN-1022','SEA-CU-4088','PDX-RCP-2150','VAN-SN-1045','SEA-SN-4101','PDX-SN-3400','VAN-CU-1090','SEA-RCP-4200','PDX-SN-3201','VAN-SN-1067'];
+                      const DEVICE_TYPES = ['SN','CU','RCP','SN','SN','SN','CU','RCP','SN','SN','SN','CU','RCP','SN','SN'];
+                      const DEVICE_REGIONS = ['Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest'];
+                      const DEVICE_STATUSES = ['Connected','Connected','Connected','Connected','Disconnected','Connected','Connected','Connected','Connected','Connected','Connected','In maintenance','Connected','Connected','Connected'];
+                      const allRows = Array.from({ length: Math.min(count, 15) }, (_, i) => ({
+                        name: DEVICE_NAMES[i % DEVICE_NAMES.length],
+                        type: DEVICE_TYPES[i % DEVICE_TYPES.length],
+                        region: DEVICE_REGIONS[i % DEVICE_REGIONS.length],
+                        status: DEVICE_STATUSES[i % DEVICE_STATUSES.length],
+                      }));
+                      const q = perfSearch.trim().toLowerCase();
+                      const filteredPerfDeviceRows = q
+                        ? allRows.filter((r) =>
+                            `${r.name} ${r.type} ${r.region} ${r.status}`.toLowerCase().includes(q),
+                          )
+                        : allRows;
+
+                      return (
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
+                            <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
+                              <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                placeholder="Search devices..."
+                                value={perfSearch}
+                                onChange={(e) => setPerfSearch(e.target.value)}
+                                className="pl-9 w-full min-w-0"
+                              />
+                            </div>
+                            <div className="ml-auto flex shrink-0 items-center gap-2">
+                              <Button type="button" variant="default">
+                                <Icon name="add" size={16} />
+                                Add device
+                              </Button>
+                            </div>
                           </div>
-                          <div className="ml-auto flex items-center gap-2">
-                            <Button type="button" variant="default">
-                              <Icon name="add" size={16} />
-                              Add device
-                            </Button>
+                          <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                            <span className="text-sm text-muted-foreground">
+                              {filteredPerfDeviceRows.length}{' '}
+                              {filteredPerfDeviceRows.length === 1 ? 'result' : 'results'}
+                            </span>
+                            {perfSearch.trim() ? (
+                              <>
+                                <Badge variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
+                                  Search: &quot;{perfSearch.trim()}&quot;
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
+                                    onClick={() => setPerfSearch('')}
+                                    aria-label="Clear search filter"
+                                  >
+                                    <Icon name="close" size={12} aria-hidden />
+                                  </Button>
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                                  onClick={() => setPerfSearch('')}
+                                >
+                                  Clear all
+                                </Button>
+                              </>
+                            ) : null}
                           </div>
-                        </div>
-                        <div className="overflow-hidden rounded-lg border bg-card">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="px-4">Device</TableHead>
-                                <TableHead className="px-4">Type</TableHead>
-                                <TableHead className="px-4">Region</TableHead>
-                                <TableHead className="px-4">Status</TableHead>
-                                <TableHead className="w-14"></TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {(() => {
-                                const count = currentProfileData.devices;
-                                const DEVICE_NAMES = ['SEA-SN-4012','PDX-CU-2201','VAN-RCP-1180','SEA-SN-4055','PDX-SN-3312','VAN-SN-1022','SEA-CU-4088','PDX-RCP-2150','VAN-SN-1045','SEA-SN-4101','PDX-SN-3400','VAN-CU-1090','SEA-RCP-4200','PDX-SN-3201','VAN-SN-1067'];
-                                const DEVICE_TYPES = ['SN','CU','RCP','SN','SN','SN','CU','RCP','SN','SN','SN','CU','RCP','SN','SN'];
-                                const DEVICE_REGIONS = ['Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest','Pacific Northwest'];
-                                const DEVICE_STATUSES = ['Connected','Connected','Connected','Connected','Disconnected','Connected','Connected','Connected','Connected','Connected','Connected','In maintenance','Connected','Connected','Connected'];
-                                const rows = Array.from({ length: Math.min(count, 15) }, (_, i) => ({
-                                  name: DEVICE_NAMES[i % DEVICE_NAMES.length],
-                                  type: DEVICE_TYPES[i % DEVICE_TYPES.length],
-                                  region: DEVICE_REGIONS[i % DEVICE_REGIONS.length],
-                                  status: DEVICE_STATUSES[i % DEVICE_STATUSES.length],
-                                }));
-                                return rows.map((row, idx) => (
-                                  <TableRow key={idx}>
+                          <div className="overflow-hidden rounded-lg border bg-card">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="px-4">Device</TableHead>
+                                  <TableHead className="px-4">Type</TableHead>
+                                  <TableHead className="px-4">Region</TableHead>
+                                  <TableHead className="px-4">Status</TableHead>
+                                  <TableHead className="w-14"></TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {filteredPerfDeviceRows.map((row, idx) => (
+                                  <TableRow key={`${row.name}-${idx}`}>
                                     <TableCell className="px-4"><DeviceLink value={row.name} maxLength={24} /></TableCell>
                                     <TableCell className="px-4"><NodeTypeBadge type={row.type} /></TableCell>
                                     <TableCell className="px-4 text-muted-foreground">{row.region}</TableCell>
@@ -4428,13 +4671,13 @@ export default function AdministrationPage({
                                       </Button>
                                     </TableCell>
                                   </TableRow>
-                                ));
-                              })()}
-                            </TableBody>
-                          </Table>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
               );

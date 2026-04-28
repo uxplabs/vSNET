@@ -25,7 +25,7 @@ For detail sheets with long prose, prefer `sm:max-w-xl md:max-w-2xl` (or similar
 
 ## Add / edit sheets (forms)
 
-Use the **same “no extra panel” idea**: do **not** wrap the whole form in another `rounded-lg border bg-muted/…` box inside `SheetContent`. The sheet chrome (header border, body padding, footer border) is enough. Stack fields with `space-y-*` on the scrollable body.
+Use the **same “no extra panel” idea**: do **not** wrap the form in `Card` / `CardContent`, a titled “Configuration” block, or any inner bordered container inside `SheetContent`. The sheet chrome (header border, body padding, footer border) is enough. Stack fields with `space-y-*` or `grid gap-*` on the scrollable body. See `.cursor/rules/admin-editor-sheet-no-form-container.mdc`.
 
 ## Reference implementation
 

@@ -8,6 +8,10 @@ alwaysApply: false
 
 Stacked labels and controls should follow **`src/components/ui/field.tsx`** primitives so spacing matches the design system and administration forms.
 
+## Side sheets and modals
+
+The same **`Field` / `FieldGroup` / `FieldLabel`** rules apply inside **`SheetContent`** and similar narrow editors — not only full-width pages. Do not drop down to raw **`Label` + `space-y-*`** in sheets “to save space”; use the primitives. See **`.cursor/rules/admin-editor-sheet-no-form-container.mdc`** for the full sheet checklist.
+
 ## Within one field (label → control)
 
 - Use **`Field`** with **`FieldLabel`** and the control as siblings.
@@ -33,3 +37,4 @@ Stacked labels and controls should follow **`src/components/ui/field.tsx`** prim
 ## Do not
 
 - Mix **`Label` + `className="mt-3"`** on inputs for vertical stacks; use **`Field` / `FieldLabel`** instead.
+- Rely on **`Label` + `space-y-2`** or outer **`space-y-4`** alone for vertical stacks of inputs — use **`FieldGroup` + `Field`** (especially in **sheets**).

@@ -1,0 +1,31 @@
+---
+description: >-
+  Admin add/edit side sheets: no inner Card form shell; use FieldGroup/Field/FieldLabel
+  and form-field-spacing (never raw Label + space-y-2 stacks).
+globs: "**/*sheet*.tsx"
+alwaysApply: false
+---
+
+# Admin editor sheets (add / edit forms)
+
+Treat this as **one checklist** whenever you add or change a **form** in `*sheet*.tsx` (Fault management, Administration, File management, etc.).
+
+## Layout
+
+- **No inner form container:** do not wrap the form in **`Card` / `CardContent`**, a **“Configuration”** titled panel, or any extra **bordered** box inside `SheetContent`. Header + padded scroll body + footer are enough.
+
+## Spacing (required — same as full-page admin forms)
+
+- **`FieldGroup`** wraps the vertical stack of fields; **`Field`** + **`FieldLabel`** + control per field. This is **not optional** for sheet bodies: it encodes label→control **`gap-4`** and between-field **`gap-8`** via `field.tsx`.
+- **Do not** use **`Label` + `space-y-2` / `space-y-4`** (or `mt-*` hacks) for stacked fields in sheets — that bypasses the design system and will look wrong.
+- **Checkbox / radio beside text:** **`gap-3`** between control and label; see **`form-field-spacing.mdc`**.
+
+## Footer
+
+- **`SheetFooter`**: Cancel (outline) + primary save, unless the screen needs a left action (e.g. “Apply to all”).
+
+## References
+
+- Good examples: **`custom-event-sheet.tsx`**, **`fault-event-edit-sheet.tsx`**.
+- Spacing spec: **`form-field-spacing.mdc`**.
+- Legacy contrast: **`add-domain-sheet.tsx`**, **`add-radio-node-sheet.tsx`** still use an inner `Card` — **new or touched** admin form sheets should follow this rule instead.

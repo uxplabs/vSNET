@@ -2,19 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { Button } from './ui/button';
-import { Icon } from './Icon';
 import { Input } from './ui/input';
-import { SearchInput } from './ui/search-input';
-import { FilterSelect } from './ui/filter-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { TooltipProvider } from './ui/tooltip';
 import { InternalSidebarList } from './ui/internal-sidebar-list';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -25,51 +16,75 @@ import {
 } from './ui/dialog';
 import { Label } from './ui/label';
 import { FaultManagementDataTable, FAULT_MANAGEMENT_DATA } from './fault-management-data-table';
+import { FAULT_GROUP_DEVICE_DATA, type FaultManagementRow } from './fault-management-model';
+import { FaultGroupDevicesDataTable } from './fault-group-devices-data-table';
+import { CustomEventsTab } from './custom-events-tab';
 
-const CATEGORY_OPTIONS = ['All', 'Alarm', 'Event', 'Trap', 'Syslog'] as const;
-const SEVERITY_OPTIONS = ['All', 'Critical', 'Major', 'Minor', 'Warning', 'Info'] as const;
-const SNMP_OPTIONS = ['All', 'Enabled', 'Disabled'] as const;
-const EMAIL_OPTIONS = ['All', 'Enabled', 'Disabled'] as const;
+const SYSTEM_DEFAULT_NOTIFICATION_GROUP = 'System default' as const;
 
-function getNotificationGroupsWithCounts(): { name: string; count: number }[] {
-  const counts: Record<string, number> = {};
-  for (const row of FAULT_MANAGEMENT_DATA) {
-    counts[row.group] = (counts[row.group] ?? 0) + 1;
-  }
-  return Object.entries(counts)
-    .map(([name, count]) => ({ name, count }))
+function sortNotificationGroups(
+  groups: { name: string; count: number }[],
+): { name: string; count: number }[] {
+  const system = groups.find((g) => g.name === SYSTEM_DEFAULT_NOTIFICATION_GROUP);
+  const rest = groups
+    .filter((g) => g.name !== SYSTEM_DEFAULT_NOTIFICATION_GROUP)
     .sort((a, b) => a.name.localeCompare(b.name));
+  if (system) {
+    return [system, ...rest];
+  }
+  return [{ name: SYSTEM_DEFAULT_NOTIFICATION_GROUP, count: 0 }, ...rest];
 }
 
 export default function FaultManagementPage() {
   const [faultTab, setFaultTab] = useState('events-configuration');
   const [search, setSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState(() => getNotificationGroupsWithCounts()[0]?.name ?? '');
+  const [selectedGroup, setSelectedGroup] = useState(() => SYSTEM_DEFAULT_NOTIFICATION_GROUP);
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [severityFilter, setSeverityFilter] = useState<string>('All');
   const [snmpFilter, setSnmpFilter] = useState<string>('All');
   const [emailFilter, setEmailFilter] = useState<string>('All');
+  /** Sub-view within Events configuration: event list vs devices */
+  const [eventsConfigView, setEventsConfigView] = useState('events');
   const [addGroupDialogOpen, setAddGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [emptyGroups, setEmptyGroups] = useState<string[]>([]);
+  const [additionalFaultRows, setAdditionalFaultRows] = useState<FaultManagementRow[]>([]);
 
-  // Merge data-derived groups with empty groups for the sidebar
+  // Event counts from static data + user-added events, merged with empty groups for the sidebar
   const allGroups = useMemo(() => {
-    const groups = getNotificationGroupsWithCounts();
+    const counts: Record<string, number> = {};
+    for (const row of FAULT_MANAGEMENT_DATA) {
+      counts[row.group] = (counts[row.group] ?? 0) + 1;
+    }
+    for (const row of additionalFaultRows) {
+      counts[row.group] = (counts[row.group] ?? 0) + 1;
+    }
+    if (!(SYSTEM_DEFAULT_NOTIFICATION_GROUP in counts)) {
+      counts[SYSTEM_DEFAULT_NOTIFICATION_GROUP] = 0;
+    }
+    let groups = Object.entries(counts).map(([name, count]) => ({ name, count }));
+    groups = sortNotificationGroups(groups);
     const existing = new Set(groups.map((g) => g.name));
     for (const name of emptyGroups) {
       if (!existing.has(name)) {
         groups.push({ name, count: 0 });
+        existing.add(name);
       }
     }
-    return groups.sort((a, b) => a.name.localeCompare(b.name));
-  }, [emptyGroups]);
+    return sortNotificationGroups(groups);
+  }, [additionalFaultRows, emptyGroups]);
 
   const handleAddGroup = () => {
     const name = newGroupName.trim();
     if (!name) return;
-    setEmptyGroups((prev) => prev.includes(name) ? prev : [...prev, name]);
+    if (name === SYSTEM_DEFAULT_NOTIFICATION_GROUP) {
+      setSelectedGroup(SYSTEM_DEFAULT_NOTIFICATION_GROUP);
+      setNewGroupName('');
+      setAddGroupDialogOpen(false);
+      return;
+    }
+    setEmptyGroups((prev) => (prev.includes(name) ? prev : [...prev, name]));
     setSelectedGroup(name);
     setNewGroupName('');
     setAddGroupDialogOpen(false);
@@ -80,6 +95,11 @@ export default function FaultManagementPage() {
     const q = groupSearch.toLowerCase().trim();
     return allGroups.filter((g) => g.name.toLowerCase().includes(q));
   }, [groupSearch, allGroups]);
+
+  const devicesCountForGroup = useMemo(
+    () => FAULT_GROUP_DEVICE_DATA.filter((d) => d.notificationGroup === selectedGroup).length,
+    [selectedGroup],
+  );
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -128,91 +148,59 @@ export default function FaultManagementPage() {
             <div className="flex-1 min-w-0 space-y-4">
               {(() => {
                 const groupCount = allGroups.find((g) => g.name === selectedGroup)?.count ?? 0;
-
-                if (groupCount === 0) {
-                  return (
-                    <>
-                      <div className="flex justify-end pb-4 mb-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon">
-                              <Icon name="more_vert" size={18} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Icon name="edit" size={16} className="mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Icon name="delete" size={16} className="mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      <div className="flex justify-center">
-                        <div className="rounded-lg border bg-card p-8 text-center max-w-sm w-full shadow-sm">
-                          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                            <Icon name="error" size={24} className="text-muted-foreground" />
-                          </div>
-                          <h3 className="text-sm font-semibold text-foreground mb-1">No events</h3>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            This notification group has no events configured yet.
-                          </p>
-                          <Button type="button" variant="outline" size="sm">
-                            <Icon name="add" size={16} className="mr-1.5" />
-                            Add notification group
-                          </Button>
-                        </div>
-                      </div>
-                    </>
-                  );
-                }
+                const devicesCount = devicesCountForGroup;
 
                 return (
-                  <>
-                    {/* Search Filter Bar */}
-                    <div className="flex flex-wrap items-center gap-3">
-                      <SearchInput
-                        size="md"
-                        wrapperClassName="w-full sm:min-w-[200px] sm:max-w-[280px]"
-                        placeholder="Search..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                      />
-                      <FilterSelect value={categoryFilter} onValueChange={setCategoryFilter} label="Category" options={[...CATEGORY_OPTIONS]} className="w-[120px]" />
-                      <FilterSelect value={severityFilter} onValueChange={setSeverityFilter} label="Severity" options={[...SEVERITY_OPTIONS]} className="w-[120px]" />
-                      <FilterSelect value={snmpFilter} onValueChange={setSnmpFilter} label="SNMP" options={[...SNMP_OPTIONS]} className="w-[120px]" />
-                      <FilterSelect value={emailFilter} onValueChange={setEmailFilter} label="Email" options={[...EMAIL_OPTIONS]} className="w-[120px]" />
-                      <div className="ml-auto flex items-center gap-2">
-                        <Button type="button" aria-label="Add event">
-                          <Icon name="add" size={16} className="mr-1.5" />
-                          Add event
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="icon">
-                              <Icon name="more_vert" size={18} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Icon name="edit" size={16} className="mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Icon name="delete" size={16} className="mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                  <Tabs value={eventsConfigView} onValueChange={setEventsConfigView} className="w-full">
+                    <div className="border-b border-border">
+                      <TabsList className="h-auto w-full justify-start rounded-none border-0 bg-transparent p-0">
+                        <TabsTrigger
+                          value="events"
+                          className="group inline-flex items-center gap-2 rounded-none border-b-2 border-transparent px-3 py-2 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                        >
+                          <span>Events</span>
+                          <span
+                            className="shrink-0 tabular-nums rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground group-data-[state=active]:bg-primary/20 group-data-[state=active]:text-foreground"
+                            aria-label={`${groupCount} events`}
+                          >
+                            {groupCount}
+                          </span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="devices"
+                          className="group inline-flex items-center gap-2 rounded-none border-b-2 border-transparent px-3 py-2 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                        >
+                          <span>Devices</span>
+                          <span
+                            className="shrink-0 tabular-nums rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground group-data-[state=active]:bg-primary/20 group-data-[state=active]:text-foreground"
+                            aria-label={`${devicesCount} devices`}
+                          >
+                            {devicesCount}
+                          </span>
+                        </TabsTrigger>
+                      </TabsList>
                     </div>
-
-                    {/* Table */}
-                    <FaultManagementDataTable groupFilter={selectedGroup} />
-                  </>
+                    <TabsContent value="events" className="mt-4 space-y-4">
+                      <FaultManagementDataTable
+                        groupFilter={selectedGroup}
+                        additionalFaultRows={additionalFaultRows}
+                        setAdditionalFaultRows={setAdditionalFaultRows}
+                        search={search}
+                        onSearchChange={setSearch}
+                        categoryFilter={categoryFilter}
+                        onCategoryFilterChange={setCategoryFilter}
+                        severityFilter={severityFilter}
+                        onSeverityFilterChange={setSeverityFilter}
+                        snmpFilter={snmpFilter}
+                        onSnmpFilterChange={setSnmpFilter}
+                        emailFilter={emailFilter}
+                        onEmailFilterChange={setEmailFilter}
+                      />
+                    </TabsContent>
+                    <TabsContent value="devices" className="mt-4">
+                      <FaultGroupDevicesDataTable notificationGroup={selectedGroup} />
+                    </TabsContent>
+                  </Tabs>
                 );
               })()}
             </div>
@@ -220,7 +208,7 @@ export default function FaultManagementPage() {
         </TabsContent>
 
         <TabsContent value="custom-events" className="mt-6">
-          <p className="text-muted-foreground">Custom events will be displayed here.</p>
+          <CustomEventsTab />
         </TabsContent>
 
         <TabsContent value="fault-correlation" className="mt-6">

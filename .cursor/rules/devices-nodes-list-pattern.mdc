@@ -1,0 +1,36 @@
+---
+description: >-
+  Device/node list UI layout — match Nodes → Devices (`DevicesPage`): toolbar spacing,
+  results row, table + pagination gap
+globs: src/components/**/*devices*.tsx,src/components/**/*fault*.tsx,src/components/DevicesPage.tsx
+alwaysApply: false
+---
+
+# Nodes / devices list pattern (canonical)
+
+When adding or adjusting **search + filters + results count + table + pagination** for devices or device-like lists, **`DevicesPage`** (`TabsContent value="device"`, Nodes → Devices) is the standard—not one-off spacing from other pages.
+
+## Toolbar (search, filters, trailing primary action)
+
+Use exactly:
+
+- Container: **`flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0`**
+- Search wrapper width (same bounds as Devices): **`w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]`** (with `SearchInput` / search icon pattern).
+- Space between filter controls: **`gap-4`** in the filter cluster (same rhythm as `gap-4` on the toolbar row).
+- Trailing button (e.g. Add device): **`ml-auto shrink-0`**—do not stretch full-width on small screens unless product asks.
+
+## Results row (`N results`, badges, Clear all)
+
+Use:
+
+- **`flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0`**
+- Count copy: **`text-sm text-muted-foreground`** with **`{n} result` / `{n} results`**.
+- Badge chips + **`Clear all`** button styling should match **`DevicesPage`** (ghost clear `h-7 text-xs`, badge `variant="secondary"` with close icon).
+
+## Table and pagination
+
+- Wrap the bordered table and `TablePagination` in a block with **`space-y-4`**, same as **`@/components/ui/data-table`** (table card, then pagination with vertical gap—not `space-y-4` between toolbar/results and table).
+
+## Outer stack
+
+- Prefer **`flex flex-col min-w-0`** for the whole block—avoid a single **`space-y-4`** on the root that also separates toolbar from results (toolbar already uses **`pb-4 mb-2`** before the results row).

@@ -180,6 +180,30 @@ export default function FileManagementPage({
     });
   }, [fileMgmt.fileUsers, search, permissionsFilter]);
 
+  const fileUsersActiveFilters = useMemo(() => {
+    const list: { key: string; label: string; onClear: () => void }[] = [];
+    if (permissionsFilter !== 'All') {
+      list.push({
+        key: 'perm',
+        label: `Permissions: ${permissionsFilter}`,
+        onClear: () => setPermissionsFilter('All'),
+      });
+    }
+    if (search.trim()) {
+      list.push({
+        key: 'search',
+        label: `Search: "${search.trim()}"`,
+        onClear: () => setSearch(''),
+      });
+    }
+    return list;
+  }, [permissionsFilter, search]);
+
+  const clearFileUsersFilters = useCallback(() => {
+    setSearch('');
+    setPermissionsFilter('All');
+  }, []);
+
   const takenFileUsernamesLower = useMemo(
     () =>
       fileMgmt.fileUsers
@@ -217,45 +241,78 @@ export default function FileManagementPage({
           </TabsList>
         </div>
 
-        <TabsContent value="users" className="mt-6 space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-full sm:min-w-[200px] sm:max-w-[280px]">
-              <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search users..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 w-full"
-              />
+        <TabsContent value="users" className="mt-6">
+          <div className="flex flex-col min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
+              <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
+                <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search users..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 w-full min-w-0"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-4 min-w-0">
+                <FilterSelect
+                  value={permissionsFilter}
+                  onValueChange={setPermissionsFilter}
+                  label="Permissions"
+                  options={[...PERMISSIONS_OPTIONS]}
+                  className="w-[180px]"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="default"
+                className="sm:ml-auto shrink-0"
+                aria-label="Add user"
+                onClick={() => {
+                  setFileUserEditing(null);
+                  setFileUserSheetOpen(true);
+                }}
+              >
+                <Icon name="add" size={16} />
+                Add user
+              </Button>
             </div>
-            <FilterSelect
-              value={permissionsFilter}
-              onValueChange={setPermissionsFilter}
-              label="Permissions"
-              options={[...PERMISSIONS_OPTIONS]}
-              className="w-[180px]"
-            />
-            <Button
-              type="button"
-              variant="default"
-              className="ml-auto shrink-0"
-              aria-label="Add user"
-              onClick={() => {
-                setFileUserEditing(null);
+            <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+              <span className="text-sm text-muted-foreground">
+                {filteredFileUsers.length} {filteredFileUsers.length === 1 ? 'result' : 'results'}
+              </span>
+              {fileUsersActiveFilters.map((f) => (
+                <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
+                  {f.label}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
+                    onClick={f.onClear}
+                    aria-label={`Clear ${f.label}`}
+                  >
+                    <Icon name="close" size={12} aria-hidden />
+                  </Button>
+                </Badge>
+              ))}
+              {fileUsersActiveFilters.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={clearFileUsersFilters}
+                >
+                  Clear all
+                </Button>
+              )}
+            </div>
+            <FileManagementUsersDataTable
+              data={filteredFileUsers}
+              onEditUser={(row) => {
+                setFileUserEditing(row);
                 setFileUserSheetOpen(true);
               }}
-            >
-              <Icon name="add" size={16} />
-              Add user
-            </Button>
+            />
           </div>
-          <FileManagementUsersDataTable
-            data={filteredFileUsers}
-            onEditUser={(row) => {
-              setFileUserEditing(row);
-              setFileUserSheetOpen(true);
-            }}
-          />
           <FileManagementUserSheet
             open={fileUserSheetOpen}
             onOpenChange={(open) => {
