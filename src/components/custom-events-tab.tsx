@@ -166,19 +166,21 @@ export function CustomEventsTab() {
   return (
     <>
       <div className="flex flex-col min-w-0 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
-          <SearchInput
-            size="md"
-            wrapperClassName="w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]"
-            placeholder="Search custom events..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <Button type="button" className="ml-auto shrink-0" aria-label="Add event" onClick={openAdd}>
-            <Icon name="add" size={16} className="mr-1.5" />
-            Add Event
-          </Button>
-        </div>
+        {rows.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
+            <SearchInput
+              size="md"
+              wrapperClassName="w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]"
+              placeholder="Search custom events..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Button type="button" className="ml-auto shrink-0" aria-label="Add event" onClick={openAdd}>
+              <Icon name="add" size={16} className="mr-1.5" />
+              Add Event
+            </Button>
+          </div>
+        )}
         {rows.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
             <span className="text-sm text-muted-foreground">
@@ -220,7 +222,7 @@ export function CustomEventsTab() {
               <p className="text-sm text-muted-foreground mb-4">
                 Add a custom event to define a name, pattern, and matching options.
               </p>
-              <Button type="button" variant="outline" size="sm" onClick={openAdd}>
+              <Button type="button" size="sm" onClick={openAdd}>
                 <Icon name="add" size={16} className="mr-1.5" />
                 Add Event
               </Button>

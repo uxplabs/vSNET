@@ -6,7 +6,6 @@ import { DataTable } from '@/components/ui/data-table';
 import { SortableHeader } from '@/components/ui/sortable-header';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/Icon';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,24 +17,48 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 export interface FileManagementUserRow {
   id: string;
   user: string;
-  passwordHashed: string;
-  description: string;
-  permissions: string;
+  sshKey: string;
+}
+
+function createDefaultSshKey(user: string): string {
+  return `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI${user.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20) || 'generated'} ${user}@ams`;
+}
+
+type LegacyFileManagementUserRow = {
+  id?: string;
+  user?: string;
+  sshKey?: string;
+  passwordHashed?: string;
+  description?: string;
+  permissions?: string;
+};
+
+export function normalizeFileManagementUserRow(row: LegacyFileManagementUserRow): FileManagementUserRow {
+  const user = (row.user ?? '').trim();
+  return {
+    id: row.id ?? `fm-${Date.now()}`,
+    user,
+    sshKey: (row.sshKey ?? '').trim() || createDefaultSshKey(user || 'user'),
+  };
+}
+
+export function normalizeFileManagementUsers(rows: LegacyFileManagementUserRow[]): FileManagementUserRow[] {
+  return rows.map(normalizeFileManagementUserRow);
 }
 
 export const FILE_MANAGEMENT_USERS_DATA: FileManagementUserRow[] = [
-  { id: '1', user: 'admin', passwordHashed: '••••••••••••••••', description: 'System administrator', permissions: 'Read, Write, Delete' },
-  { id: '2', user: 'operator1', passwordHashed: '••••••••••••••••', description: 'Operations user', permissions: 'Read, Write' },
-  { id: '3', user: 'viewer_sea', passwordHashed: '••••••••••••••••', description: 'Seattle region viewer', permissions: 'Read' },
-  { id: '4', user: 'backup_user', passwordHashed: '••••••••••••••••', description: 'Backup and restore', permissions: 'Read, Write' },
-  { id: '5', user: 'audit', passwordHashed: '••••••••••••••••', description: 'Audit log access', permissions: 'Read' },
-  { id: '6', user: 'sync_service', passwordHashed: '••••••••••••••••', description: 'Sync service account', permissions: 'Read, Write' },
-  { id: '7', user: 'operator2', passwordHashed: '••••••••••••••••', description: 'Second shift operations', permissions: 'Read, Write' },
-  { id: '8', user: 'viewer_pdx', passwordHashed: '••••••••••••••••', description: 'Portland region viewer', permissions: 'Read' },
-  { id: '9', user: 'reporting', passwordHashed: '••••••••••••••••', description: 'Report generation and export', permissions: 'Read, Write' },
-  { id: '10', user: 'support', passwordHashed: '••••••••••••••••', description: 'Support team access', permissions: 'Read, Write' },
-  { id: '11', user: 'guest', passwordHashed: '••••••••••••••••', description: 'Temporary guest access', permissions: 'Read' },
-  { id: '12', user: 'config_admin', passwordHashed: '••••••••••••••••', description: 'Configuration management', permissions: 'Read, Write, Delete' },
+  { id: '1', user: 'admin', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICgVdM1eadminvSNET admin@ams' },
+  { id: '2', user: 'operator1', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFxP2yVwoperator1 operator1@ams' },
+  { id: '3', user: 'viewer_sea', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP8Qx3NWviewersea viewer_sea@ams' },
+  { id: '4', user: 'backup_user', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM2b7wYbackupuser backup_user@ams' },
+  { id: '5', user: 'audit', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK4w9hQwaudit audit@ams' },
+  { id: '6', user: 'sync_service', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEq2L7dssyncservice sync_service@ams' },
+  { id: '7', user: 'operator2', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG3p6xLroperator2 operator2@ams' },
+  { id: '8', user: 'viewer_pdx', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAb5s4Qkviewerpdx viewer_pdx@ams' },
+  { id: '9', user: 'reporting', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP1h0kRreporting reporting@ams' },
+  { id: '10', user: 'support', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHz3j9Wwsupport support@ams' },
+  { id: '11', user: 'guest', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK0n2aM5guest guest@ams' },
+  { id: '12', user: 'config_admin', sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF5u8cPnconfigadmin config_admin@ams' },
 ];
 
 /** File management data included in the administration save snapshot (users + retention + sync). */
@@ -55,7 +78,7 @@ export interface FileManagementPersisted {
 
 export function createInitialFileManagementPersisted(): FileManagementPersisted {
   return {
-    fileUsers: FILE_MANAGEMENT_USERS_DATA.map((u) => ({ ...u })),
+    fileUsers: normalizeFileManagementUsers(FILE_MANAGEMENT_USERS_DATA),
     pmDays: '30',
     cmMb: '1024',
     cperDays: '14',
@@ -72,56 +95,18 @@ export function createInitialFileManagementPersisted(): FileManagementPersisted 
 function buildColumns(onEditUser?: (row: FileManagementUserRow) => void): ColumnDef<FileManagementUserRow>[] {
   return [
     {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-      meta: {
-        headerClassName: 'sticky left-0 z-10 w-10 bg-card shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-        cellClassName:
-          'sticky left-0 z-10 w-10 bg-card group-hover:!bg-muted group-data-[state=selected]:!bg-muted transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.06)]',
-      },
-    },
-    {
       accessorKey: 'user',
-      header: ({ column }) => <SortableHeader column={column}>User</SortableHeader>,
+      header: ({ column }) => <SortableHeader column={column}>Username</SortableHeader>,
       cell: ({ row }) => <span className="font-medium">{row.getValue('user') as string}</span>,
     },
     {
-      accessorKey: 'passwordHashed',
-      header: ({ column }) => <SortableHeader column={column}>Password</SortableHeader>,
+      accessorKey: 'sshKey',
+      header: ({ column }) => <SortableHeader column={column}>SSH key</SortableHeader>,
       cell: ({ row }) => (
-        <span className="font-mono text-sm text-muted-foreground">{row.getValue('passwordHashed') as string}</span>
-      ),
-    },
-    {
-      accessorKey: 'description',
-      header: ({ column }) => <SortableHeader column={column}>Description</SortableHeader>,
-      cell: ({ row }) => (
-        <span className="block max-w-[200px] truncate" title={row.getValue('description') as string}>
-          {row.getValue('description') as string}
+        <span className="block max-w-[580px] truncate font-mono text-xs text-muted-foreground" title={row.getValue('sshKey') as string}>
+          {row.getValue('sshKey') as string}
         </span>
       ),
-    },
-    {
-      accessorKey: 'permissions',
-      header: ({ column }) => <SortableHeader column={column}>Permissions</SortableHeader>,
-      cell: ({ row }) => row.getValue('permissions') as string,
     },
     {
       id: 'actions',
@@ -142,8 +127,6 @@ function buildColumns(onEditUser?: (row: FileManagementUserRow) => void): Column
               >
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem>Reset password</DropdownMenuItem>
-              <DropdownMenuItem>Change permissions</DropdownMenuItem>
               <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

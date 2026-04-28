@@ -6,27 +6,7 @@ import { Button } from './ui/button';
 import { Field, FieldContent, FieldGroup, FieldLabel } from './ui/field';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
 import { Input } from './ui/input';
-import { Checkbox } from './ui/checkbox';
 import type { FileManagementUserRow } from './file-management-users-data-table';
-
-const MOCK_PASSWORD_DISPLAY = '••••••••••••••••';
-
-function flagsFromPermissionsString(value: string): { read: boolean; write: boolean; delete: boolean } {
-  const parts = value.split(',').map((s) => s.trim().toLowerCase());
-  return {
-    read: parts.includes('read'),
-    write: parts.includes('write'),
-    delete: parts.includes('delete'),
-  };
-}
-
-function permissionsStringFromFlags(f: { read: boolean; write: boolean; delete: boolean }): string {
-  const parts: string[] = [];
-  if (f.read) parts.push('Read');
-  if (f.write) parts.push('Write');
-  if (f.delete) parts.push('Delete');
-  return parts.length > 0 ? parts.join(', ') : 'Read';
-}
 
 export interface FileManagementUserSheetProps {
   open: boolean;
@@ -40,37 +20,21 @@ export interface FileManagementUserSheetProps {
 type FormState = {
   id?: string;
   user: string;
-  password: string;
-  description: string;
-  permRead: boolean;
-  permWrite: boolean;
-  permDelete: boolean;
+  sshKey: string;
 };
 
 function emptyForm(): FormState {
   return {
     user: '',
-    password: '',
-    description: '',
-    permRead: true,
-    permWrite: false,
-    permDelete: false,
+    sshKey: '',
   };
 }
 
 function rowToForm(row: FileManagementUserRow): FormState {
-  const f = flagsFromPermissionsString(row.permissions);
-  const normDelete = f.delete;
-  const normWrite = f.write || normDelete;
-  const normRead = f.read || normWrite;
   return {
     id: row.id,
     user: row.user,
-    password: '',
-    description: row.description,
-    permRead: normRead,
-    permWrite: normWrite && normRead,
-    permDelete: normDelete && normWrite && normRead,
+    sshKey: row.sshKey,
   };
 }
 
@@ -106,64 +70,28 @@ export function FileManagementUserSheet({
 
   const handleSubmit = React.useCallback(() => {
     const name = form.user.trim();
-    const desc = form.description.trim();
-    if (!name || !desc || !form.id) return;
-    if (!isEdit && !form.password.trim()) return;
+    const sshKey = form.sshKey.trim();
+    if (!name || !sshKey || !form.id) return;
 
-    if (!isEdit && takenUsernamesLower.includes(name.toLowerCase())) {
+    if (takenUsernamesLower.includes(name.toLowerCase())) {
       toast.error('A user with that name already exists.');
       return;
     }
 
-    const passwordHashed =
-      form.password.trim().length > 0 ? MOCK_PASSWORD_DISPLAY : user?.passwordHashed ?? MOCK_PASSWORD_DISPLAY;
-
     const row: FileManagementUserRow = {
       id: form.id,
       user: name,
-      passwordHashed,
-      description: desc,
-      permissions: permissionsStringFromFlags({
-        read: form.permRead,
-        write: form.permWrite,
-        delete: form.permDelete,
-      }),
+      sshKey,
     };
     onSave?.(row);
     toast.success(isEdit ? `User "${row.user}" updated` : `User "${row.user}" added`);
     handleClose(false);
-  }, [form, isEdit, onSave, handleClose, user?.passwordHashed, takenUsernamesLower]);
+  }, [form, isEdit, onSave, handleClose, takenUsernamesLower]);
 
   const canSave =
     form.user.trim().length > 0 &&
-    form.description.trim().length > 0 &&
-    !!form.id &&
-    form.permRead &&
-    (isEdit || form.password.trim().length > 0);
-
-  const setPermRead = (checked: boolean) => {
-    if (checked) {
-      update({ permRead: true });
-    } else {
-      update({ permRead: false, permWrite: false, permDelete: false });
-    }
-  };
-
-  const setPermWrite = (checked: boolean) => {
-    if (checked) {
-      update({ permRead: true, permWrite: true });
-    } else {
-      update({ permWrite: false, permDelete: false });
-    }
-  };
-
-  const setPermDelete = (checked: boolean) => {
-    if (checked) {
-      update({ permRead: true, permWrite: true, permDelete: true });
-    } else {
-      update({ permDelete: false });
-    }
-  };
+    form.sshKey.trim().length > 0 &&
+    !!form.id;
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
@@ -176,7 +104,7 @@ export function FileManagementUserSheet({
           <FieldGroup>
             <Field controlSize="md">
               <FieldLabel htmlFor="fm-user-name">
-                User <span className="text-destructive">*</span>
+                Username <span className="text-destructive">*</span>
               </FieldLabel>
               <FieldContent>
                 <Input
@@ -185,69 +113,22 @@ export function FileManagementUserSheet({
                   value={form.user}
                   onChange={(e) => update({ user: e.target.value })}
                   placeholder="username"
-                  disabled={isEdit}
                 />
-                {isEdit ? (
-                  <p className="text-xs text-muted-foreground">User name cannot be changed after the account is created.</p>
-                ) : null}
               </FieldContent>
             </Field>
-            <Field controlSize="md">
-              <FieldLabel htmlFor="fm-user-password">
-                Password {!isEdit ? <span className="text-destructive">*</span> : null}
+            <Field controlSize="full">
+              <FieldLabel htmlFor="fm-user-ssh-key">
+                SSH key <span className="text-destructive">*</span>
               </FieldLabel>
-              <Input
-                id="fm-user-password"
-                type="password"
-                autoComplete="new-password"
-                value={form.password}
-                onChange={(e) => update({ password: e.target.value })}
-                placeholder={isEdit ? 'Leave blank to keep current password' : 'Enter password'}
-              />
-            </Field>
-            <Field controlSize="lg">
-              <FieldLabel htmlFor="fm-user-description">
-                Description <span className="text-destructive">*</span>
-              </FieldLabel>
-              <Input
-                id="fm-user-description"
-                value={form.description}
-                onChange={(e) => update({ description: e.target.value })}
-                placeholder="Role or purpose for this account"
-              />
-            </Field>
-            <Field>
-              <FieldLabel className="text-base">Permissions</FieldLabel>
               <FieldContent>
-                <p className="text-xs text-muted-foreground">Write requires Read. Delete requires Read and Write.</p>
-                <div className="space-y-3 rounded-lg border border-border bg-muted/10 p-4">
-                  <label htmlFor="fm-perm-read" className="flex cursor-pointer items-center gap-2">
-                    <Checkbox
-                      id="fm-perm-read"
-                      checked={form.permRead}
-                      onCheckedChange={(v) => setPermRead(v === true)}
-                    />
-                    <span className="text-sm font-normal">Read</span>
-                  </label>
-                  <label htmlFor="fm-perm-write" className="flex cursor-pointer items-center gap-2">
-                    <Checkbox
-                      id="fm-perm-write"
-                      checked={form.permWrite}
-                      onCheckedChange={(v) => setPermWrite(v === true)}
-                      disabled={!form.permRead}
-                    />
-                    <span className="text-sm font-normal">Write</span>
-                  </label>
-                  <label htmlFor="fm-perm-delete" className="flex cursor-pointer items-center gap-2">
-                    <Checkbox
-                      id="fm-perm-delete"
-                      checked={form.permDelete}
-                      onCheckedChange={(v) => setPermDelete(v === true)}
-                      disabled={!form.permRead || !form.permWrite}
-                    />
-                    <span className="text-sm font-normal">Delete</span>
-                  </label>
-                </div>
+                <Input
+                  id="fm-user-ssh-key"
+                  autoComplete="off"
+                  value={form.sshKey}
+                  onChange={(e) => update({ sshKey: e.target.value })}
+                  placeholder="ssh-ed25519 AAAA... user@host"
+                  className="font-mono text-xs"
+                />
               </FieldContent>
             </Field>
           </FieldGroup>

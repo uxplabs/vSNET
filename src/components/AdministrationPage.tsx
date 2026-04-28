@@ -69,7 +69,11 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import FaultManagementPage from './FaultManagementPage';
 import LabelManagementPage from './LabelManagementPage';
 import FileManagementPage from './FileManagementPage';
-import { createInitialFileManagementPersisted, type FileManagementPersisted } from './file-management-users-data-table';
+import {
+  createInitialFileManagementPersisted,
+  normalizeFileManagementUsers,
+  type FileManagementPersisted,
+} from './file-management-users-data-table';
 import DeviceMigrationPage from './DeviceMigrationPage';
 import {
   Sidebar,
@@ -353,6 +357,13 @@ interface AdministrationPersistedSnapshot {
     snmpPrivacyProtocol: string;
     snmpChangePrivacyPassword: boolean;
   };
+  serverSettings: {
+    maintenanceModeEnabled: boolean;
+    systemName: string;
+    systemLocation: string;
+    systemContact: string;
+    systemDescription: string;
+  };
   profileData: Record<string, ProfileData>;
   /** Present in new snapshots; absent in older serialized state. */
   fileManagement?: FileManagementPersisted;
@@ -360,6 +371,7 @@ interface AdministrationPersistedSnapshot {
 
 type SnmpAgentFormValues = AdministrationPersistedSnapshot['snmp'];
 type SmtpFormValues = AdministrationPersistedSnapshot['smtp'];
+type ServerSettingsFormValues = AdministrationPersistedSnapshot['serverSettings'];
 
 export const PERF_PROFILES_INIT: Record<string, ProfileData> = {
   'LTE Throughput Baseline': {
@@ -579,6 +591,14 @@ const DEFAULT_ACCESS_CONTROL_SETTINGS: AccessControlSettingsFormValues = {
   messageOfDay: 'Maintenance window every Sunday 02:00-04:00 UTC.',
 };
 
+const DEFAULT_SERVER_SETTINGS: ServerSettingsFormValues = {
+  maintenanceModeEnabled: false,
+  systemName: '',
+  systemLocation: '',
+  systemContact: '',
+  systemDescription: '',
+};
+
 export default function AdministrationPage({
   appName = 'AMS',
   onSignOut,
@@ -684,6 +704,15 @@ export default function AdministrationPage({
   const [, setAccessControlSettingsBaseline] = useState<AccessControlSettingsFormValues>(() => ({
     ...DEFAULT_ACCESS_CONTROL_SETTINGS,
   }));
+  const [maintenanceModeEnabled, setMaintenanceModeEnabled] = useState(
+    DEFAULT_SERVER_SETTINGS.maintenanceModeEnabled,
+  );
+  const [systemName, setSystemName] = useState(DEFAULT_SERVER_SETTINGS.systemName);
+  const [systemLocation, setSystemLocation] = useState(DEFAULT_SERVER_SETTINGS.systemLocation);
+  const [systemContact, setSystemContact] = useState(DEFAULT_SERVER_SETTINGS.systemContact);
+  const [systemDescription, setSystemDescription] = useState(DEFAULT_SERVER_SETTINGS.systemDescription);
+  const serverSettingsEditBaselineRef = useRef<ServerSettingsFormValues | null>(null);
+  const [serverSettingsSectionMode, setServerSettingsSectionMode] = useState<'view' | 'edit'>('view');
   const [search, setSearch] = useState('');
   const [northboundTab, setNorthboundTab] = useState('alarm-forwarding');
   const [alarmForwardingRows, setAlarmForwardingRows] = useState<AlarmForwardingRow[]>(() => [...ALARM_FORWARDING_INITIAL]);
@@ -914,6 +943,13 @@ export default function AdministrationPage({
         snmpPrivacyProtocol,
         snmpChangePrivacyPassword,
       },
+      serverSettings: {
+        maintenanceModeEnabled,
+        systemName,
+        systemLocation,
+        systemContact,
+        systemDescription,
+      },
       profileData,
       fileManagement: fileMgmt,
     };
@@ -964,6 +1000,11 @@ export default function AdministrationPage({
     snmpChangeAuthenticationPassword,
     snmpPrivacyProtocol,
     snmpChangePrivacyPassword,
+    maintenanceModeEnabled,
+    systemName,
+    systemLocation,
+    systemContact,
+    systemDescription,
     profileData,
     fileMgmt,
   ]);
@@ -1188,6 +1229,51 @@ export default function AdministrationPage({
     smtpEditBaselineRef.current !== null &&
     JSON.stringify(collectSmtpForm()) !== JSON.stringify(smtpEditBaselineRef.current);
 
+  const collectServerSettingsForm = useCallback((): ServerSettingsFormValues => {
+    return {
+      maintenanceModeEnabled,
+      systemName,
+      systemLocation,
+      systemContact,
+      systemDescription,
+    };
+  }, [maintenanceModeEnabled, systemName, systemLocation, systemContact, systemDescription]);
+
+  const applyServerSettingsForm = useCallback((v: ServerSettingsFormValues) => {
+    setMaintenanceModeEnabled(v.maintenanceModeEnabled);
+    setSystemName(v.systemName);
+    setSystemLocation(v.systemLocation);
+    setSystemContact(v.systemContact);
+    setSystemDescription(v.systemDescription);
+  }, []);
+
+  const startServerSettingsEdit = useCallback(() => {
+    serverSettingsEditBaselineRef.current = structuredClone(collectServerSettingsForm());
+    setServerSettingsSectionMode('edit');
+  }, [collectServerSettingsForm]);
+
+  const cancelServerSettingsEdit = useCallback(() => {
+    const baseline = serverSettingsEditBaselineRef.current;
+    if (baseline) applyServerSettingsForm(baseline);
+    serverSettingsEditBaselineRef.current = null;
+    setServerSettingsSectionMode('view');
+  }, [applyServerSettingsForm]);
+
+  const saveServerSettings = useCallback(() => {
+    serverSettingsEditBaselineRef.current = null;
+    toast.success('Server settings saved');
+    setTimeout(() => {
+      bumpCommittedAdministrationRef.current();
+    }, 0);
+    setServerSettingsSectionMode('view');
+  }, []);
+
+  const serverSettingsEditDirty =
+    serverSettingsSectionMode === 'edit' &&
+    serverSettingsEditBaselineRef.current !== null &&
+    JSON.stringify(collectServerSettingsForm()) !==
+      JSON.stringify(serverSettingsEditBaselineRef.current);
+
   const applyAdministrationPersistedSnapshot = useCallback((s: AdministrationPersistedSnapshot) => {
     setAccessControlUsers(s.accessControlUsers);
     setAuthSidebarSection(s.authSidebarSection);
@@ -1236,11 +1322,17 @@ export default function AdministrationPage({
     setSnmpChangeAuthenticationPassword(s.snmp.snmpChangeAuthenticationPassword);
     setSnmpPrivacyProtocol(s.snmp.snmpPrivacyProtocol);
     setSnmpChangePrivacyPassword(s.snmp.snmpChangePrivacyPassword);
+    const serverSettings = s.serverSettings ?? DEFAULT_SERVER_SETTINGS;
+    setMaintenanceModeEnabled(serverSettings.maintenanceModeEnabled);
+    setSystemName(serverSettings.systemName);
+    setSystemLocation(serverSettings.systemLocation);
+    setSystemContact(serverSettings.systemContact);
+    setSystemDescription(serverSettings.systemDescription);
     setProfileData(structuredClone(s.profileData));
     if (s.fileManagement) {
       setFileMgmt({
         ...s.fileManagement,
-        fileUsers: s.fileManagement.fileUsers.map((u) => ({ ...u })),
+        fileUsers: normalizeFileManagementUsers(s.fileManagement.fileUsers),
       });
     } else {
       setFileMgmt(createInitialFileManagementPersisted());
@@ -1248,9 +1340,11 @@ export default function AdministrationPage({
     setAccessControlSettingsSectionMode('view');
     setSnmpAgentSectionMode('view');
     setSmtpSectionMode('view');
+    setServerSettingsSectionMode('view');
     accessControlSettingsEditBaselineRef.current = null;
     snmpAgentEditBaselineRef.current = null;
     smtpEditBaselineRef.current = null;
+    serverSettingsEditBaselineRef.current = null;
     setFileManagementFormsResetNonce((n) => n + 1);
   }, []);
 
@@ -1996,6 +2090,85 @@ export default function AdministrationPage({
     </FieldGroup>
   );
 
+  const renderServerSettingsValuesView = () => (
+    <div className="max-w-3xl space-y-8">
+      <Field className="gap-1">
+        <FieldLabel className={roKvLabel}>Server maintenance mode</FieldLabel>
+        <p className={roKvValue}>{maintenanceModeEnabled ? 'Enabled' : 'Disabled'}</p>
+      </Field>
+      <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>System name</FieldLabel>
+          <p className={roKvValue}>{systemName || '—'}</p>
+        </Field>
+        <Field className="gap-1">
+          <FieldLabel className={roKvLabel}>System location</FieldLabel>
+          <p className={roKvValue}>{systemLocation || '—'}</p>
+        </Field>
+        <Field className="gap-1 md:col-span-2">
+          <FieldLabel className={roKvLabel}>System contact</FieldLabel>
+          <p className={roKvValue}>{systemContact || '—'}</p>
+        </Field>
+      </div>
+      <Field className="gap-1">
+        <FieldLabel className={roKvLabel}>System description</FieldLabel>
+        <p className={cn(roKvValue, 'whitespace-pre-wrap')}>{systemDescription || '—'}</p>
+      </Field>
+    </div>
+  );
+
+  const renderServerSettingsEditFields = () => (
+    <FieldGroup className="max-w-3xl">
+      <div className="flex items-center gap-3">
+        <Checkbox
+          id="server-maintenance-mode"
+          checked={maintenanceModeEnabled}
+          onCheckedChange={(checked) => setMaintenanceModeEnabled(Boolean(checked))}
+        />
+        <Label htmlFor="server-maintenance-mode" className="cursor-pointer">
+          Server maintenance mode
+        </Label>
+      </div>
+      <Field controlSize="lg">
+        <FieldLabel htmlFor="server-system-name">System name</FieldLabel>
+        <Input
+          id="server-system-name"
+          value={systemName}
+          onChange={(e) => setSystemName(e.target.value)}
+          placeholder="Enter system name"
+        />
+      </Field>
+      <Field controlSize="lg">
+        <FieldLabel htmlFor="server-system-location">System location</FieldLabel>
+        <Input
+          id="server-system-location"
+          value={systemLocation}
+          onChange={(e) => setSystemLocation(e.target.value)}
+          placeholder="Enter system location"
+        />
+      </Field>
+      <Field controlSize="lg">
+        <FieldLabel htmlFor="server-system-contact">System contact</FieldLabel>
+        <Input
+          id="server-system-contact"
+          value={systemContact}
+          onChange={(e) => setSystemContact(e.target.value)}
+          placeholder="Enter system contact"
+        />
+      </Field>
+      <Field controlSize="full">
+        <FieldLabel htmlFor="server-system-description">System description</FieldLabel>
+        <Textarea
+          id="server-system-description"
+          className="min-h-24"
+          value={systemDescription}
+          onChange={(e) => setSystemDescription(e.target.value)}
+          placeholder="Enter system description"
+        />
+      </Field>
+    </FieldGroup>
+  );
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <Navbar01
@@ -2101,77 +2274,104 @@ export default function AdministrationPage({
 
                   <TabsContent value="users" className="mt-6">
                     <div className="flex flex-col min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
-                        <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
-                          <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            placeholder="Search users..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 w-full min-w-0"
-                          />
+                      {accessControlUsers.length === 0 ? (
+                        <div className="flex justify-center py-8">
+                          <div className="rounded-lg border bg-card p-8 text-center max-w-sm w-full shadow-sm">
+                            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                              <Icon name="person" size={24} className="text-muted-foreground" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-foreground mb-1">No users yet</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              Add a user to manage access control permissions and profile assignment.
+                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => {
+                                setAccessControlUserEditing(null);
+                                setAccessControlUserSheetOpen(true);
+                              }}
+                            >
+                              <Icon name="add" size={16} className="mr-1.5" />
+                              Add user
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-4 min-w-0">
-                          <FilterSelect
-                            value={profileFilter}
-                            onValueChange={setProfileFilter}
-                            label="Profile"
-                            options={[...PROFILE_OPTIONS]}
-                            className="w-[130px]"
-                          />
-                        </div>
-                        <div className="ml-auto flex items-center gap-2 shrink-0">
-                          <Button
-                            type="button"
-                            variant="default"
-                            aria-label="Add user"
-                            onClick={() => {
-                              setAccessControlUserEditing(null);
+                      ) : (
+                        <>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-4 mb-2 shrink-0 min-w-0">
+                            <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-[280px] sm:min-w-[100px]">
+                              <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                placeholder="Search users..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="pl-9 w-full min-w-0"
+                              />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-4 min-w-0">
+                              <FilterSelect
+                                value={profileFilter}
+                                onValueChange={setProfileFilter}
+                                label="Profile"
+                                options={[...PROFILE_OPTIONS]}
+                                className="w-[130px]"
+                              />
+                            </div>
+                            <div className="ml-auto flex items-center gap-2 shrink-0">
+                              <Button
+                                type="button"
+                                variant="default"
+                                aria-label="Add user"
+                                onClick={() => {
+                                  setAccessControlUserEditing(null);
+                                  setAccessControlUserSheetOpen(true);
+                                }}
+                              >
+                                <Icon name="add" size={16} />
+                                Add user
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
+                            <span className="text-sm text-muted-foreground">
+                              {filteredAccessControlUsers.length}{' '}
+                              {filteredAccessControlUsers.length === 1 ? 'result' : 'results'}
+                            </span>
+                            {accessControlUsersActiveFilters.map((f) => (
+                              <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
+                                {f.label}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
+                                  onClick={f.onClear}
+                                  aria-label={`Clear ${f.label}`}
+                                >
+                                  <Icon name="close" size={12} aria-hidden />
+                                </Button>
+                              </Badge>
+                            ))}
+                            {accessControlUsersActiveFilters.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                                onClick={clearAccessControlUsersFilters}
+                              >
+                                Clear all
+                              </Button>
+                            )}
+                          </div>
+                          <AccessControlUsersDataTable
+                            data={filteredAccessControlUsers}
+                            onEditUser={(row) => {
+                              setAccessControlUserEditing(row);
                               setAccessControlUserSheetOpen(true);
                             }}
-                          >
-                            <Icon name="add" size={16} />
-                            Add user
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 py-1.5 shrink-0 min-w-0">
-                        <span className="text-sm text-muted-foreground">
-                          {filteredAccessControlUsers.length}{' '}
-                          {filteredAccessControlUsers.length === 1 ? 'result' : 'results'}
-                        </span>
-                        {accessControlUsersActiveFilters.map((f) => (
-                          <Badge key={f.key} variant="secondary" className="gap-1 pr-0.5 pl-2 py-0.5 font-medium">
-                            {f.label}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 shrink-0 rounded-sm -mr-0.5 hover:bg-muted-foreground/20"
-                              onClick={f.onClear}
-                              aria-label={`Clear ${f.label}`}
-                            >
-                              <Icon name="close" size={12} aria-hidden />
-                            </Button>
-                          </Badge>
-                        ))}
-                        {accessControlUsersActiveFilters.length > 0 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                            onClick={clearAccessControlUsersFilters}
-                          >
-                            Clear all
-                          </Button>
-                        )}
-                      </div>
-                      <AccessControlUsersDataTable
-                        data={filteredAccessControlUsers}
-                        onEditUser={(row) => {
-                          setAccessControlUserEditing(row);
-                          setAccessControlUserSheetOpen(true);
-                        }}
-                      />
+                          />
+                        </>
+                      )}
                     </div>
                     <AccessControlUserSheet
                       open={accessControlUserSheetOpen}
@@ -3977,6 +4177,53 @@ export default function AdministrationPage({
               </div>
             )}
 
+            {activeSection === 'server-settings' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader className="flex flex-col gap-6 space-y-0 p-6 pb-0">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-1.5">
+                        <CardTitle>Server settings</CardTitle>
+                        <CardDescription>System identity and maintenance mode configuration.</CardDescription>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                        {serverSettingsSectionMode === 'view' ? (
+                          <Button type="button" className="sm:self-start" onClick={startServerSettingsEdit}>
+                            Edit
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="sm:self-start"
+                              onClick={cancelServerSettingsEdit}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              className="sm:self-start"
+                              disabled={!serverSettingsEditDirty}
+                              onClick={saveServerSettings}
+                            >
+                              Save
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <AdminFormCardHeaderDivider />
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    {serverSettingsSectionMode === 'view'
+                      ? renderServerSettingsValuesView()
+                      : renderServerSettingsEditFields()}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {activeSection === 'fault-management' && (
               <FaultManagementPage />
             )}
@@ -4683,7 +4930,7 @@ export default function AdministrationPage({
               );
             })()}
 
-            {activeSection !== 'access-control' && activeSection !== 'audit-trail' && activeSection !== 'northbound-interface' && activeSection !== 'email' && activeSection !== 'fault-management' && activeSection !== 'label-management' && activeSection !== 'file-management' && activeSection !== 'device-migration' && activeSection !== 'performance' && (
+            {activeSection !== 'access-control' && activeSection !== 'audit-trail' && activeSection !== 'northbound-interface' && activeSection !== 'email' && activeSection !== 'server-settings' && activeSection !== 'fault-management' && activeSection !== 'label-management' && activeSection !== 'file-management' && activeSection !== 'device-migration' && activeSection !== 'performance' && (
               <div className="flex items-center justify-center py-12">
                 <p className="text-muted-foreground">
                   {activeLabel} content will be displayed here.
