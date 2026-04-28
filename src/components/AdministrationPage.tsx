@@ -69,6 +69,7 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import FaultManagementPage from './FaultManagementPage';
 import LabelManagementPage from './LabelManagementPage';
 import FileManagementPage from './FileManagementPage';
+import RedundancyPage from './redundancy-page';
 import {
   createInitialFileManagementPersisted,
   normalizeFileManagementUsers,
@@ -4247,6 +4248,10 @@ export default function AdministrationPage({
 
             {activeSection === 'device-migration' && (
               <DeviceMigrationPage />
+            )}
+
+            {activeSection === 'redundancy' && (
+              <RedundancyPage />
             )}
 
             {activeSection === 'performance' && (() => {
